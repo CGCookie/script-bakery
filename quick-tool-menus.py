@@ -13,6 +13,47 @@ from bpy import context
 scene = context.scene
 obj = scene.objects.active
 
+### New Operators ###
+
+# creates an operator for applying subsurf modifiers
+class applySubsurf(bpy.types.Operator):
+    bl_label = "Apply Only Subsurf Modifiers"
+    bl_idname = "object.apply_subsurf"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        
+        applyModifier = bpy.ops.object.modifier_apply
+        
+        # If any subsurf modifiers exist on object, apply them.
+        for mod in obj.modifiers:
+            if mod.type=='SUBSURF':
+
+        # Old code that was dependent on names, rather than type. So if the modifier was renamed it would fail.
+#        for mod in obj.modifiers:
+#            if "Subsurf" in mod.name:
+                print (mod)
+                applyModifier(apply_as='DATA', modifier=mod.name)
+        return {"FINISHED"}
+
+# creates an operator for toggling Sculpt Symmetry
+
+class sculptSymmetryX(bpy.types.Operator):
+    bl_label = "Toggle X-axis Symmetry"
+    bl_idname = "sculpt.symmetry_x"
+    
+    def execute(self, context):
+        
+        symmetry_x = bpy.context.tool_settings.sculpt.use_symmetry_x
+        if symmetry_x:
+            symmetry_x = False
+        else:
+            symmetry_x = True
+        
+        return {"FINISHED"}    
+
+### Creating the Menus for each mode ###
+
 # adds an object mode menu 
 class JWObjectTools(bpy.types.Menu):
     bl_label = "Jonathan's Object Tools"
@@ -32,24 +73,6 @@ class JWObjectTools(bpy.types.Menu):
         layout.operator("object.shade_smooth")
         layout.operator("object.shade_flat")
 
-# creates an operator for applying subsurf modifiers
-class applySubsurf(bpy.types.Operator):
-    bl_label = "Apply Only Subsurf Modifiers"
-    bl_idname = "object.apply_subsurf"
-    bl_options = {'REGISTER', 'UNDO'}
-    
-    def execute(self, context):
-        
-        applyModifier = bpy.ops.object.modifier_apply
-        
-        # If any subsurf modifiers exist on object, apply them.
-        for mod in obj.modifiers:
-            if mod.type=='SUBSURF':
-#        for mod in obj.modifiers:
-#            if "Subsurf" in mod.name:
-                print (mod)
-                applyModifier(apply_as='DATA', modifier=mod.name)
-        return {"FINISHED"}
 
 # creates a menu for Sculpt mode tools
 class JWSculptTools(bpy.types.Menu):
@@ -62,7 +85,7 @@ class JWSculptTools(bpy.types.Menu):
         layout.operator("object.modifier_add", 'Add Subsurf', icon='MOD_SUBSURF').type='SUBSURF'
         layout.operator("object.apply_subsurf", 'Apply Subsurf', icon='MOD_SUBSURF')
         # trying to enable setting symmetry from the menu
-#        layout.operator("bpy.types.Sculpt").use_symmetry_x=False
+        layout.operator("sculpt.symmetry_x")
         
         
 # creates a menu for edit mode tools         
@@ -86,13 +109,19 @@ class JWMeshTools(bpy.types.Menu):
         layout.operator("mesh.vert_slide")
         layout.operator("mesh.vertices_smooth")       
 
+### Creating the hotkeys ###
+
 addon_keymaps = []
 
 def register():
+    #register the new menus
     bpy.utils.register_class(JWMeshTools)
     bpy.utils.register_class(JWObjectTools)
+    
+    #register the new operators
     bpy.utils.register_class(JWSculptTools)
     bpy.utils.register_class(applySubsurf)
+    bpy.utils.register_class(sculptSymmetryX)
     
     # create the object mode menu hotkey
     wm = bpy.context.window_manager
@@ -115,10 +144,14 @@ def register():
     addon_keymaps.append(km)
 
 def unregister():
+    #unregister the new menus
     bpy.utils.unregister_class(JWMeshTools)
     bpy.utils.unregister_class(JWObjectTools)
     bpy.utils.register_class(JWSculptTools)
+    
+    #unregister the new operators
     bpy.utils.register_class(applySubsurf)
+    bpy.utils.register_class(sculptSymmetryX)
     
     # remove keymaps when add-on is deactivated
     wm = bpy.context.window_manager
