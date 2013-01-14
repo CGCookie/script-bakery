@@ -21,6 +21,22 @@ class applySubsurf(bpy.types.Operator):
     bl_idname = "object.apply_subsurf"
     bl_options = {'REGISTER', 'UNDO'}
     
+    # test if it is possible to apply a subsurf modifier, thanks to Richard Van Der Oost
+    @classmethod
+    def poll(cls, context):
+       
+       # get the active object
+       obj = scene.objects.active
+       
+       # test if there's an active object
+       if obj:
+           
+           # find modifiers with "SUBSURF" type
+           for mod in obj.modifiers:
+               if mod.type == 'SUBSURF':
+                   return True
+       return False
+    
     def execute(self, context):
         
         applyModifier = bpy.ops.object.modifier_apply
@@ -37,22 +53,75 @@ class applySubsurf(bpy.types.Operator):
         return {"FINISHED"}
 
 # creates an operator for toggling Sculpt Symmetry
-
 class sculptSymmetryX(bpy.types.Operator):
     bl_label = "Toggle X-axis Symmetry"
     bl_idname = "sculpt.symmetry_x"
     
     def execute(self, context):
-        
+       
+       # checks the current state of x-axis symmetry then toggles it. 
         symmetry_x = bpy.context.tool_settings.sculpt.use_symmetry_x
         if symmetry_x:
-            symmetry_x = False
+            context.tool_settings.sculpt.use_symmetry_x = False
         else:
-            symmetry_x = True
+            context.tool_settings.sculpt.use_symmetry_x = True
         
-        return {"FINISHED"}    
+        return {"FINISHED"}
+
+class sculptSymmetryY(bpy.types.Operator):
+    bl_label = "Toggle Y-axis Symmetry"
+    bl_idname = "sculpt.symmetry_y"
+    
+    def execute(self, context):
+        
+        symmetry_y = bpy.context.tool_settings.sculpt.use_symmetry_y
+        if symmetry_y:
+            context.tool_settings.sculpt.use_symmetry_y = False
+        else:
+            context.tool_settings.sculpt.use_symmetry_y = True
+        
+        return {"FINISHED"}   
+    
+class sculptSymmetryZ(bpy.types.Operator):
+    bl_label = "Toggle Z-axis Symmetry"
+    bl_idname = "sculpt.symmetry_z"
+    
+    def execute(self, context):
+        
+        symmetry_z = bpy.context.tool_settings.sculpt.use_symmetry_z
+        if symmetry_z:
+            context.tool_settings.sculpt.use_symmetry_z = False
+        else:
+            context.tool_settings.sculpt.use_symmetry_z = True
+        
+        return {"FINISHED"}       
 
 ### Creating the Menus for each mode ###
+
+# adds a Mode switch menu
+class ModeSwitch(bpy.types.Menu):
+    bl_label = "Quick Mode Switch Menu"
+    bl_idname = "mode.switch_menu"
+    
+    def draw(self, context):
+        layout = self.layout
+
+# attempting to check the current mode to display the relative operator        
+        if bpy.context.mode:
+            context.mode == 'OBJECT'
+            layout.operator("object.editmode_toggle", 'Edit Mode', icon='EDITMODE_HLT')
+        else:
+            layout.operator("object.editmode_toggle", 'Object Mode', icon='OBJECT_DATAMODE')
+#        current_mode = bpy.context.mode
+#        if current_mode == 'EDIT_MESH'
+#        
+#        return {"FINISHED"}
+        
+                 
+
+#        layout.operator("object.editmode_toggle", 'Object Mode', icon='OBJECT_DATAMODE')
+        layout.operator("sculpt.sculptmode_toggle", 'Sculpt Mode', icon='SCULPTMODE_HLT')
+
 
 # adds an object mode menu 
 class JWObjectTools(bpy.types.Menu):
@@ -84,8 +153,12 @@ class JWSculptTools(bpy.types.Menu):
         
         layout.operator("object.modifier_add", 'Add Subsurf', icon='MOD_SUBSURF').type='SUBSURF'
         layout.operator("object.apply_subsurf", 'Apply Subsurf', icon='MOD_SUBSURF')
-        # trying to enable setting symmetry from the menu
-        layout.operator("sculpt.symmetry_x")
+        
+        layout.separator()
+        
+        layout.operator("sculpt.symmetry_x", icon='MOD_MIRROR')
+        layout.operator("sculpt.symmetry_y")
+        layout.operator("sculpt.symmetry_z")
         
         
 # creates a menu for edit mode tools         
@@ -117,26 +190,39 @@ def register():
     #register the new menus
     bpy.utils.register_class(JWMeshTools)
     bpy.utils.register_class(JWObjectTools)
+    bpy.utils.register_class(JWSculptTools)
+    bpy.utils.register_class(ModeSwitch)
     
     #register the new operators
-    bpy.utils.register_class(JWSculptTools)
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(sculptSymmetryX)
+    bpy.utils.register_class(sculptSymmetryY)
+    bpy.utils.register_class(sculptSymmetryZ)
+    
+    wm = bpy.context.window_manager
+    
+    # create the mode switcher menu hotkey
+    km = wm.keyconfigs.addon.keymaps.new(name='3D View', space_type='VIEW_3D')
+    kmi = km.keymap_items.new('wm.call_menu', 'TAB', 'PRESS', alt=True)
+    kmi.properties.name = 'mode.switch_menu'
     
     # create the object mode menu hotkey
-    wm = bpy.context.window_manager
     km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
     kmi = km.keymap_items.new('wm.call_menu', 'T', 'PRESS', oskey=True)
     kmi.properties.name = 'object.tools_menu'
     
     # create the sculpt mode menu hotkey
-    wm = bpy.context.window_manager
     km = wm.keyconfigs.addon.keymaps.new(name='Sculpt', space_type='EMPTY')
     kmi = km.keymap_items.new('wm.call_menu', 'T', 'PRESS', oskey=True)
     kmi.properties.name = 'sculpt.tools_menu'
     
+    # create the Sculpt symmetry hotkeys
+    kmi = km.keymap_items.new('sculpt.symmetry_x', 'X', 'PRESS', shift=True)
+    kmi = km.keymap_items.new('sculpt.symmetry_y', 'Y', 'PRESS', shift=True)
+    kmi = km.keymap_items.new('sculpt.symmetry_z', 'Z', 'PRESS', shift=True)
+    
+    
     # creatue the edit mode menu hotkey
-    wm = bpy.context.window_manager
     km = wm.keyconfigs.addon.keymaps.new(name='Mesh', space_type='EMPTY')
     kmi = km.keymap_items.new('wm.call_menu', 'T', 'PRESS', oskey=True)
     kmi.properties.name = 'mesh.tools_menu'
@@ -148,10 +234,13 @@ def unregister():
     bpy.utils.unregister_class(JWMeshTools)
     bpy.utils.unregister_class(JWObjectTools)
     bpy.utils.register_class(JWSculptTools)
+    bpy.utils.register_class(ModeSwitch)
     
     #unregister the new operators
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(sculptSymmetryX)
+    bpy.utils.register_class(sculptSymmetryY)
+    bpy.utils.register_class(sculptSymmetryZ)
     
     # remove keymaps when add-on is deactivated
     wm = bpy.context.window_manager
