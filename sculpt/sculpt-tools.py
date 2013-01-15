@@ -16,6 +16,7 @@ import bpy
 
 ### creates an operator for applying subsurf modifiers ###
 class applySubsurf(bpy.types.Operator):
+    """Apply only Subsurf Modifiers"""
     bl_label = "Apply Only Subsurf Modifiers"
     bl_idname = "object.apply_subsurf"
     bl_options = {'REGISTER', 'UNDO'}
@@ -46,18 +47,15 @@ class applySubsurf(bpy.types.Operator):
         # If any subsurf modifiers exist on object, apply them.
         for mod in obj.modifiers:
             if mod.type=='SUBSURF':
-
-        # Old code that was dependent on names, rather than type. So if the modifier was renamed it would fail.
-#        for mod in obj.modifiers:
-#            if "Subsurf" in mod.name:
-                print (mod)
                 applyModifier(apply_as='DATA', modifier=mod.name)
+        
         return {"FINISHED"}
 
 
 ### Creating operators for toggling Sculpt Symmetry ###
 
 class sculptSymmetryX(bpy.types.Operator):
+    """Enable X-axis symmetry"""
     bl_label = "Toggle X-axis Symmetry"
     bl_idname = "sculpt.symmetry_x"
     
@@ -73,6 +71,7 @@ class sculptSymmetryX(bpy.types.Operator):
         return {"FINISHED"}
 
 class sculptSymmetryY(bpy.types.Operator):
+    """Enable Y-axis symmetry"""
     bl_label = "Toggle Y-axis Symmetry"
     bl_idname = "sculpt.symmetry_y"
     
@@ -87,6 +86,7 @@ class sculptSymmetryY(bpy.types.Operator):
         return {"FINISHED"}   
     
 class sculptSymmetryZ(bpy.types.Operator):
+    """Enable Z-axis symmetry"""
     bl_label = "Toggle Z-axis Symmetry"
     bl_idname = "sculpt.symmetry_z"
     
@@ -107,8 +107,9 @@ class sculptSymmetryZ(bpy.types.Operator):
 ### ------------ New Menus ------------ ###        
         
 # creates a menu for Sculpt mode tools
-class JWSculptTools(bpy.types.Menu):
-    bl_label = "Jonathan's Sculpt Tools"
+class SculptTools(bpy.types.Menu):
+    
+    bl_label = "Sculpt Tools"
     bl_idname = "sculpt.tools_menu"
 
     def draw(self, context):
@@ -116,6 +117,10 @@ class JWSculptTools(bpy.types.Menu):
         
         layout.operator("object.modifier_add", 'Add Subsurf', icon='MOD_SUBSURF').type='SUBSURF'
         layout.operator("object.apply_subsurf", 'Apply Subsurf', icon='MOD_SUBSURF')
+        
+        layout.separator()
+        
+        layout.operator("object.modifier_add", 'Remesh Modifier', icon='MOD_REMESH').type='REMESH'
         
         layout.separator()
         
@@ -132,7 +137,7 @@ class JWSculptTools(bpy.types.Menu):
 addon_keymaps = []
 
 def register():
-    bpy.utils.register_class(JWSculptTools)
+    bpy.utils.register_class(SculptTools)
     bpy.utils.register_class(sculptSymmetryX)
     bpy.utils.register_class(sculptSymmetryY)
     bpy.utils.register_class(sculptSymmetryZ)
@@ -155,7 +160,7 @@ def register():
 def unregister():
 
     #unregister the new operators 
-    bpy.utils.unregister_class(JWSculptTools)
+    bpy.utils.unregister_class(SculptTools)
     bpy.utils.register_class(sculptSymmetryX)
     bpy.utils.register_class(sculptSymmetryY)
     bpy.utils.register_class(sculptSymmetryZ)
