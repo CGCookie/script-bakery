@@ -1,8 +1,8 @@
 bl_info = {
     "name": "Sculpting Tools",
-    "description": "Provides tools and hotkeys for accellerating the sculpt workflow",
+    "description": "Creates tools and hotkeys for improving sculpting workflow. Default menu hotkey is OSKEY+Tab (CMD, Windows key)",
     "author": "Jonathan Williamson",
-    "version": (0,1),
+    "version": (0,2),
     "blender": (2, 6, 5),
     "category": "3D View",
 }
@@ -26,7 +26,7 @@ class applySubsurf(bpy.types.Operator):
     def poll(cls, context):
        
        # get the active object
-       obj = scene.objects.active
+       obj = context.active_object
        
        # test if there's an active object
        if obj:
@@ -40,13 +40,49 @@ class applySubsurf(bpy.types.Operator):
     def execute(self, context):
         
         #check for active object
-        obj = context.scene.objects.active
+        obj = context.active_object
         
         applyModifier = bpy.ops.object.modifier_apply
         
         # If any subsurf modifiers exist on object, apply them.
         for mod in obj.modifiers:
             if mod.type=='SUBSURF':
+                applyModifier(apply_as='DATA', modifier=mod.name)
+        
+        return {"FINISHED"}
+
+class applyRemesh(bpy.types.Operator):
+    """Apply only Remesh Modifiers"""
+    bl_label = "Apply Only Remesh Modifiers"
+    bl_idname = "object.apply_remesh"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    # test if it is possible to apply a remesh modifier
+    @classmethod    
+    def poll(cls, context):
+       
+       # get the active object
+       obj = context.active_object
+       
+       # test if there's an active object
+       if obj:
+           
+           # find modifiers with "REMESH" type
+           for mod in obj.modifiers:
+               if mod.type == 'REMESH':
+                   return True
+       return False
+    
+    def execute(self, context):
+        
+        #check for active object
+        obj = context.active_object
+        
+        applyModifier = bpy.ops.object.modifier_apply
+        
+        # If any remesh modifiers exist on object, apply them.
+        for mod in obj.modifiers:
+            if mod.type=='REMESH':
                 applyModifier(apply_as='DATA', modifier=mod.name)
         
         return {"FINISHED"}
@@ -116,11 +152,12 @@ class SculptTools(bpy.types.Menu):
         layout = self.layout
         
         layout.operator("object.modifier_add", 'Add Subsurf', icon='MOD_SUBSURF').type='SUBSURF'
-        layout.operator("object.apply_subsurf", 'Apply Subsurf', icon='MOD_SUBSURF')
+        layout.operator("object.apply_subsurf", 'Apply Subsurf')
         
         layout.separator()
         
         layout.operator("object.modifier_add", 'Remesh Modifier', icon='MOD_REMESH').type='REMESH'
+        layout.operator("object.apply_remesh", 'Apply Remesh')
         
         layout.separator()
         
@@ -142,6 +179,7 @@ def register():
     bpy.utils.register_class(sculptSymmetryY)
     bpy.utils.register_class(sculptSymmetryZ)
     bpy.utils.register_class(applySubsurf)
+    bpy.utils.register_class(applyRemesh)
     
     wm = bpy.context.window_manager
         
@@ -165,6 +203,7 @@ def unregister():
     bpy.utils.register_class(sculptSymmetryY)
     bpy.utils.register_class(sculptSymmetryZ)
     bpy.utils.register_class(applySubsurf)
+    bpy.utils.register_class(applyRemesh)
     
     # remove keymaps when add-on is deactivated
     wm = bpy.context.window_manager
