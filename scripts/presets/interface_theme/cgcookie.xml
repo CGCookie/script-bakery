@@ -10,7 +10,7 @@
                           axis_z="#0000dc">
         <wcol_regular>
           <ThemeWidgetColors outline="#191919"
-                             inner="#999999ff"
+                             inner="#a6a6a6ff"
                              inner_sel="#646464ff"
                              item="#191919ff"
                              text="#000000"
@@ -120,7 +120,7 @@
           <ThemeWidgetColors outline="#151515"
                              inner="#2f2f2fff"
                              inner_sel="#464646ff"
-                             item="#777777ff"
+                             item="#919191ff"
                              text="#b8b8b8"
                              text_sel="#cccccc"
                              show_shaded="TRUE"
@@ -718,8 +718,8 @@
       </ThemeLogicEditor>
     </logic_editor>
     <outliner>
-      <ThemeOutliner match="#245824"
-                     selected_highlight="#212844">
+      <ThemeOutliner match="#4e85c6"
+                     selected_highlight="#8d6831">
         <space>
           <ThemeSpaceGeneric back="#3a3a3a"
                              title="#000000"
@@ -746,20 +746,20 @@
     <info>
       <ThemeInfo>
         <space>
-          <ThemeSpaceGeneric back="#828282"
+          <ThemeSpaceGeneric back="#757575"
                              title="#000000"
                              text="#000000"
                              text_hi="#000000"
                              header="#3b3b3b"
-                             header_text="#e5e5e5"
+                             header_text="#f2f2f2"
                              header_text_hi="#000000"
-                             button="#686868ff"
+                             button="#828282ff"
                              button_title="#000000"
                              button_text="#000000"
                              button_text_hi="#000000">
             <panelcolors>
               <ThemePanelColors header="#00000019"
-                                back="#68686880"
+                                back="#41414180"
                                 show_header="FALSE"
                                 show_back="FALSE">
               </ThemePanelColors>
@@ -771,7 +771,7 @@
     <user_preferences>
       <ThemeUserPreferences>
         <space>
-          <ThemeSpaceGeneric back="#3b3b3b"
+          <ThemeSpaceGeneric back="#2e2e2e"
                              title="#000000"
                              text="#b8b8b8"
                              text_hi="#ffffff"
@@ -794,7 +794,7 @@
       </ThemeUserPreferences>
     </user_preferences>
     <console>
-      <ThemeConsole line_output="#b8b8b8"
+      <ThemeConsole line_output="#c5c5c5"
                     line_input="#ffffff"
                     line_info="#00aa00"
                     line_error="#dc6060"
@@ -813,7 +813,7 @@
                              button_text_hi="#ffffff">
             <panelcolors>
               <ThemePanelColors header="#00000019"
-                                back="#72727280"
+                                back="#65656580"
                                 show_header="FALSE"
                                 show_back="FALSE">
               </ThemePanelColors>
