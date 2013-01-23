@@ -2,7 +2,7 @@ bl_info = {
     "name": "Sculpting Tools",
     "description": "Creates tools and hotkeys for improving sculpting workflow. Default menu hotkey is OSKEY+Tab (CMD, Windows key)",
     "author": "Jonathan Williamson",
-    "version": (0,2),
+    "version": (0,3),
     "blender": (2, 6, 5),
     "category": "3D View",
 }
@@ -199,11 +199,11 @@ def unregister():
 
     #unregister the new operators 
     bpy.utils.unregister_class(SculptTools)
-    bpy.utils.register_class(sculptSymmetryX)
-    bpy.utils.register_class(sculptSymmetryY)
-    bpy.utils.register_class(sculptSymmetryZ)
-    bpy.utils.register_class(applySubsurf)
-    bpy.utils.register_class(applyRemesh)
+    bpy.utils.unregister_class(sculptSymmetryX)
+    bpy.utils.unregister_class(sculptSymmetryY)
+    bpy.utils.unregister_class(sculptSymmetryZ)
+    bpy.utils.unregister_class(applySubsurf)
+    bpy.utils.unregister_class(applyRemesh)
     
     # remove keymaps when add-on is deactivated
     wm = bpy.context.window_manager
