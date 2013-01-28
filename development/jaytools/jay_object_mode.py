@@ -70,7 +70,7 @@ class JWMeshTools(bpy.types.Menu):
         layout.separator()
         
         layout.operator("transform.edge_slide")
-        layout.operator("mesh.vert_slide")
+        layout.operator("transform.vert_slide")
         layout.operator("mesh.vertices_smooth")       
 
 
@@ -95,12 +95,12 @@ def register():
     
     # create the object mode menu hotkey
     km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
-    kmi = km.keymap_items.new('wm.call_menu', 'T', 'PRESS', oskey=True)
+    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
     kmi.properties.name = 'object.tools_menu' 
     
     # creatue the edit mode menu hotkey
     km = wm.keyconfigs.addon.keymaps.new(name='Mesh', space_type='EMPTY')
-    kmi = km.keymap_items.new('wm.call_menu', 'T', 'PRESS', oskey=True)
+    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
     kmi.properties.name = 'mesh.tools_menu'
 
     addon_keymaps.append(km)

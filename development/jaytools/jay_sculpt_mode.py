@@ -47,7 +47,7 @@ def register():
     #kmi = km.keymap_items.new('sculpt.symmetry_z', 'Z', 'PRESS', shift=True)
     
     # create sculpt menu hotkey
-    kmi = km.keymap_items.new('wm.call_menu', 'T', 'PRESS', oskey=True)
+    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
     kmi.properties.name = 'sculpt.tools_menu' 
     print('4')
     addon_keymaps.append(km)
