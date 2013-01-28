@@ -2,10 +2,10 @@ bl_info = {
     "name": "Jay's Tools",
     "description": "A series of tools and menus to enhance and speed up workflow",
     "author": "Jonathan Williamson",
-    "version": (0, 1),
+    "version": (0, 2),
     "blender": (2, 6, 6),
     "location": "View3D",
-    "warning": '',  # used for warning icon and text in addons panel
+    "warning": '',
     "wiki_url": "",
     "tracker_url": "",
     "category": "3D View"}
