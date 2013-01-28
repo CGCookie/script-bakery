@@ -1,13 +1,5 @@
-bl_info = {
-    "name": "Quick Tool Menus",
-    "description": "A series of quick tool menus for Object Mode and Edit Mode",
-    "author": "Jonathan Williamson",
-    "version": (0,3),
-    "blender": (2, 6, 5),
-    "category": "3D View",
-}
-  
 import bpy
+import os
 from bpy import context
  
     
@@ -46,6 +38,10 @@ class JWObjectTools(bpy.types.Menu):
         
         layout.operator_menu_enum("object.modifier_add", "type",
                                       icon='MODIFIER') 
+        
+        layout.operator("object.modifier_add", 'Add Subsurf', icon='MOD_SUBSURF').type='SUBSURF'
+        layout.operator("object.apply_subsurf", 'Apply Subsurf')
+        
         layout.separator() 
                 
         layout.operator_menu_enum("object.origin_set", "type")

@@ -1,0 +1,51 @@
+bl_info = {
+    "name": "Jay's Tools",
+    "description": "A series of tools and menus to enhance and speed up workflow",
+    "author": "Jonathan Williamson",
+    "version": (0, 1),
+    "blender": (2, 6, 6),
+    "location": "View3D",
+    "warning": '',  # used for warning icon and text in addons panel
+    "wiki_url": "",
+    "tracker_url": "",
+    "category": "3D View"}
+
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'jaytools'))
+    
+    
+if "bpy" in locals():
+    import imp
+    imp.reload(jay_operators)
+    imp.reload(jay_object_mode)
+    imp.reload(jay_sculpt_mode)
+    print("Reloaded multifiles")
+	
+else:
+    from . import jay_operators, jay_object_mode, jay_sculpt_mode
+    
+    print("Imported multifiles")
+
+import jay_operators
+import jay_sculpt_mode
+import jay_object_mode
+
+import bpy
+
+
+
+def register():
+   jay_operators.register()
+   jay_object_mode.register()
+   jay_sculpt_mode.register()
+   
+   bpy.utils.register_module(__name__)
+   
+   
+   
+ 
+def unregister():
+    bpy.utils.unregister_module(__name__)
+    
+if __name__ == "__main__":
+    register()
