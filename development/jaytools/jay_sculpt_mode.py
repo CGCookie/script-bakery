@@ -16,7 +16,7 @@ class SculptTools(bpy.types.Menu):
         
         layout.separator()
         
-        layout.operator("object.modifier_add", 'Remesh Modifier', icon='MOD_REMESH').type='REMESH'
+        layout.operator("object.smooth_remesh", 'Remesh Modifier', icon='MOD_REMESH')
         layout.operator("object.apply_remesh", 'Apply Remesh')
         
         layout.separator()

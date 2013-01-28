@@ -39,6 +39,19 @@ class applySubsurf(bpy.types.Operator):
         
         return {"FINISHED"}
 
+class smoothRemesh(bpy.types.Operator):
+    """Add a Smooth Remesh Modifier"""
+    bl_label = "Smooth Remesh"
+    bl_idname = "object.smooth_remesh"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+    
+        bpy.ops.object.modifier_add(type='REMESH')
+        bpy.context.object.modifiers['Remesh'].mode = 'SMOOTH'
+    
+        return {"FINISHED"}
+
 class applyRemesh(bpy.types.Operator):
     """Apply only Remesh Modifiers"""
     bl_label = "Apply Only Remesh Modifiers"
@@ -131,6 +144,7 @@ class sculptSymmetryZ(bpy.types.Operator):
 def register():
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(applyRemesh)
+    bpy.utils.register_class(smoothRemesh)
     bpy.utils.register_class(sculptSymmetryX)
     bpy.utils.register_class(sculptSymmetryY)
     bpy.utils.register_class(sculptSymmetryZ)
@@ -139,6 +153,7 @@ def register():
 def unregister():
     bpy.utils.unregister_class(applySubsurf)
     bpy.utils.unregister_class(applyRemesh)
+    bpy.utils.register_class(smoothRemesh)
     bpy.utils.unregister_class(sculptSymmetryX)
     bpy.utils.unregister_class(sculptSymmetryY)
     bpy.utils.unregister_class(sculptSymmetryZ)
