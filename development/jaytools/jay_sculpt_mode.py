@@ -32,26 +32,19 @@ class SculptTools(bpy.types.Menu):
 addon_keymaps = []
 
 def register():
-    print('1')
     bpy.utils.register_class(SculptTools)
     
-    wm = bpy.context.window_manager
-    print('2')    
+    wm = bpy.context.window_manager   
     # create the Sculpt hotkeys
     km = bpy.context.window_manager.keyconfigs.active.keymaps['Sculpt']
     km.keymap_items.new('sculpt.symmetry_x', 'X', 'PRESS', shift=True)
-    print('3')
-    #km = wm.keyconfigs.addon.keymaps.new(name='Sculpt', space_type='EMPTY')
-    #kmi = km.keymap_items.new('sculpt.symmetry_x', 'X', 'PRESS', shift=True)
-    #kmi = km.keymap_items.new('sculpt.symmetry_y', 'Y', 'PRESS', shift=True)
-    #kmi = km.keymap_items.new('sculpt.symmetry_z', 'Z', 'PRESS', shift=True)
+    km.keymap_items.new('sculpt.symmetry_y', 'Y', 'PRESS', shift=True)
+    km.keymap_items.new('sculpt.symmetry_z', 'Z', 'PRESS', shift=True)
     
     # create sculpt menu hotkey
     kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
     kmi.properties.name = 'sculpt.tools_menu' 
-    print('4')
     addon_keymaps.append(km)
-    print('5')
 
     
 def unregister():
