@@ -27,7 +27,7 @@ class JWObjectTools(bpy.types.Menu):
         layout = self.layout
         
         
-        layout.operator("object.modifier_add", 'Add Subsurf', icon='MOD_SUBSURF').type='SUBSURF'
+        layout.operator("object.add_subsurf", 'Add Subsurf', icon='MOD_SUBSURF')
         layout.operator("object.apply_subsurf", 'Apply Subsurf')
         
         layout.operator("object.add_mirror", 'Add Mirror', icon='MOD_MIRROR')

@@ -3,6 +3,64 @@ import bpy
 ### ------------ New Operators ------------ ###
 
 
+        
+################################################### 
+# Add a Subsurf Modifier at level 2 and optimal display enabled   
+################################################### 
+
+class addSubsurf(bpy.types.Operator):
+    """Add a Subsurf modifier at level 2 with Optimal Display"""
+    bl_label = "Add a Subsurf Modifier"
+    bl_idname = "object.add_subsurf"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        
+        obj = context.active_object
+        
+        activeMod = bpy.context.active_object.modifiers
+        
+        bpy.ops.object.modifier_add(type='SUBSURF')
+        print("Added Subsurf Modifier")
+        
+        for mod in obj.modifiers:
+            if mod.type == 'SUBSURF':
+                activeMod[mod.name].show_only_control_edges = True
+                activeMod[mod.name].levels = 2
+                
+        return {"FINISHED"}
+        
+        
+################################################### 
+# Add a Mirror Modifier with clipping enabled   
+################################################### 
+    
+class addMirror(bpy.types.Operator):
+    """Add a Mirror modifier with clipping"""
+    bl_label = "Add Mirror Modifier"
+    bl_idname = "object.add_mirror"
+    bl_options = {'REGISTER', 'UNDO'}
+       
+    def execute(self, context):
+              
+        #check for active object
+        obj = context.active_object
+        
+        activeMod = bpy.context.active_object.modifiers
+        
+        bpy.ops.object.modifier_add(type='MIRROR')
+        print("Added Mirror Modifier")
+        
+        
+        # If any mirror modifiers exist on object, add clipping to them.
+        for mod in obj.modifiers:
+            if mod.type == 'MIRROR':
+                activeMod[mod.name].use_clip=True
+        
+        return {"FINISHED"}
+    
+
+
 ################################################### 
 # Apply only subsurf modifiers   
 ################################################### 
@@ -40,37 +98,6 @@ class applySubsurf(bpy.types.Operator):
         for mod in obj.modifiers:
             if mod.type == 'SUBSURF':
                 applyModifier(apply_as='DATA', modifier=mod.name)
-        
-        return {"FINISHED"}
-
-
-
-################################################### 
-# Add a Mirror Modifier with clipping enabled   
-################################################### 
-    
-class addMirror(bpy.types.Operator):
-    """Add a Mirror modifier with clipping"""
-    bl_label = "Add Mirror Modifier"
-    bl_idname = "object.add_mirror"
-    bl_options = {'REGISTER', 'UNDO'}
-       
-    def execute(self, context):
-              
-        #check for active object
-        obj = context.active_object
-        
-        activeMod = bpy.context.active_object.modifiers
-        
-        bpy.ops.object.modifier_add(type='MIRROR')
-        
-        print("Added Mirror Modifier")
-        
-        
-        # If any mirror modifiers exist on object, add clipping to them.
-        for mod in obj.modifiers:
-            if mod.type == 'MIRROR':
-                activeMod[mod.name].use_clip=True
         
         return {"FINISHED"}
     
@@ -198,6 +225,7 @@ class sculptSymmetryZ(bpy.types.Operator):
 ######### Register and unregister the operators ###########
 
 def register():
+    bpy.utils.register_class(addSubsurf)
     bpy.utils.register_class(addMirror)
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(applyRemesh)
@@ -208,6 +236,7 @@ def register():
 
     
 def unregister():
+    bpy.utils.unregister_class(addSubsurf)
     bpy.utils.unregister_class(addMirror)
     bpy.utils.unregister_class(applySubsurf)
     bpy.utils.unregister_class(applyRemesh)
