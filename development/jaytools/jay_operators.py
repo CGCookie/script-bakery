@@ -2,7 +2,11 @@ import bpy
 
 ### ------------ New Operators ------------ ###
 
-### creates an operator for applying subsurf modifiers ###
+
+################################################### 
+# Apply only subsurf modifiers   
+################################################### 
+
 class applySubsurf(bpy.types.Operator):
     """Apply only Subsurf Modifiers"""
     bl_label = "Apply Only Subsurf Modifiers"
@@ -34,10 +38,46 @@ class applySubsurf(bpy.types.Operator):
         
         # If any subsurf modifiers exist on object, apply them.
         for mod in obj.modifiers:
-            if mod.type=='SUBSURF':
+            if mod.type == 'SUBSURF':
                 applyModifier(apply_as='DATA', modifier=mod.name)
         
         return {"FINISHED"}
+
+
+
+################################################### 
+# Add a Mirror Modifier with clipping enabled   
+################################################### 
+    
+class addMirror(bpy.types.Operator):
+    """Add a Mirror modifier with clipping"""
+    bl_label = "Add Mirror Modifier"
+    bl_idname = "object.add_mirror"
+    bl_options = {'REGISTER', 'UNDO'}
+       
+    def execute(self, context):
+              
+        #check for active object
+        obj = context.active_object
+        
+        activeMod = bpy.context.active_object.modifiers
+        
+        bpy.ops.object.modifier_add(type='MIRROR')
+        
+        print("Added Mirror Modifier")
+        
+        
+        # If any mirror modifiers exist on object, add clipping to them.
+        for mod in obj.modifiers:
+            if mod.type == 'MIRROR':
+                activeMod[mod.name].use_clip=True
+        
+        return {"FINISHED"}
+    
+    
+################################################### 
+# Add a Remesh Modifier with Smooth set as the type   
+################################################### 
 
 class smoothRemesh(bpy.types.Operator):
     """Add a Smooth Remesh Modifier"""
@@ -51,6 +91,12 @@ class smoothRemesh(bpy.types.Operator):
         bpy.context.object.modifiers['Remesh'].mode = 'SMOOTH'
     
         return {"FINISHED"}
+
+
+
+################################################### 
+# Apply any remesh modifiers   
+################################################### 
 
 class applyRemesh(bpy.types.Operator):
     """Apply only Remesh Modifiers"""
@@ -83,14 +129,17 @@ class applyRemesh(bpy.types.Operator):
         
         # If any remesh modifiers exist on object, apply them.
         for mod in obj.modifiers:
-            if mod.type=='REMESH':
+            if mod.type == 'REMESH':
                 applyModifier(apply_as='DATA', modifier=mod.name)
         
         return {"FINISHED"}
     
-    
 
-### Creating operators for toggling Sculpt Symmetry ###
+
+    
+################################################### 
+# Creating operators for toggling Sculpt Symmetry
+################################################### 
 
 class sculptSymmetryX(bpy.types.Operator):
     """Enable X-axis symmetry"""
@@ -107,6 +156,13 @@ class sculptSymmetryX(bpy.types.Operator):
             context.tool_settings.sculpt.use_symmetry_x = True
         
         return {"FINISHED"}
+
+
+
+
+################################################### 
+# Add sculpt Symmetry
+################################################### 
 
 class sculptSymmetryY(bpy.types.Operator):
     """Enable Y-axis symmetry"""
@@ -142,6 +198,7 @@ class sculptSymmetryZ(bpy.types.Operator):
 ######### Register and unregister the operators ###########
 
 def register():
+    bpy.utils.register_class(addMirror)
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(applyRemesh)
     bpy.utils.register_class(smoothRemesh)
@@ -151,9 +208,10 @@ def register():
 
     
 def unregister():
+    bpy.utils.unregister_class(addMirror)
     bpy.utils.unregister_class(applySubsurf)
     bpy.utils.unregister_class(applyRemesh)
-    bpy.utils.register_class(smoothRemesh)
+    bpy.utils.unregister_class(smoothRemesh)
     bpy.utils.unregister_class(sculptSymmetryX)
     bpy.utils.unregister_class(sculptSymmetryY)
     bpy.utils.unregister_class(sculptSymmetryZ)

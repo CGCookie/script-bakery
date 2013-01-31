@@ -2,7 +2,7 @@ bl_info = {
     "name": "Jay's Tools",
     "description": "A series of tools and menus to enhance and speed up workflow",
     "author": "Jonathan Williamson",
-    "version": (0, 1),
+    "version": (0, 3),
     "blender": (2, 6, 6),
     "location": "View3D - 'Q' key gives a menu in Object, Edit, and Sculpt modes.",
     "warning": '',  # used for warning icon and text in addons panel
@@ -19,16 +19,18 @@ if "bpy" in locals():
     imp.reload(jay_operators)
     imp.reload(jay_object_mode)
     imp.reload(jay_sculpt_mode)
+    imp.reload(jay_edit_mode)
     print("Reloaded multifiles")
 	
 else:
-    from . import jay_operators, jay_object_mode, jay_sculpt_mode
+    from . import jay_operators, jay_object_mode, jay_sculpt_mode, jay_edit_mode
     
     print("Imported multifiles")
 
 import jay_operators
 import jay_sculpt_mode
 import jay_object_mode
+import jay_edit_mode
 
 import bpy
 
@@ -37,6 +39,7 @@ import bpy
 def register():
    jay_operators.register()
    jay_object_mode.register()
+   jay_edit_mode.register()
    jay_sculpt_mode.register()
    
    bpy.utils.register_module(__name__)
