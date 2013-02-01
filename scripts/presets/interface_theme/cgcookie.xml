@@ -225,16 +225,16 @@
       </ThemeUserInterface>
     </user_interface>
     <view_3d>
-      <ThemeView3D grid="#3c3c3c"
+      <ThemeView3D grid="#424242"
                    wire="#000000"
                    lamp="#00000028"
                    speaker="#000000"
                    camera="#000000"
                    empty="#000000"
-                   object_selected="#744e2a"
+                   object_selected="#a8663d"
                    object_active="#c28d45"
-                   object_grouped="#0a3d0a"
-                   object_grouped_active="#55bb55"
+                   object_grouped="#106410"
+                   object_grouped_active="#5bc85b"
                    transform="#ffffff"
                    vertex="#a8a8a8"
                    vertex_select="#c28d45"
@@ -660,7 +660,7 @@
                        converter_node="#686a75"
                        operator_node="#6c696f"
                        group_node="#69756e"
-                       frame_node="#00000000"
+                       frame_node="#00000033"
                        matte_node="#000000"
                        distor_node="#000000"
                        noodle_curving="0">
