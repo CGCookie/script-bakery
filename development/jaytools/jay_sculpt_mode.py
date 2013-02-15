@@ -25,6 +25,12 @@ class SculptTools(bpy.types.Menu):
         layout.operator("sculpt.symmetry_y")
         layout.operator("sculpt.symmetry_z")     
 
+        layout.separator()
+        
+        layout.operator("sculpt.axislock_x", icon='MANIPUL')
+        layout.operator("sculpt.axislock_y")
+        layout.operator("sculpt.axislock_z")
+
 
 
 ### ------------ New Hotkeys and registration ------------ ###   

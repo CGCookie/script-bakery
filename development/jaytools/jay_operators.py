@@ -185,12 +185,6 @@ class sculptSymmetryX(bpy.types.Operator):
         return {"FINISHED"}
 
 
-
-
-################################################### 
-# Add sculpt Symmetry
-################################################### 
-
 class sculptSymmetryY(bpy.types.Operator):
     """Enable Y-axis symmetry"""
     bl_label = "Toggle Y-axis Symmetry"
@@ -219,7 +213,59 @@ class sculptSymmetryZ(bpy.types.Operator):
         else:
             context.tool_settings.sculpt.use_symmetry_z = True
         
-        return {"FINISHED"}       
+        return {"FINISHED"}     
+    
+################################################### 
+# Creating operators for toggling Axis Locks
+################################################### 
+
+class sculptAxisLockX(bpy.types.Operator):
+    """Toggle X-axis Locking"""
+    bl_label = "Toggle X-axis Lock"
+    bl_idname = "sculpt.axislock_x"
+    
+    def execute(self, context):
+       
+       # checks the current state of x-axis symmetry then toggles it. 
+        axisLock_x = bpy.context.tool_settings.sculpt.lock_x
+        if axisLock_x:
+            context.tool_settings.sculpt.lock_x = False
+        else:
+            context.tool_settings.sculpt.lock_x = True
+        
+        return {"FINISHED"}      
+    
+class sculptAxisLockY(bpy.types.Operator):
+    """Toggle Y-axis Locking"""
+    bl_label = "Toggle Y-axis Lock"
+    bl_idname = "sculpt.axislock_y"
+    
+    def execute(self, context):
+       
+       # checks the current state of y-axis lock then toggles it. 
+        axisLock_y = bpy.context.tool_settings.sculpt.lock_y
+        if axisLock_y:
+            context.tool_settings.sculpt.lock_y = False
+        else:
+            context.tool_settings.sculpt.lock_y = True
+        
+        return {"FINISHED"}    
+    
+class sculptAxisLockZ(bpy.types.Operator):
+    """Toggle Z-axis Locking"""
+    bl_label = "Toggle Z-axis Lock"
+    bl_idname = "sculpt.axislock_z"
+    
+    def execute(self, context):
+       
+       # checks the current state of z-axis lock then toggles it. 
+        axisLock_z = bpy.context.tool_settings.sculpt.lock_z
+        if axisLock_z:
+            context.tool_settings.sculpt.lock_z = False
+        else:
+            context.tool_settings.sculpt.lock_z = True
+        
+        return {"FINISHED"}    
 
 
 ######### Register and unregister the operators ###########
@@ -233,6 +279,9 @@ def register():
     bpy.utils.register_class(sculptSymmetryX)
     bpy.utils.register_class(sculptSymmetryY)
     bpy.utils.register_class(sculptSymmetryZ)
+    bpy.utils.register_class(sculptAxisLockX)
+    bpy.utils.register_class(sculptAxisLockY)
+    bpy.utils.register_class(sculptAxisLockZ)
 
     
 def unregister():
@@ -244,6 +293,9 @@ def unregister():
     bpy.utils.unregister_class(sculptSymmetryX)
     bpy.utils.unregister_class(sculptSymmetryY)
     bpy.utils.unregister_class(sculptSymmetryZ)
+    bpy.utils.unregister_class(sculptAxisLockX)
+    bpy.utils.unregister_class(sculptAxisLockY)
+    bpy.utils.unregister_class(sculptAxisLockZ)
 
     
 if __name__ == "__main__":
