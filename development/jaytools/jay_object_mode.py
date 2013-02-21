@@ -36,6 +36,7 @@ class JWObjectTools(bpy.types.Menu):
                 
         layout.operator_menu_enum("object.modifier_add", "type",
                                       icon='MODIFIER') 
+        layout.operator("object.apply_modifiers")
         
         layout.separator() 
                 
