@@ -1,9 +1,9 @@
 bl_info = {
     "name": "Boolean Operators",
-    #"location": "View3D > Add > Mesh > Add SubD Cube",
+    "location": "View3D > Toolbar",
     "description": "Add Boolean Operators",
     "author": "Jonathan Williamson",
-    "version": (0,1),
+    "version": (0,2),
     "blender": (2, 6, 6),
     "category": "3D View",
     }
@@ -14,7 +14,7 @@ import bpy
 ###------ Create Boolean Operators -------###
    
 class boolean(bpy.types.Operator):
-    """Boolean Selection"""
+    """Boolean the currently selected objects"""
     bl_idname = "mesh.boolean"
     bl_label = "Boolean Operator"
     bl_options = {'REGISTER', 'UNDO'}     
@@ -53,29 +53,29 @@ class boolean(bpy.types.Operator):
         return {"FINISHED"}     
 
 
-###------- Create the Boolean Menu                   --------###          
+###------- Create the Boolean Menu --------###          
 
 class booleanMenu(bpy.types.Menu):
-    bl_label = "Boolean Operators"
+    bl_label = "Boolean Tools"
     bl_idname = "object.boolean_menu"
        
     def draw(self, context):
         layout = self.layout
         
-        union = layout.operator("mesh.boolean", "Union Boolean")
+        union = layout.operator("mesh.boolean", "Union")
         union.modOp = 'UNION'
         
-        intersect = layout.operator("mesh.boolean", "Intersect Boolean")
+        intersect = layout.operator("mesh.boolean", "Intersect")
         intersect.modOp = 'INTERSECT'
         
-        difference = layout.operator("mesh.boolean", "Difference Boolean")
+        difference = layout.operator("mesh.boolean", "Difference")
         difference.modOp = 'DIFFERENCE'
 
 
-###------- Create the Boolean Toolbar                --------###          
+###------- Create the Boolean Toolbar --------###          
 
 class booleanToolbar(bpy.types.Panel):
-    bl_label = "Boolean Operators"
+    bl_label = "Boolean Tools"
     bl_idname = "object.boolean_toolbar"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
@@ -83,16 +83,19 @@ class booleanToolbar(bpy.types.Panel):
     
     def draw(self, context):
         layout = self.layout
+        
         col = layout.column(align=True)
         
-         
-        union = col.operator("mesh.boolean", "Union")
+        col.label(text="Operation:", icon="MOD_BOOLEAN")
+        
+        row = col.row()
+        union = row.operator("mesh.boolean", "Union")
         union.modOp = 'UNION'
         
-        intersect = col.operator("mesh.boolean", "Intersect")
+        intersect = row.operator("mesh.boolean", "Intersect")
         intersect.modOp = 'INTERSECT'
         
-        difference = col.operator("mesh.boolean", "Difference")
+        difference = row.operator("mesh.boolean", "Difference")
         difference.modOp = 'DIFFERENCE'
     
 ###------- Define the Hotkeys and Register Operators ---------###
