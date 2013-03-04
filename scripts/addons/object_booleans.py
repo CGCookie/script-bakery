@@ -3,12 +3,13 @@ bl_info = {
     "location": "View3D > Toolbar",
     "description": "Add Boolean Operators",
     "author": "Jonathan Williamson",
-    "version": (0,2),
+    "version": (0,3),
     "blender": (2, 6, 6),
     "category": "3D View",
     }
 
 import bpy
+
 
 
 ###------ Create Boolean Operators -------###
@@ -22,33 +23,40 @@ class boolean(bpy.types.Operator):
     modOp = bpy.props.StringProperty()
             
     def execute(self, context):
-        
-        
+         
         modName = "Bool"
     
         activeObj = context.active_object
         selected = context.selected_objects
 
-        for ob in selected:
-            if ob != bpy.context.active_object:
-                nonActive = ob
+        if selected:
+            if len(selected) > 1:
+                if len(selected) == 2:
+                    for ob in selected:
+                        if ob != bpy.context.active_object:
+                            nonActive = ob
+    
+                    bpy.ops.object.modifier_add(type="BOOLEAN")   
+                    activeMod = bpy.context.active_object.modifiers
                     
-        bpy.ops.object.modifier_add(type="BOOLEAN")   
-        activeMod = bpy.context.active_object.modifiers
-        
-        
-        for mod in activeObj.modifiers:
-            if mod.type == 'BOOLEAN':
-                activeMod[mod.name].operation = self.modOp
-                activeMod[mod.name].object = nonActive
-                activeMod[mod.name].name = modName
-        
-        bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modName)
-        bpy.context.scene.objects.active = nonActive 
-        activeObj.select = False
-        bpy.ops.object.delete(use_global=False)
-        activeObj.select = True
-        bpy.context.scene.objects.active = activeObj
+                    for mod in activeObj.modifiers:
+                        if mod.type == 'BOOLEAN':
+                            activeMod[mod.name].operation = self.modOp
+                            activeMod[mod.name].object = nonActive
+                            activeMod[mod.name].name = modName
+                    
+                    bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modName)
+                    bpy.context.scene.objects.active = nonActive 
+                    activeObj.select = False
+                    bpy.ops.object.delete(use_global=False)
+                    activeObj.select = True
+                    bpy.context.scene.objects.active = activeObj
+                else:
+                    self.report({'INFO'}, "Select only 2 objects at a time")
+            else:
+                self.report({'INFO'}, "Only 1 object selected")
+        else:
+            self.report({'INFO'}, "No objects selected")
                 
         return {"FINISHED"}     
 
