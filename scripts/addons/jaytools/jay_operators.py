@@ -18,15 +18,13 @@ class addSubsurf(bpy.types.Operator):
         
         obj = context.active_object
         
-        activeMod = bpy.context.active_object.modifiers
-        
         bpy.ops.object.modifier_add(type='SUBSURF')
         print("Added Subsurf Modifier")
         
         for mod in obj.modifiers:
             if mod.type == 'SUBSURF':
-                activeMod[mod.name].show_only_control_edges = True
-                activeMod[mod.name].levels = 2
+                mod.show_only_control_edges = True
+                mod.levels = 2
                 
         return {"FINISHED"}
         
@@ -41,21 +39,26 @@ class addMirror(bpy.types.Operator):
     bl_idname = "object.add_mirror"
     bl_options = {'REGISTER', 'UNDO'}
        
+    
+    # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    # Add the modifier
     def execute(self, context):
               
         #check for active object
         obj = context.active_object
         
-        activeMod = bpy.context.active_object.modifiers
-        
         bpy.ops.object.modifier_add(type='MIRROR')
         print("Added Mirror Modifier")
         
         
-        # If any mirror modifiers exist on object, add clipping to them.
+        # Find the added mofieir and enable clipping
         for mod in obj.modifiers:
             if mod.type == 'MIRROR':
-                activeMod[mod.name].use_clip=True
+                mod.use_clip=True
         
         return {"FINISHED"}
     
@@ -161,6 +164,44 @@ class applyRemesh(bpy.types.Operator):
         
         return {"FINISHED"}
     
+    
+################################################### 
+# Apply all modifiers   
+################################################### 
+
+class applyModifiers(bpy.types.Operator):
+    """Apply all modifiers"""
+    bl_label = "Apply All Modifiers"
+    bl_idname = "object.apply_modifiers"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+
+    @classmethod    
+    def poll(cls, context):
+       
+       # get the active object
+       obj = context.active_object
+       
+       # test if there's an active object
+       if obj:
+           
+           # check for modifiers
+           if obj.modifiers:
+               return True
+       return False
+   
+    def execute(self, context):
+        
+        #check for active object
+        obj = context.active_object
+        
+        applyModifier = bpy.ops.object.modifier_apply
+        
+        # If any modifiers exist on object, apply them.
+        for mod in obj.modifiers:
+            applyModifier(apply_as='DATA', modifier=mod.name)
+        
+        return {"FINISHED"}    
 
 
     
@@ -265,7 +306,35 @@ class sculptAxisLockZ(bpy.types.Operator):
         else:
             context.tool_settings.sculpt.lock_z = True
         
-        return {"FINISHED"}    
+        return {"FINISHED"}   
+    
+class sculptCollapseShortEdges(bpy.types.Operator):
+    """"Toggle Collapse Short Edges Option"""
+    bl_label = "Toggle Collapse Short Edges"
+    bl_idname = "sculpt.collapse_short_edges"
+    
+    # test if it is possible to toggle short edge collapse
+    @classmethod    
+    def poll(cls, context):
+       
+       # get the active object
+       dyntopo = bpy.context.sculpt_object.use_dynamic_topology_sculpting
+       
+       # test if there's an active object
+       if dyntopo:
+           context.sculpt_object.use_dynamic_topology_sculpting = False
+           return True
+       return False
+   
+    def execute(self, context):
+        
+        shortEdges = bpy.context.scene.tool_settings.sculpt.use_edge_collapse
+        if shortEdges:
+            context.scene.tool_settings.sculpt.use_edge_collapse = False
+        else:
+            context.scene.tool_settings.sculpt.use_edge_collapse = True
+            
+        return {"FINISHED"}
 
 
 ######### Register and unregister the operators ###########
@@ -275,6 +344,7 @@ def register():
     bpy.utils.register_class(addMirror)
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(applyRemesh)
+    bpy.utils.register_class(applyModifiers)
     bpy.utils.register_class(smoothRemesh)
     bpy.utils.register_class(sculptSymmetryX)
     bpy.utils.register_class(sculptSymmetryY)
@@ -282,6 +352,7 @@ def register():
     bpy.utils.register_class(sculptAxisLockX)
     bpy.utils.register_class(sculptAxisLockY)
     bpy.utils.register_class(sculptAxisLockZ)
+    bpy.utils.register_class(sculptCollapseShortEdges)
 
     
 def unregister():
@@ -289,6 +360,7 @@ def unregister():
     bpy.utils.unregister_class(addMirror)
     bpy.utils.unregister_class(applySubsurf)
     bpy.utils.unregister_class(applyRemesh)
+    bpy.utils.unregister_class(applyModifiers)
     bpy.utils.unregister_class(smoothRemesh)
     bpy.utils.unregister_class(sculptSymmetryX)
     bpy.utils.unregister_class(sculptSymmetryY)
@@ -296,6 +368,8 @@ def unregister():
     bpy.utils.unregister_class(sculptAxisLockX)
     bpy.utils.unregister_class(sculptAxisLockY)
     bpy.utils.unregister_class(sculptAxisLockZ)
+    bpy.utils.unregister_class(sculptCollapseShortEdges)
+    
 
     
 if __name__ == "__main__":

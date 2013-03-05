@@ -12,19 +12,20 @@ class JWMeshTools(bpy.types.Menu):
         layout = self.layout
         layout.operator_context = 'INVOKE_REGION_WIN'
         
+        layout.operator("gpencil.surfsk_add_surface", 'Add BSurface', icon='OUTLINER_OB_SURFACE')
+        layout.operator("mesh.bridge_edge_loops")
+                
+        layout.separator()
+        
+        layout.operator("mesh.bevel")
         layout.operator("mesh.inset").use_boundary=False
         layout.operator("mesh.subdivide")
         
         layout.separator()
         
         layout.operator("mesh.knife_tool", icon='SCULPTMODE_HLT')
-        layout.operator("mesh.bridge_edge_loops")
         layout.operator("mesh.vert_connect")
         
-        layout.separator()
-        
-        layout.operator("gpencil.surfsk_add_surface", 'Add BSurface', icon='OUTLINER_OB_SURFACE')
-                
         layout.separator()
         
         layout.operator("transform.edge_slide", icon='EDGESEL')

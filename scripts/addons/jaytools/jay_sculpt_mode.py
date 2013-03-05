@@ -11,6 +11,11 @@ class SculptTools(bpy.types.Menu):
     def draw(self, context):
         layout = self.layout
         
+        layout.operator("sculpt.dynamic_topology_toggle", 'Dynamic Topology',)
+        layout.operator("sculpt.collapse_short_edges", 'Collapse Short Edges',)
+        
+        layout.separator()
+        
         layout.operator("object.modifier_add", 'Add Subsurf', icon='MOD_SUBSURF').type='SUBSURF'
         layout.operator("object.apply_subsurf", 'Apply Subsurf')
         
