@@ -18,15 +18,13 @@ class addSubsurf(bpy.types.Operator):
         
         obj = context.active_object
         
-        activeMod = bpy.context.active_object.modifiers
-        
         bpy.ops.object.modifier_add(type='SUBSURF')
         print("Added Subsurf Modifier")
         
         for mod in obj.modifiers:
             if mod.type == 'SUBSURF':
-                activeMod[mod.name].show_only_control_edges = True
-                activeMod[mod.name].levels = 2
+                mod.show_only_control_edges = True
+                mod.levels = 2
                 
         return {"FINISHED"}
         
@@ -41,21 +39,26 @@ class addMirror(bpy.types.Operator):
     bl_idname = "object.add_mirror"
     bl_options = {'REGISTER', 'UNDO'}
        
+    
+    # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    # Add the modifier
     def execute(self, context):
               
         #check for active object
         obj = context.active_object
         
-        activeMod = bpy.context.active_object.modifiers
-        
         bpy.ops.object.modifier_add(type='MIRROR')
         print("Added Mirror Modifier")
         
         
-        # If any mirror modifiers exist on object, add clipping to them.
+        # Find the added mofieir and enable clipping
         for mod in obj.modifiers:
             if mod.type == 'MIRROR':
-                activeMod[mod.name].use_clip=True
+                mod.use_clip=True
         
         return {"FINISHED"}
     
@@ -172,21 +175,21 @@ class applyModifiers(bpy.types.Operator):
     bl_idname = "object.apply_modifiers"
     bl_options = {'REGISTER', 'UNDO'}
     
-    # test if it is possible to apply a remesh modifier
-#    @classmethod    
-#    def poll(cls, context):
-#       
-#       # get the active object
-#       obj = context.active_object
-#       
-#       # test if there's an active object
-#       if obj:
-#           
-#           # find modifiers
-#           for mod in obj.modifiers:
-#               return True
-#       return False
-    
+
+    @classmethod    
+    def poll(cls, context):
+       
+       # get the active object
+       obj = context.active_object
+       
+       # test if there's an active object
+       if obj:
+           
+           # check for modifiers
+           if obj.modifiers:
+               return True
+       return False
+   
     def execute(self, context):
         
         #check for active object
