@@ -1,16 +1,18 @@
 bl_info = {
     "name": "Boolean Operators",
     "location": "View3D > Toolbar",
-    "description": "Add Boolean Operators",
+    "description": "Add Boolean Tools for running boolean operations on two selected objects.",
     "author": "Jonathan Williamson",
-    "version": (0,3),
+    "version": (0,4),
     "blender": (2, 6, 6),
+    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/3D_interaction/booleanoperators",
+    "tracker_url": "http://projects.blender.org/tracker/index.php?func=detail&aid=34502&group_id=153&atid=467",
     "category": "3D View",
     }
 
 import bpy
 
-
+scene = bpy.context.scene
 
 ###------ Create Boolean Operators -------###
    
@@ -33,24 +35,23 @@ class boolean(bpy.types.Operator):
             if len(selected) > 1:
                 if len(selected) == 2:
                     for ob in selected:
-                        if ob != bpy.context.active_object:
+                        if ob != activeObj:
                             nonActive = ob
     
                     bpy.ops.object.modifier_add(type="BOOLEAN")   
-                    activeMod = bpy.context.active_object.modifiers
                     
                     for mod in activeObj.modifiers:
                         if mod.type == 'BOOLEAN':
-                            activeMod[mod.name].operation = self.modOp
-                            activeMod[mod.name].object = nonActive
-                            activeMod[mod.name].name = modName
+                            mod.operation = self.modOp
+                            mod.object = nonActive
+                            mod.name = modName
                     
                     bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modName)
-                    bpy.context.scene.objects.active = nonActive 
+                    scene.objects.active = nonActive 
                     activeObj.select = False
                     bpy.ops.object.delete(use_global=False)
                     activeObj.select = True
-                    bpy.context.scene.objects.active = activeObj
+                    scene.objects.active = activeObj
                 else:
                     self.report({'INFO'}, "Select only 2 objects at a time")
             else:
@@ -122,7 +123,6 @@ def register():
     km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
     kmi = km.keymap_items.new('wm.call_menu', 'B', 'PRESS', ctrl=True, shift=True)
     kmi.properties.name = 'object.boolean_menu'
-
 
     addon_keymaps.append(km)
     
