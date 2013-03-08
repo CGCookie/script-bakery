@@ -7,7 +7,7 @@ bl_info = {
     "location": "View3D - 'Q' key gives a menu in Object, Edit, and Sculpt modes.",
     "warning": '',  # used for warning icon and text in addons panel
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/3D_interaction/jaytools",
-    "tracker_url": "http://projects.blender.org/tracker/index.php?func=detail&aid=34482&group_id=153&atid=467",
+    "tracker_url": "https://github.com/CGCookie/script-bakery/issues?labels=Jay+Tools&page=1&state=open",
     "category": "3D View"}
 
 import sys, os
