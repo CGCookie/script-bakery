@@ -2,6 +2,49 @@ import bpy
 
 ### ------------ New Operators ------------ ###
 
+        
+################################################### 
+# Add empty at cursor, making it inactively selected   
+################################################### 
+class addEmpty(bpy.types.Operator):
+    """Add a unactive Empty Object as a modifier target"""
+    bl_label = "Add a unactive Empty Object"""
+    bl_idname = "object.empty_add_unactive"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    def execute(self, context):
+        scene = context.scene
+        # Get the currently active object
+        activeObj = context.active_object
+        
+        # Store the current object
+        currentObj = activeObj
+        
+        # Add an empty and store the selected objects
+        bpy.ops.object.empty_add(type='PLAIN_AXES')
+        selectedObj = context.selected_objects
+        
+        # Check if a mirror modifier exists, if it does then assign the empty
+        for mod in currentObj.modifiers:
+            if mod.type == 'MIRROR':
+                for obj in selectedObj:
+                    if obj.type == 'EMPTY':
+                        mod.mirror_object = bpy.data.objects[obj.name]
+                        obj.select = False
+                    else:
+                        break
+            else:
+                break     
+
+        # Select the previously stored current object and make it active                    
+        scene.objects.active = currentObj
+        currentObj.select = True
+     
+        return {"FINISHED"}
 
         
 ################################################### 
@@ -13,6 +56,10 @@ class addSubsurf(bpy.types.Operator):
     bl_label = "Add a Subsurf Modifier"
     bl_idname = "object.add_subsurf"
     bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
     
     def execute(self, context):
         
@@ -34,7 +81,7 @@ class addSubsurf(bpy.types.Operator):
 ################################################### 
     
 class addMirror(bpy.types.Operator):
-    """Add a Mirror modifier with clipping"""
+    """Add a Mirror modifier with clipping, use 2nd selected object as Mirror center"""
     bl_label = "Add Mirror Modifier"
     bl_idname = "object.add_mirror"
     bl_options = {'REGISTER', 'UNDO'}
@@ -48,18 +95,62 @@ class addMirror(bpy.types.Operator):
     # Add the modifier
     def execute(self, context):
               
-        #check for active object
-        obj = context.active_object
+        scene = bpy.context.scene
         
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Find all selected objects
+        targetObj = context.selected_objects
+        
+        # Add a mirror modifier
         bpy.ops.object.modifier_add(type='MIRROR')
-        print("Added Mirror Modifier")
+                
+        # Store the mesh object
+        selectedObj = activeObj
+        print("Selected:", selectedObj)
+        print("Active:", activeObj)
         
         
-        # Find the added mofieir and enable clipping
-        for mod in obj.modifiers:
+        useMirrorObj = False
+        
+        # If an second object is not selected, don't use mirror object
+        if len(targetObj) > 1:
+            useMirrorObj = True
+            
+        ### No long needed, used for auto-creation of the mirror empty    
+#            if not [obj for obj in targetObj if obj.type == 'EMPTY']:
+#                bpy.ops.object.empty_add(type='PLAIN_AXES')
+
+        # Make the targetObj active
+        try:
+            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
+        except:
+            pass
+        
+        print("Scene Active:", scene.objects.active)
+                
+        # Check for active object
+        activeObj = context.active_object
+        print("Active:", activeObj)
+        
+        # Swap the selected and active objects
+        (selectedObj, activeObj) = (activeObj, selectedObj)
+        print("Swapped Active:", activeObj)
+        print("Swapped Selected:", selectedObj)
+        
+        # Deselect the empty object and select the mesh object again, making it active
+        selectedObj.select = False
+        activeObj.select = True
+        scene.objects.active = activeObj
+        
+        # Find the added modifier, enable clipping, set the mirror object
+        for mod in activeObj.modifiers:
             if mod.type == 'MIRROR':
-                mod.use_clip=True
-        
+                mod.use_clip = True
+                if useMirrorObj == True:
+                    mod.mirror_object = bpy.data.objects[selectedObj.name]      
+
         return {"FINISHED"}
     
 
@@ -74,17 +165,17 @@ class applySubsurf(bpy.types.Operator):
     bl_idname = "object.apply_subsurf"
     bl_options = {'REGISTER', 'UNDO'}
     
-    # test if it is possible to apply a subsurf modifier, thanks to Richard Van Der Oost
+    # Test if it is possible to apply a subsurf modifier, thanks to Richard Van Der Oost
     @classmethod    
     def poll(cls, context):
        
-       # get the active object
+       # Get the active object
        obj = context.active_object
        
-       # test if there's an active object
+       # Test if there's an active object
        if obj:
            
-           # find modifiers with "SUBSURF" type
+           # Find modifiers with "SUBSURF" type
            for mod in obj.modifiers:
                if mod.type == 'SUBSURF':
                    return True
@@ -166,40 +257,34 @@ class applyRemesh(bpy.types.Operator):
     
     
 ################################################### 
-# Apply all modifiers   
+# Apply all modifiers on the active object
 ################################################### 
 
 class applyModifiers(bpy.types.Operator):
-    """Apply all modifiers"""
+    """Apply all modifiers on selected objects"""
     bl_label = "Apply All Modifiers"
     bl_idname = "object.apply_modifiers"
     bl_options = {'REGISTER', 'UNDO'}
     
-
-    @classmethod    
+    @classmethod
     def poll(cls, context):
-       
-       # get the active object
-       obj = context.active_object
-       
-       # test if there's an active object
-       if obj:
-           
-           # check for modifiers
-           if obj.modifiers:
-               return True
-       return False
+        return len(context.selected_objects) > 0
    
     def execute(self, context):
         
-        #check for active object
-        obj = context.active_object
+        # find all selected objects
+        sel = context.selected_objects
         
         applyModifier = bpy.ops.object.modifier_apply
         
-        # If any modifiers exist on object, apply them.
-        for mod in obj.modifiers:
-            applyModifier(apply_as='DATA', modifier=mod.name)
+        # loop through all selected objects
+        for obj in sel:
+            # set the current object in the loop to active
+            bpy.context.scene.objects.active = obj
+            
+            # If any modifiers exist on current object object, apply them.
+            for mod in obj.modifiers:
+                applyModifier(apply_as='DATA', modifier=mod.name)
         
         return {"FINISHED"}    
 
@@ -340,6 +425,7 @@ class sculptCollapseShortEdges(bpy.types.Operator):
 ######### Register and unregister the operators ###########
 
 def register():
+    bpy.utils.register_class(addEmpty)
     bpy.utils.register_class(addSubsurf)
     bpy.utils.register_class(addMirror)
     bpy.utils.register_class(applySubsurf)
@@ -356,6 +442,7 @@ def register():
 
     
 def unregister():
+    bpy.utils.unregister_class(addEmpty)
     bpy.utils.unregister_class(addSubsurf)
     bpy.utils.unregister_class(addMirror)
     bpy.utils.unregister_class(applySubsurf)

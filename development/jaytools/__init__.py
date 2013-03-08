@@ -2,7 +2,7 @@ bl_info = {
     "name": "Jay's Tools",
     "description": "A series of tools and menus to enhance and speed up workflow",
     "author": "Jonathan Williamson",
-    "version": (0, 4),
+    "version": (0, 5),
     "blender": (2, 6, 6),
     "location": "View3D - 'Q' key gives a menu in Object, Edit, and Sculpt modes.",
     "warning": '',  # used for warning icon and text in addons panel
