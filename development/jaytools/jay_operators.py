@@ -7,14 +7,10 @@ import bpy
 # Add empty at cursor, making it inactively selected   
 ################################################### 
 class addEmpty(bpy.types.Operator):
-    """Add a unactive Empty Object as a modifier target"""
-    bl_label = "Add a unactive Empty Object"""
+    """Add an inactive, selected Empty Object as a modifier target"""
+    bl_label = "Add an unactive Empty Object"""
     bl_idname = "object.empty_add_unactive"
     bl_options = {'REGISTER', 'UNDO'}
-    
-    @classmethod
-    def poll(cls, context):
-        return len(context.selected_objects) > 0
     
     def execute(self, context):
         scene = context.scene
@@ -34,11 +30,7 @@ class addEmpty(bpy.types.Operator):
                 for obj in selectedObj:
                     if obj.type == 'EMPTY':
                         mod.mirror_object = bpy.data.objects[obj.name]
-                        obj.select = False
-                    else:
-                        break
-            else:
-                break     
+                        obj.select = False    
 
         # Select the previously stored current object and make it active                    
         scene.objects.active = currentObj
