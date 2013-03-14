@@ -1,5 +1,4 @@
-#script template by Alex Telford | www.metalix.co.nz
-#script by Your Alex Telford | www.metalix.co.nz
+#script by Your Alex Telford | www.blendercookie.com
 #Description:
 #Rotates the pivot of an object without effecting the object itself, caution: slow on heavy objects.
 bl_info = {
