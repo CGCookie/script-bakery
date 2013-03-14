@@ -2,7 +2,7 @@
 #Description:
 #Rotates the pivot of an object without effecting the object itself, caution: slow on heavy objects.
 bl_info = {
-    "name": "Script Name",
+    "name": "Rotate Pivot",
     "author": "Alex Telford",
     "version": (0, 1),
     "blender": (2, 6, 6),
