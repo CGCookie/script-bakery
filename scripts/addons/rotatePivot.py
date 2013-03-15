@@ -4,7 +4,7 @@
 bl_info = {
     "name": "Rotate Pivot",
     "author": "Alex Telford",
-    "version": (0, 1),
+    "version": (0, 3),
     "blender": (2, 6, 6),
     "location": "View3D > Toolshelf",
     "description": "Rotate the pivot of an object",
@@ -26,13 +26,18 @@ class rotatePivotInit(bpy.types.Panel):
     def poll(self, context):
        return(bpy.context.mode == 'OBJECT')
 
+    #check box
+    bpy.types.Scene.applyRotationFirst= BoolProperty(
+        name = "Apply Rotation", 
+        description = "Apply Rotation before rotating",
+        default = True)
+        
     def draw(self, context):
         obj = context.object
         scn = context.scene
         
         layout = self.layout
         col = layout.column()
-        
         #try to layout, otherwise say something else
         try:
             selected = bpy.context.scene.objects.active.name
@@ -45,6 +50,9 @@ class rotatePivotInit(bpy.types.Panel):
             for ob in bpy.context.selected_objects:
                 if ob != bpy.context.scene.objects.active:
                     col.label('>>'+ob.name)
+            
+            col.label("Apply initial rotation")
+            col.prop(scn, "applyRotationFirst", text = '')
             #execute button
             layout.operator("copyrotation.toselected")
         except:
@@ -66,13 +74,18 @@ class OBJECT_OT_rotatePivot(bpy.types.Operator):
         selection = bpy.context.selected_objects
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
+        pivotPoint = context.space_data.pivot_point
+        context.space_data.pivot_point = "CURSOR"
         for ob in selection:
             if ob != active:
                 print(ob)
                 bpy.context.scene.objects.active = ob
                 ob.select = True
+                if scn.applyRotationFirst == True:
+                    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
                 rotatePivot(active.rotation_euler)
                 bpy.ops.object.select_all(action='DESELECT')
+        context.space_data.pivot_point = pivotPoint
         #warnings use this context if you need them, here we just print the stuff
         self.report({'INFO'}, "Done!")
         
@@ -82,17 +95,17 @@ class OBJECT_OT_rotatePivot(bpy.types.Operator):
 def rotatePivot(rotation):
     #rotate selected object based on a vector
     bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.transform.rotate(value=rotation.x, axis=(1,0,0))
+    bpy.ops.transform.rotate(value=rotation.x, axis=(1,0,0), constraint_orientation='GLOBAL')
     bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.transform.rotate(value=-rotation.x, axis=(1,0,0))
+    bpy.ops.transform.rotate(value=-rotation.x, axis=(1,0,0), constraint_orientation='GLOBAL')
     bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.transform.rotate(value=rotation.y, axis=(0,1,0))
+    bpy.ops.transform.rotate(value=rotation.y, axis=(0,1,0), constraint_orientation='GLOBAL')
     bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.transform.rotate(value=-rotation.y, axis=(0,1,0))
+    bpy.ops.transform.rotate(value=-rotation.y, axis=(0,1,0), constraint_orientation='GLOBAL')
     bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.transform.rotate(value=rotation.z, axis=(0,0,1))
+    bpy.ops.transform.rotate(value=rotation.z, axis=(0,0,1), constraint_orientation='GLOBAL')
     bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.transform.rotate(value=-rotation.z, axis=(0,0,1))
+    bpy.ops.transform.rotate(value=-rotation.z, axis=(0,0,1), constraint_orientation='GLOBAL')
     bpy.ops.object.mode_set(mode='OBJECT')
 
 def register():
