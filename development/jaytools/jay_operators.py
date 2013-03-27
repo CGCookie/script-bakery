@@ -26,7 +26,7 @@ class addTarget(bpy.types.Operator):
             if obj.type == 'EMPTY':
                 break
             elif obj.type != 'EMPTY':
-                bpy.ops.object.empty_add(type='PLAIN_AXES', name='Target')
+                bpy.ops.object.empty_add(type='PLAIN_AXES')
                 selectedObj = context.selected_objects
             
         # Check if a mirror modifier exists, if it does then assign the empty
@@ -265,7 +265,7 @@ class applyModifiers(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
-        return len(context.selected_objects) > 0
+        return len(context.selected_objects) > 0 and len(context.active_object.modifiers) > 0
    
     def execute(self, context):
         

@@ -24,6 +24,8 @@ class SculptTools(bpy.types.Menu):
         layout.operator("object.smooth_remesh", 'Remesh Modifier', icon='MOD_REMESH')
         layout.operator("object.apply_remesh", 'Apply Remesh')
         
+        layout.operator("object.apply_modifiers", 'Apply All Modifiers')
+        
         layout.separator()
         
         layout.operator("sculpt.symmetry_x", icon='MOD_MIRROR')
