@@ -193,10 +193,10 @@ class OBJECT_OT_allEdgesToggle(bpy.types.Operator):
                 if ob.type == "MESH":
                     mesh = ob.data
                     if toggle == 1:
-                        mesh.show_all_edges = False
+                        ob.show_all_edges = False
                         ob.show_wire = False
                     if toggle == 0:
-                        mesh.show_all_edges = True
+                        ob.show_all_edges = True
                         ob.show_wire = True
                         scn.objects.active = ob
                         #if bpy.ops.object.mode_set.poll():
