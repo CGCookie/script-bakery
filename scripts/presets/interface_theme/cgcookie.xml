@@ -117,7 +117,7 @@
           </ThemeWidgetColors>
         </wcol_box>
         <wcol_menu>
-          <ThemeWidgetColors outline="#151515"
+          <ThemeWidgetColors outline="#000000"
                              inner="#2f2f2fff"
                              inner_sel="#464646ff"
                              item="#919191ff"
@@ -130,7 +130,7 @@
         </wcol_menu>
         <wcol_pulldown>
           <ThemeWidgetColors outline="#000000"
-                             inner="#3f3f3fff"
+                             inner="#3b3b3bff"
                              inner_sel="#c28d45ff"
                              item="#ffffffff"
                              text="#b8b8b8"
@@ -142,7 +142,7 @@
         </wcol_pulldown>
         <wcol_menu_back>
           <ThemeWidgetColors outline="#000000"
-                             inner="#3b3b3bff"
+                             inner="#3b3b3bcc"
                              inner_sel="#2d2d2de6"
                              item="#646464ff"
                              text="#b8b8b8"
@@ -225,7 +225,7 @@
       </ThemeUserInterface>
     </user_interface>
     <view_3d>
-      <ThemeView3D grid="#424242"
+      <ThemeView3D grid="#5c5c5c"
                    wire="#000000"
                    lamp="#00000028"
                    speaker="#000000"
@@ -300,8 +300,8 @@
             </panelcolors>
             <gradients>
               <ThemeGradientColors show_grad="TRUE"
-                                   gradient="#1a1a1a"
-                                   high_gradient="#2c2e30">
+                                   gradient="#272727"
+                                   high_gradient="#505257">
               </ThemeGradientColors>
             </gradients>
           </ThemeSpaceGradient>
