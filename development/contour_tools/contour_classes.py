@@ -7,6 +7,7 @@ Created on Apr 23, 2013
 ####class definitions####
 
 import bpy
+import math
 from mathutils import Vector
 from mathutils.geometry import intersect_point_line
 import contour_utilities
@@ -23,7 +24,8 @@ class ContourControlPoint(object):
         
     def mouse_over(self,x,y):
         dist = (self.x -x)**2 + (self.y - y)**2
-        if dist < self.mouse_rad**2:
+        print(dist < 100)
+        if dist < 100:
             return True
         else:
             return False
@@ -54,24 +56,30 @@ class ContourCutLine(object):
         mouse_loc = Vector((x,y,0))
         head_loc = Vector((self.head.x, self.head.y, 0))
         tail_loc = Vector((self.tail.x, self.tail.y, 0))
-        intersect = intersect_point_line(mouse_loc,head_loc, tail_loc)[0]
-        dist = (intersect - mouse_loc).length_squared
-        print(dist)
-        active_self = dist < 100 #TODO:  make this a sensitivity setting
+        intersect = intersect_point_line(mouse_loc, head_loc, tail_loc)
+        
+        dist = (intersect[0] - mouse_loc).length_squared
+        bound = intersect[1]
+        active_self = (dist < 100) and (bound < 1) and (bound > 0) #TODO:  make this a sensitivity setting
         
         if active_head and active_tail and active_self: #they are all clustered together
+            print('returning head but tail too')
             return self.head
         
-        elif active_tail and active_self:
+        elif active_tail:
+            print('returning tail')
             return self.tail
         
-        elif active_head and active_self:
+        elif active_head:
+            print('returning head')
             return self.head
         
         elif active_self:
+            print('returning line')
             return self
         
         else:
+            print('returning None')
             return None
 #cut line, a user interactive 2d line which represents a plane in 3d splace
     #head (type conrol point)

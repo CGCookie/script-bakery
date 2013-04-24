@@ -44,69 +44,7 @@ def retopo_draw_callback(self,context):
         for c_cut in self.cut_lines:
             c_cut.draw(context)
     
-def retopo_modal(self,context,event):   
-    #event mouse move
-    if event.type == 'MOUSEMOVE':
-        if self.drag and self.drag_target:
-            
-        #if asses drag
-            #put drag target location to mouse location
-            self.drag_target.x = event.mouse_region_x
-            self.drag_target.y = event.mouse_region_y
-            
-            return {'RUNNING_MODAL'}
-            
-        #else detect proximity to items around
-        else:
-            print('step 4')
-            #identify hover target for highlighting
-            if self.cut_lines:
-                for c_cut in self.cut_lines:
-                    self.hover_target = c_cut.active_element(context,event.mouse_region_x,event.mouse_region_y)
-           
-            return {'RUNNING_MODAL'}
-    
-    #even right click or escape
-    if event.type in ('RIGHTMOUSE', 'ESC'):
-        #clean up callbacks to prevent crash
-        contour_utilities.callback_cleanup(self,context)
-        return {'CANCELLED'}  
 
-    #event click
-    elif event.type == 'LEFTMOUSE':
-        if event.value == 'RELEASE':
-            if self.drag and self.drag_target:
-                if hasattr(self.drag_target,"head"): #then it's a  line
-                    self.drag_target.head.x = event.mouse_region_x
-                    self.drag_target.tail.y = event.mouse_region_y
-                    self.drag_target.head.x = event.mouse_region_x
-                    self.drag_target.tail.y = event.mouse_region_y
-            else:
-                self.drag_target.x = event.mouse_region_x
-                self.drag_target.y = event.mouse_region_y
-            
-            #clear the drag and hover
-            self.drag = False
-            self.hover_target = None
-
-            return {'RUNNING_MODAL'}
-    
-        if event.value == 'PRESS':
-            self.drag = True
-            self.drag_target = self.hover_target #presume them ose cant move w/o making it through modal?
-            
-            if not self.drag_target:
-                v3d = context.space_data
-                region = v3d.region_3d 
-                view = region.view_rotation * Vector((0,0,1))
-                self.cut_lines.append(ContourCutLine(event.mouse_region_x, event.mouse_region_y, view))
-                self.drag_target = self.cut_lines[-1].tail
-        
-                
-            return {'RUNNING_MODAL'}
-        
-        else:
-            return {'RUNNING_MODAL'}
         #event value press
             #asses proximity for hovering
             #if no proximity:
@@ -161,11 +99,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             else:
                 #identify hover target for highlighting
                 if self.cut_lines:
+                    new_target = False
                     for c_cut in self.cut_lines:
                         h_target = c_cut.active_element(context,event.mouse_region_x,event.mouse_region_y)
                         if h_target:
+                            new_target = True
                             self.hover_target = h_target
-                            
+                    
+                    if not new_target:
+                        self.hover_target = None
+                                
                     return {'RUNNING_MODAL'}
                 return {'RUNNING_MODAL'}
         
