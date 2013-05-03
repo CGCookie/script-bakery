@@ -6,7 +6,7 @@ import bpy
 ################################################### 
 # Add empty at cursor, making it inactively selected   
 ################################################### 
-class addEmpty(bpy.types.Operator):
+class addTarget(bpy.types.Operator):
     """Add an inactive, selected Empty Object as a modifier target"""
     bl_label = "Add an unactive Empty Object"""
     bl_idname = "object.empty_add_unactive"
@@ -20,10 +20,15 @@ class addEmpty(bpy.types.Operator):
         # Store the current object
         currentObj = activeObj
         
-        # Add an empty and store the selected objects
-        bpy.ops.object.empty_add(type='PLAIN_AXES')
+        # Check to see if a target exists, if it does not then create one
         selectedObj = context.selected_objects
-        
+        for obj in selectedObj:
+            if obj.type == 'EMPTY':
+                break
+            elif obj.type != 'EMPTY':
+                bpy.ops.object.empty_add(type='PLAIN_AXES')
+                selectedObj = context.selected_objects
+            
         # Check if a mirror modifier exists, if it does then assign the empty
         for mod in currentObj.modifiers:
             if mod.type == 'MIRROR':
@@ -55,15 +60,19 @@ class addSubsurf(bpy.types.Operator):
     
     def execute(self, context):
         
-        obj = context.active_object
+    #    obj = context.active_object
+        scene = bpy.context.scene
+        sel = context.selected_objects
         
-        bpy.ops.object.modifier_add(type='SUBSURF')
-        print("Added Subsurf Modifier")
+        for obj in sel:
+            scene.objects.active = obj
+            bpy.ops.object.modifier_add(type='SUBSURF')
+            print("Added Subsurf Modifier")
         
-        for mod in obj.modifiers:
-            if mod.type == 'SUBSURF':
-                mod.show_only_control_edges = True
-                mod.levels = 2
+            for mod in obj.modifiers:
+                if mod.type == 'SUBSURF':
+                    mod.show_only_control_edges = True
+                    mod.levels = 2
                 
         return {"FINISHED"}
         
@@ -260,7 +269,7 @@ class applyModifiers(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
-        return len(context.selected_objects) > 0
+        return len(context.selected_objects) > 0 and len(context.active_object.modifiers) > 0
    
     def execute(self, context):
         
@@ -417,7 +426,7 @@ class sculptCollapseShortEdges(bpy.types.Operator):
 ######### Register and unregister the operators ###########
 
 def register():
-    bpy.utils.register_class(addEmpty)
+    bpy.utils.register_class(addTarget)
     bpy.utils.register_class(addSubsurf)
     bpy.utils.register_class(addMirror)
     bpy.utils.register_class(applySubsurf)
@@ -434,7 +443,7 @@ def register():
 
     
 def unregister():
-    bpy.utils.unregister_class(addEmpty)
+    bpy.utils.unregister_class(addTarget)
     bpy.utils.unregister_class(addSubsurf)
     bpy.utils.unregister_class(addMirror)
     bpy.utils.unregister_class(applySubsurf)
