@@ -34,6 +34,7 @@ else:
     print("Imported multifiles")
 '''
 import bpy
+import bmesh
 from mathutils import Vector
 import contour_utilities
 from contour_classes import ContourCutLine
@@ -116,8 +117,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         if event.type in ('RIGHTMOUSE', 'ESC'):
             #clean up callbacks to prevent crash
             contour_utilities.callback_cleanup(self,context)
+            self.bme.free()
             return {'CANCELLED'}  
-    
+        
+        if event.type in {'MIDDLEMOUSE'}:
+            return {'PASS_THROUGH'}
+        
         #event click
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
@@ -128,9 +133,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.drag_target.head.y = self.initial_location_head[1] + delta[1]
                         self.drag_target.tail.x = self.initial_location_tail[0] + delta[0]
                         self.drag_target.tail.y = self.initial_location_tail[1] + delta[1]
+                        
+                        self.drag_target.hit_object(context)
+                        self.drag_target.cut_object(context, self.bme)
                 else:
                     self.drag_target.x = event.mouse_region_x
                     self.drag_target.y = event.mouse_region_y
+                    self.drag_target.parent.hit_object(self,context)
                 
                 #clear the drag and hover
                 self.drag = False
@@ -163,6 +172,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #return ret_val
     
     def invoke(self, context, event):
+        
+        if context.object:
+            ob = context.object
+            me = ob.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
+            self.bme = bmesh.new()
+            self.bme.from_mesh(me)
+            #self.bme.normal_update() #necessary?  nope...we don't need normals..save some time
         
         self._handle = bpy.types.SpaceView3D.draw_handler_add(retopo_draw_callback, (self, context), 'WINDOW', 'POST_PIXEL')
 
