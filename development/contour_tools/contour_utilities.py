@@ -295,9 +295,9 @@ def face_cycle(face, pt, no, prev_eds, verts, connection):
                 
                 connection[len(verts)] = [f.index for f in ed.link_faces]
                 verts.append(result[1])
-                next_faces = [f for f in ed.link_faces if f != face]
-                if len(nex_faces):
-                    element = next_faces[0]
+                next_faces = [newf for newf in ed.link_faces if newf.index != face.index]
+                if len(next_faces):
+                    return next_faces[0]
                 else:
                     #guess we got to a non manifold edge
                     print('found end of mesh!')
@@ -313,10 +313,6 @@ def face_cycle(face, pt, no, prev_eds, verts, connection):
                 verts.append(result[1])  #store the "intersection"
                     
                 return co_point
-            
-            else:
-                print('should not have reached here')
-                return None
             
                 
 def vert_cycle(vert, pt, no, prev_eds, verts, connection):
@@ -347,7 +343,7 @@ def vert_cycle(vert, pt, no, prev_eds, verts, connection):
                 if result[0] == 'CROSS':
                     connection[len(verts)] = [f.index for f in ed.link_faces]
                     verts.append(result[1])
-                    next_faces = [f for f in ed.link_faces if f != face]
+                    next_faces = [newf for newf in ed.link_faces if newf.index != f.index]
                     if len(next_faces):
                         #return face to try face cycle
                         return next_faces[0]
@@ -480,16 +476,16 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     
     edge_mapping = {}  #perhaps we should use bmesh becaus it stores the great cycles..answer yup
     
-    #first initial search.  Could take a while
-    #but will always take <= original method
+    #first initial search around seeded face.
+    #if none, we may go back to brute force
+    #but prolly not :-)
     seed_edge = None
     seed_search = 0
     prev_eds = []
+    seeds =[]
     for ed in bme.faces[seed_index].edges:
         seed_search += 1        
         prev_eds.append(ed.index)
-        
-        
         
         A = ed.verts[0].co
         B = ed.verts[1].co
@@ -498,102 +494,29 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
             #add the point, add the mapping move forward
             edge_mapping[len(verts)] = [f.index for f in ed.link_faces]
             verts.append(result[1])
-            next_face = [face for face in ed.link_faces if face.index != seed_index][0]
+            seeds.append([face for face in ed.link_faces if face.index != seed_index][0])
             seed_edge = True
-            new_face = next_face
-            keepon = True
-            break
         
     if not seed_edge:
         print('failed to find a good face to start with, cancelling until your programmer gets smarter')
         return None    
         
-    print('found seed in %i searces vs %i total edges' % (seed_search, len(bme.edges)))
     #we have found one edge that crosses, now, baring any terrible disconnections in the mesh,
     #we traverse through the link faces, wandering our way through....removing edges from our list
 
     tests = 0
-    keepon = True
-    while keepon and tests < 1000:
-        tests += 1
-        #first, we know that this face is not coplanar..that's good
-        #if new_face.no.cross(no) == 0:
-            #print('coplanar face, stopping calcs until your programmer gets smarter')
-            #return None
-        keepon = False
-        for ed in new_face.edges:
+    for element in seeds: #this will go both ways if they dont meet up.
+        while element and tests < 10000:
+            tests += 1
+            #first, we know that this face is not coplanar..that's good
+            #if new_face.no.cross(no) == 0:
+                #print('coplanar face, stopping calcs until your programmer gets smarter')
+                #return None
+            if type(element) == bmesh.types.BMFace:
+                element = face_cycle(element, pt, no, prev_eds, verts, edge_mapping)
             
-            if ed.index not in prev_eds:  #important that we have robust exclusion criteria to prevent infinite loops
-                prev_eds.append(ed.index)
-                A = ed.verts[0].co
-                B = ed.verts[1].co
-                result = cross_edge(A, B, pt, no)
-                if result[0] == 'CROSS':
-                    #add the point, add the mapping move forward
-                    edge_mapping[len(verts)] = [f.index for f in ed.link_faces]
-                    verts.append(result[1])
-                    next_face = [face for face in ed.link_faces if face.index != new_face.index][0]
-                    
-                    new_face = next_face
-                    keepon = True
-                    break
-                
-                elif result[0] == 'POINT':
-                    #test the edges of the point
-                    #figure out wft if going on
-                    #figure out the next face
-                    #move on
-
-                    
-                    if result[1] == A:
-                        co_point = ed.verts[0]
-                    else:
-                        co_point = ed.verts[1]
-                    
-                    edge_mapping[len(verts)] = [f.index for f in co_point.link_faces]  #notice we take the face loop around the point!
-                    verts.append(result[1])  #store the vert    
- 
-
-                    #loop through all edges connected to this vert
-                    #as long as none of them are coplanar, we just test all the
-                    #adjacent faces to find the next intersection....
-                    #these will be all the edges terminating in this pole
-                    edge_results = []
-                    for pt_edge in co_point.link_edges:  
-                        a = pt_edge.verts[0]
-                        b = pt_edge.verts[1]  
-                        temp_test = cross_edge(a,b, pt, no)
-                        prev_eds.append(pt_edge.index)
-                        
-                        if temp_test[0] == 'POINT':
-                            #this is the most likely result,
-                            #unless we trul encountered a coplanar edge
-                            edge_results.append('POINT')
-                        
-                        if temp_test[0] == 'COPLANAR': #the edge is coplanar..
-                            
-                            edge_results.append('COPLANAR')
- 
-                    
-                    if 'COPLANAR' not in edge_results:            
-                        [v_coord, v_map, next_face] = coplanar_point_cycle(co_point, pt, no, prev_eds)
-                        edge_mapping[len(verts)] = v_map
-                        verts.append(v_coord)  #store the vert   
-                        
-                        keepon = True
-                        new_face = next_face
-                        break
-                                
-                elif result[0] == 'COPLANR':
-                    #jump to test the edges around the other point
-                    #for ed not in prev_face:
-                    #for vert no in current_ed?                        
-                    print('coplanr,stopping for now')
-                    
-                    keepon = False
-                    new_face = None
-                    break
-                    
+            elif type(element) == bmesh.types.BMVert:
+                element = vert_cycle(element, pt, no, prev_eds, verts, edge_mapping)           
  
     print('walked around cross section in %i tests' % tests)            
                 
