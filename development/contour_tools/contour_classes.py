@@ -108,10 +108,13 @@ class ContourCutLine(object):
         mx = context.object.matrix_world
         pt = self.plane_pt
         pno = self.plane_no
-        cross = contour_utilities.cross_section_seed(bme, mx, pt, pno, self.seed_face_index, debug = True)   
-        if cross:
-            self.verts = [mx*v for v in cross[0]]
-            self.eds = cross[1]
+        if pt and pno:
+            cross = contour_utilities.cross_section_seed(bme, mx, pt, pno, self.seed_face_index, debug = True)   
+            if cross:
+                self.verts = [mx*v for v in cross[0]]
+                self.eds = cross[1]
+        else:
+            print('no hit! aim better')
         
         
     def active_element(self,context,x,y):
