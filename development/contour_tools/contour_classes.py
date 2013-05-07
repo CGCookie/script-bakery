@@ -46,6 +46,7 @@ class ContourCutLine(object):
         self.updated = False
         self.plane_pt = None
         self.plane_no = None
+        self.seed_face_index = None
         self.verts = []
         self.edges = []
         
@@ -100,13 +101,14 @@ class ContourCutLine(object):
         
         if hit[2] != -1:
             self.plane_pt = mx * hit[0]
+            self.seed_face_index = hit[2] 
         
     def cut_object(self,context, bme):
         
         mx = context.object.matrix_world
         pt = self.plane_pt
         pno = self.plane_no
-        cross = contour_utilities.cross_section(bme, mx, pt, pno, debug = True)   
+        cross = contour_utilities.cross_section_seed(bme, mx, pt, pno, self.seed_face_index, debug = True)   
         if cross:
             self.verts = [mx*v for v in cross[0]]
             self.eds = cross[1]

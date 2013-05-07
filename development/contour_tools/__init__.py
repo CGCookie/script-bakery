@@ -39,6 +39,7 @@ from mathutils import Vector
 import contour_utilities
 from contour_classes import ContourCutLine
 
+methods = (('0','WALKING','0'),('1','BRUTE','1'))
 
 def retopo_draw_callback(self,context):
     if self.cut_lines:
@@ -71,7 +72,7 @@ def retopo_draw_callback(self,context):
     
 #Operator
 class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
-    '''Delete Menu'''
+    '''Slice an object and retopo along slices'''
     bl_idname = "cgcookie.retop_contour"
     bl_label = "Contour Retopologize"    
     
