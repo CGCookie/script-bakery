@@ -80,6 +80,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     def modal(self, context, event):
         context.area.tag_redraw()
         
+        if event.type == 'RET' and event.value == 'PRESS':
+            self.push_mesh_data(context)
+            return{'RUNNING_MODAL'}
+            
         if event.type == 'MOUSEMOVE':
             
             if self.drag and self.drag_target:
@@ -123,6 +127,17 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         if event.type in {'MIDDLEMOUSE'}:
             return {'PASS_THROUGH'}
+        
+        if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE'}:
+            if event.type == 'WHEELUPMOUSE':
+                self.segments += 1
+            else:
+                self.segments -= 1
+            
+            print("this many segments : %i" % self.segments)
+            for cut_line in self.cut_lines:
+                cut_line.simplify_cross(self.segments)
+                print("This many verts %i" % len(cut_line.verts_simple))
         
         #event click
         elif event.type == 'LEFTMOUSE':
@@ -172,6 +187,38 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #print(ret_val)
         #return ret_val
     
+    def push_mesh_data(self,context):
+        imx = context.object.matrix_world.inverted()
+        
+        total_verts = []
+        total_edges = []
+        
+        
+        n_rings = len(self.cut_lines)
+        n_lines = len(self.cut_lines[0].verts_simple)
+        
+        for n in range(2,len(self.cut_lines)):
+            VO = self.cut_lines[n].verts_simple[0] - self.cut_lines[n-1].verts_simple[0]
+            VR = self.cut_lines[n].verts_simple[-1] - self.cut_lines[n-1].verts_simple[0]
+            
+            if VR.length < VO.length:
+                self.cut_lines[n].verts_simple.reverse()
+        
+        for i, cut_line in enumerate(self.cut_lines):
+            for v in cut_line.verts_simple:
+                total_verts.append(imx * v)
+            for ed in cut_line.eds_simple:
+                total_edges.append((ed[0]+i*n_lines,ed[1]+i*n_lines))
+            
+            if i < n_rings - 1:
+                #make connections between loops
+                for j in range(0,n_lines):
+                    total_edges.append((i*n_lines + j, (i+1)*n_lines + j))
+                
+        self.tmp_mesh.from_pydata(total_verts,total_edges,[])
+        self.new_object.update_tag()
+        context.scene.update()    
+        
     def invoke(self, context, event):
         
         if context.object:
@@ -179,8 +226,17 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             me = ob.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
             self.bme = bmesh.new()
             self.bme.from_mesh(me)
+            self.segments = 10
             #self.bme.normal_update() #necessary?  nope...we don't need normals..save some time
-        
+            
+            self.tmp_mesh = bpy.data.meshes.new(ob.name + "ctrt") 
+            self.new_object = bpy.data.objects.new(ob.name + "ctrt", self.tmp_mesh)
+            self.new_object.data = self.tmp_mesh
+            self.new_object.show_wire = True
+            self.new_object.matrix_world = ob.matrix_world
+            scene = bpy.context.scene
+            scene.objects.link(self.new_object)
+ 
         self._handle = bpy.types.SpaceView3D.draw_handler_add(retopo_draw_callback, (self, context), 'WINDOW', 'POST_PIXEL')
 
         self.drag = False

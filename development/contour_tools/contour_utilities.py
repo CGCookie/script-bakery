@@ -380,13 +380,19 @@ def vert_cycle(vert, pt, no, prev_eds, verts, connection):
                         #return the vert to repeat the vert cycle
                         return element
 
-def space_evenly_on_path(verts, segments):  #prev deved for Open Dental CAD
+def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental CAD
     '''
     Gives evenly spaced location along a string of verts
     Assumes that nverts > nsegments
+    Assumes verts are ORDERED along path
+    Assumes edges are ordered coherently
+    Yes these are lazy assumptions, but the way I build my data
+    guarantees these assumptions so deal with it.
+    
     args:
         verts - list of vert locations type Mathutils.Vector
-              - A loop is specified by setting the first vert == last vert
+        eds - list of index pairs type tuple(integer) eg (3,5).
+              should look like this though [(0,1),(1,2),(2,3),(3,4),(4,0)]     
         segments - number of segments to divide path into        
     return
         new_verts - list of new Vert Locations type list[Mathutils.Vector]
@@ -397,9 +403,9 @@ def space_evenly_on_path(verts, segments):  #prev deved for Open Dental CAD
         return verts
      
     #determine if cyclic or not, first vert same as last vert
-    if verts[0] == verts[-1]:
+    if 0 in edges[-1]:
         cyclic = True
-        print('cyclic vert chain...oh well doesnt matter')
+        #print('cyclic vert chain...oh well doesnt matter')
     else:
         cyclic = False
         
@@ -407,11 +413,18 @@ def space_evenly_on_path(verts, segments):  #prev deved for Open Dental CAD
     #calc_length
     arch_len = 0
     cumulative_lengths = [0] #is this a stupid way to do this? If the 
-    for i in range(0,len(verts)-1):
+    for i in range(0,len(verts)-2):
         v0 = verts[i]
         v1 = verts[i+1]
-        V0 = v1-v0
-        arch_len += V0.length
+        V = v1-v0
+        arch_len += V.length
+        cumulative_lengths.append(arch_len)
+        
+    if cyclic:
+        v0 = verts[i+1]
+        v1 = verts[0]
+        V = v1-v0
+        arch_len += V.length
         cumulative_lengths.append(arch_len)
         
     #identify vert indicies of import
@@ -419,9 +432,14 @@ def space_evenly_on_path(verts, segments):  #prev deved for Open Dental CAD
     #no further than the desired fraction of the curve
     
     #initialze new vert array and seal the end points
-    new_verts = [[None]]*(segments + 1)
-    new_verts[0] = verts[0]
-    new_verts[-1] = verts[-1]
+    if cyclic:
+        new_verts = [[None]]*(segments)
+        new_verts[0] = verts[0]
+            
+    else:
+        new_verts = [[None]]*(segments + 1)
+        new_verts[0] = verts[0]
+        new_verts[-1] = verts[-1]
     
     n = 1 #index to save some looping through the cumulative lengths list
     for i in range(0,segments-1):
@@ -429,15 +447,25 @@ def space_evenly_on_path(verts, segments):  #prev deved for Open Dental CAD
         
         #fid the original vert with the largets legnth
         #not greater than the desired length
-        for j in range(n, len(verts)-1-n):
+        for j in range(n, len(verts)-1):
             if cumulative_lengths[j] > desired_length:
                 n = j - 1
                 break
 
         extra = desired_length - cumulative_lengths[j-1]
         new_verts[i+1] = verts[j-1] + extra * (verts[j]-verts[j-1]).normalized()
-     
-    return new_verts
+    
+    eds = []
+    
+    for i in range(0,len(new_verts)-1):
+        eds.append((i,i+1))
+    if cyclic:
+        #close the loop
+        eds.append((i+1,0))
+
+    
+    print(eds)     
+    return new_verts, eds
  
 def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     '''
@@ -502,10 +530,13 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     #we have found one edge that crosses, now, baring any terrible disconnections in the mesh,
     #we traverse through the link faces, wandering our way through....removing edges from our list
 
-    tests = 0
+    total_tests = 0
+    
     for element in seeds: #this will go both ways if they dont meet up.
-        while element and tests < 10000:
-            tests += 1
+        element_tests = 0
+        while element and total_tests < 10000:
+            total_tests += 1
+            element_tests += 1
             #first, we know that this face is not coplanar..that's good
             #if new_face.no.cross(no) == 0:
                 #print('coplanar face, stopping calcs until your programmer gets smarter')
@@ -514,24 +545,54 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
                 element = face_cycle(element, pt, no, prev_eds, verts, edge_mapping)
             
             elif type(element) == bmesh.types.BMVert:
-                element = vert_cycle(element, pt, no, prev_eds, verts, edge_mapping)           
+                element = vert_cycle(element, pt, no, prev_eds, verts, edge_mapping)
+                
+        print('cpomplete %i tests in this seed search' % element_tests)
+        print('%i vertices found so far' % len(verts))
+        
  
-    print('walked around cross section in %i tests' % tests)            
+    #The following tests for a closed loop
+    #if the loop found itself on the first go round, the last test
+    #will only get one try, and find no new crosses
+    #trivially, mast make sure that the first seed we found wasn't
+    #on a non manifold edge, which should never happen
+    closed_loop = element_tests == 1 and len(seeds) == 2
+    
+    print('walked around cross section in %i tests' % total_tests)
+    print('found this many vertices: %i' % len(verts))       
                 
     if debug:
         n = len(times)
         times.append(time.time())
         print('calced intersections %f sec' % (times[n]-times[n-1]))
        
-    #iterate through smartly to create edge keys          
-    for i in range(0,len(verts)):
-        a_faces = set(edge_mapping[i])
-        for m in range(i,len(verts)):
-            if m != i:
-                b_faces = set(edge_mapping[m])
-                if a_faces & b_faces:
-                    eds.append((i,m))
+    #iterate through smartly to create edge keys
+    #no longer have to do this...verts are created in order
     
+    if closed_loop:        
+        for i in range(0,len(verts)-1):
+            eds.append((i,i+1))
+        
+        #the edge loop closure
+        eds.append((i+1,0))
+        
+    else:
+        #two more verts found than total tests
+        #one vert per element test in the last loop
+        
+        
+        #split the loop into the verts into the first seed and 2nd seed
+        seed_1_verts = verts[:len(verts)-(element_tests)] #yikes maybe this index math is right
+        seed_2_verts = verts[len(verts)-(element_tests):]
+        seed_2_verts.reverse()
+        
+        seed_2_verts.extend(seed_1_verts)
+        
+        
+        for i in range(0,len(seed_1_verts)-1):
+            eds.append((i,i+1))
+    
+        verts = seed_2_verts
     if debug:
         n = len(times)
         times.append(time.time())

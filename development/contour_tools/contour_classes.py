@@ -48,6 +48,8 @@ class ContourCutLine(object):
         self.plane_no = None
         self.seed_face_index = None
         self.verts = []
+        self.verts_simple = []
+        self.eds_simple = []
         self.edges = []
         
     def draw(self,context):
@@ -63,7 +65,11 @@ class ContourCutLine(object):
             contour_utilities.draw_points(context, [point], (1,0,.2,1), 5)
         
         if self.verts:
-            contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), 3)
+            contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), 1)
+            
+        if self.verts_simple:
+            contour_utilities.draw_3d_points(context, self.verts_simple, (0,.2,1,1), 3)
+            
         #draw contour points? later
     
     def hit_object(self,context):
@@ -116,7 +122,10 @@ class ContourCutLine(object):
         else:
             print('no hit! aim better')
         
+    def simplify_cross(self,segments):
+        [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments)
         
+          
     def active_element(self,context,x,y):
         active_head = self.head.mouse_over(x, y)
         active_tail = self.tail.mouse_over(x, y)
