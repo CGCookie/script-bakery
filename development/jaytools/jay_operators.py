@@ -60,15 +60,19 @@ class addSubsurf(bpy.types.Operator):
     
     def execute(self, context):
         
-        obj = context.active_object
+    #    obj = context.active_object
+        scene = bpy.context.scene
+        sel = context.selected_objects
         
-        bpy.ops.object.modifier_add(type='SUBSURF')
-        print("Added Subsurf Modifier")
+        for obj in sel:
+            scene.objects.active = obj
+            bpy.ops.object.modifier_add(type='SUBSURF')
+            print("Added Subsurf Modifier")
         
-        for mod in obj.modifiers:
-            if mod.type == 'SUBSURF':
-                mod.show_only_control_edges = True
-                mod.levels = 2
+            for mod in obj.modifiers:
+                if mod.type == 'SUBSURF':
+                    mod.show_only_control_edges = True
+                    mod.levels = 2
                 
         return {"FINISHED"}
         

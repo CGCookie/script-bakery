@@ -2,7 +2,7 @@ bl_info = {
     "name": "Jay's Tools",
     "description": "A series of tools and menus to enhance and speed up workflow",
     "author": "Jonathan Williamson",
-    "version": (0, 5),
+    "version": (0, 6),
     "blender": (2, 6, 6),
     "location": "View3D - 'Q' key gives a menu in Object, Edit, and Sculpt modes.",
     "warning": '',  # used for warning icon and text in addons panel
@@ -49,6 +49,10 @@ def register():
  
 def unregister():
     bpy.utils.unregister_module(__name__)
+    jay_operators.unregister()
+    jay_object_mode.unregister()
+    jay_edit_mode.unregister()
+    jay_sculpt_mode.unregister()
     
 if __name__ == "__main__":
     register()
