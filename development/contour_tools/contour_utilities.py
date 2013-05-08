@@ -379,68 +379,66 @@ def vert_cycle(vert, pt, no, prev_eds, verts, connection):
                         
                         #return the vert to repeat the vert cycle
                         return element
-                    
-    
-def coplanar_point_cycle(vert, pt, no, prev_eds):
-    
-    for face in vert.link_faces:
-        for ed in face.edges:
-            if ed.index not in prev_eds:
-                prev_eds.append(ed.index)
-                A = ed.verts[0].co
-                B = ed.verts[1].co
-                result = cross_edge(A, B, pt, no)
-                
-                if result[0] == 'CROSS':
-                    v_coord = result[1]
-                    connectivity = [f.index for f in ed.link_faces] 
-                    next_face = [f for f in ed.link_faces if f != face][0]
-   
-    return [v_coord, connectivity, next_face]
 
-def coplanar_edge_cycle(ed,pt,no,old_edges,f):
+def space_evenly_on_path(verts, segments):  #prev deved for Open Dental CAD
     '''
+    Gives evenly spaced location along a string of verts
+    Assumes that nverts > nsegments
     args:
-        f:  the original face that had a coplanar point or edge
-            connected to one of it's verts 
-              \  f1  /
-            f  >-ed-<  f2
-              /  f3  \
-        ed: the coplanar edge
-        
-        
+        verts - list of vert locations type Mathutils.Vector
+              - A loop is specified by setting the first vert == last vert
+        segments - number of segments to divide path into        
+    return
+        new_verts - list of new Vert Locations type list[Mathutils.Vector]
     '''
     
-    cop_face = 0
-    for face in ed.link_faces:
-        if face.no.cross(no) == 0:
-            cop_face += 1
-            print('found a coplanar face')
-    
-    if cop_face == 2:
-        #we have two coplanar faces with a coplanar edge
-        #this makes our cross section fail from a loop perspective
-        print("Coplanar face error")
-        return [None,'COPLANAR_FACE_ERROR']
-    
+    if segments > len(verts):
+        print('more segments requested than original verts...I refuse to subdivide until my developer gets smarter')
+        return verts
+     
+    #determine if cyclic or not, first vert same as last vert
+    if verts[0] == verts[-1]:
+        cyclic = True
+        print('cyclic vert chain...oh well doesnt matter')
     else:
-        #jump down line
-        v0_faces = [face.index for face in ed.verts[0].link_faces]
-        v1_faces = [face.index for face in ed.verts[1].link_faces]
+        cyclic = False
         
-        #make sure we are moving forward..not backward by using vert/face connections
-        #remember f is the face where w came from
-        if f.index in v0_faces:
-            new_vert = ed.verts[1]
-            new_vert_key = v1_faces
-        else:
-            new_vert = ed.verts[0]
-            new_vert_key = v0_faces
-         
-        new_face_candidates =  set(new_vert_key) - set([face.index for f in ed.link_faces])  
         
-        return [new_vert, new_vert_key, new_face_candidates]
+    #calc_length
+    arch_len = 0
+    cumulative_lengths = [0] #is this a stupid way to do this? If the 
+    for i in range(0,len(verts)-1):
+        v0 = verts[i]
+        v1 = verts[i+1]
+        V0 = v1-v0
+        arch_len += V0.length
+        cumulative_lengths.append(arch_len)
+        
+    #identify vert indicies of import
+    #this will be the largest vert which lies at
+    #no further than the desired fraction of the curve
     
+    #initialze new vert array and seal the end points
+    new_verts = [[None]]*(segments + 1)
+    new_verts[0] = verts[0]
+    new_verts[-1] = verts[-1]
+    
+    n = 1 #index to save some looping through the cumulative lengths list
+    for i in range(0,segments-1):
+        desired_length = (i+1)/segments * arch_len
+        
+        #fid the original vert with the largets legnth
+        #not greater than the desired length
+        for j in range(n, len(verts)-1-n):
+            if cumulative_lengths[j] > desired_length:
+                n = j - 1
+                break
+
+        extra = desired_length - cumulative_lengths[j-1]
+        new_verts[i+1] = verts[j-1] + extra * (verts[j]-verts[j-1]).normalized()
+     
+    return new_verts
+ 
 def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     '''
     Takes a mesh and associated world matrix of the object and returns a cross secion in local
