@@ -54,11 +54,12 @@ class ContourCutLine(object):
         
     def draw(self,context):
         
-        #draw connecting line
-        points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
-        contour_utilities.draw_polyline_from_points(context, points, (0,.5,1,1), 1, "GL_LINE_STIPPLE")
-        #draw head #draw tail
-        contour_utilities.draw_points(context, points, (1,0,.2,1), 5)
+        if not self.verts_simple:
+            #draw connecting line
+            points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
+            contour_utilities.draw_polyline_from_points(context, points, (0,.5,1,1), 1, "GL_LINE_STIPPLE")
+            #draw head #draw tail
+            contour_utilities.draw_points(context, points, (1,0,.2,1), 5)
         
         if self.plane_pt:
             point = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.plane_pt)

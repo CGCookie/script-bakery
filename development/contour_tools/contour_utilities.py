@@ -11,6 +11,9 @@ import bgl
 import blf
 import bmesh
 import time
+import math
+
+from collections import deque
 
 from bpy_extras import view3d_utils
 from mathutils.geometry import intersect_line_plane, intersect_point_line
@@ -47,6 +50,87 @@ def draw_points(context, points, color, size):
     
     bgl.glEnd()   
     return
+
+
+def perp_vector_point_line(pt1, pt2, ptn):
+    '''
+    Vector bwettn pointn and line between point1
+    and point2
+    args:
+        pt1, and pt1 are Vectors representing line segment
+    
+    return Vector
+    
+    pt1 ------------------- pt
+            ^
+            |
+            |
+            |<-----this vector
+            |
+            ptn
+    '''
+    pt_on_line = intersect_point_line(ptn, pt1, pt2)[0]
+    alt_vect = pt_on_line - ptn
+    
+    return alt_vect
+
+
+def rpd_cycle(verts, a, b, match_factor):
+    '''
+    http://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
+    
+    searhces between two points for a point with perpendicular distance
+    greater than the match factor
+    '''
+
+    max_perp_d = 0
+    indx = a
+    for i in range(a+1,b):
+        perp_d = perp_vector_point_line(verts[a],verts[b],verts[i])
+        if perp_d > max_perp_d:
+            max_perp_d = perp_d
+            indx = i
+            
+    if max_perp_d > match_factor:
+        return i
+    else:
+        return None
+        
+
+def RPD_open_loop(verts, match_factor):
+    '''
+    a list of vertex locations in order
+    match factor = distance to aim for between approximation and original
+    '''
+    
+    #do some timing
+    
+    #count simplifaction iterations
+    
+    #
+    new_verts_inds = [0,len(verts)-1]
+    A = 0
+    B = len(verts)-1
+    new_v = rpd_cycle(verts, A, B, match_factor)
+    if new_v:
+        pairs = None #TODO: take care of this function
+    
+    
+    
+def RPD_closed_loop(verts,match_factor):
+    '''
+    a list of vertex locations in order
+    match factor = distance to aim for between approximation and original
+    '''
+    
+    #first we simply duplicated the last vert
+    #move it by some small amount so that we get an
+    #open loop
+    
+    
+    #now we do RPD open loop
+    
+
 
 def draw_3d_points(context, points, color, size):
     '''
@@ -96,7 +180,36 @@ def draw_polyline_from_points(context, points, color, thickness, LINE_TYPE):
     return
 
 
-
+def draw_polyline_from_3dpoints(context, points_3d, color, thickness, LINE_TYPE):
+    '''
+    a simple way to draw a line
+    slow...becuase it must convert to screen every time
+    but allows you to pan and zoom around
+    
+    args:
+        points_3d: a list of tuples representing x,y SCREEN coordinate eg [(10,30),(11,31),...]
+        color: tuple (r,g,b,a)
+        thickness: integer? maybe a float
+        LINE_TYPE:  eg...bgl.GL_LINE_STIPPLE or 
+    '''
+    points = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in points_3d]
+    if LINE_TYPE == "GL_LINE_STIPPLE":  
+        bgl.glLineStipple(4, 0x5555)  #play with this later
+        bgl.glEnable(bgl.GL_LINE_STIPPLE)  
+    
+    bgl.glColor4f(*color)
+    bgl.glLineWidth(thickness)
+    bgl.glBegin(bgl.GL_LINE_STRIP)
+    for coord in points:  
+        bgl.glVertex2f(*coord)  
+    
+    bgl.glEnd()  
+      
+    if LINE_TYPE == "GL_LINE_STIPPLE":  
+        bgl.glDisable(bgl.GL_LINE_STIPPLE)  
+        bgl.glEnable(bgl.GL_BLEND)  # back to uninterupted lines  
+      
+    return
     
     
 
@@ -467,6 +580,83 @@ def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental C
     print(eds)     
     return new_verts, eds
  
+def list_shift(seq, n):
+    n = n % len(seq)
+    return seq[n:] + seq[:n]
+
+def align_edge_loops(verts_1, verts_2, eds_1, eds_2):
+    '''
+    Modifies vert order and edge indices to  provide best
+    bridge between edge_loop1 and edge_loop2
+    
+    args:
+        verts_1: list of Vectors
+        verts_2: list of Vectors
+        
+        eds_1: connectivity of the first loop, really just to test loop or line
+        eds_2: connectivity of 2nd loops, really just to test for loop or line
+        
+    return:
+        verts_2
+    '''
+    print('testing alignment')
+    if 0 in eds_1[-1]:
+        cyclic = True
+        print('cyclic vert chain')
+    else:
+        cyclic = False
+    
+    if len(verts_1) != len(verts_2):
+        print('non uniform loops, stopping until your developer gets smarter')
+        return
+    
+    
+    #turns out, sum of diagonals is > than semi perimeter
+    #lets exploit this (only true if quad is pretty much flat)
+    #if we have paths reversed...our indices will give us diagonals
+    #instead of perimeter
+    D1_O = verts_2[0] - verts_1[0]
+    D2_O = verts_2[-1] - verts_1[-1]
+    D1_R = verts_2[0] - verts_1[-1]
+    D2_R = verts_2[-1] - verts_1[0]
+            
+    original_length = D1_O.length + D2_O.length
+    reverse_length = D1_R.length + D2_R.length
+    if reverse_length < original_length:
+        verts_2.reverse()
+        print('reversing')
+        
+    
+    
+    #iterate all verts and "handshake problem" them
+    #into a dictionary?  That's not very effecient!
+    edge_len_dict = {}
+    for i in range(0,len(verts_1)):
+        for n in range(0,len(verts_2)):
+            edge = (i,n)
+            vect = verts_2[n] - verts_1[i]
+            edge_len_dict[edge] = vect.length
+    
+    shift_lengths = []
+    #shift_cross = []
+    for shift in range(0,len(verts_2)):
+        tmp_len = 0
+        #tmp_cross = 0
+        for i in range(0, len(verts_2)):
+            shift_mod = int(math.fmod(i+shift, len(verts_2)))
+            tmp_len += edge_len_dict[(i,shift_mod)]
+        shift_lengths.append(tmp_len)
+           
+    final_shift = shift_lengths.index(min(shift_lengths))
+    if final_shift != 0:
+        print("shifting verst by %i" % final_shift)
+        verts_2 = list_shift(verts_2, final_shift)
+    
+    
+            
+    return verts_2
+    
+
 def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     '''
     Takes a mesh and associated world matrix of the object and returns a cross secion in local

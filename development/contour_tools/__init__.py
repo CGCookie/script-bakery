@@ -46,7 +46,9 @@ def retopo_draw_callback(self,context):
         for c_cut in self.cut_lines:
             c_cut.draw(context)
     
-
+    if self.follow_lines != []:
+        for follow in self.follow_lines:
+            contour_utilities.draw_polyline_from_3dpoints(context, follow, (0,1,.2,1), 1,"GL_LINE_STIPPLE")
         #event value press
             #asses proximity for hovering
             #if no proximity:
@@ -134,10 +136,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             else:
                 self.segments -= 1
             
-            print("this many segments : %i" % self.segments)
             for cut_line in self.cut_lines:
+                if not cut_line.verts:
+                    cut_line.hit_object(context)
+                    cut_line.cut_object(context, self.bme)
                 cut_line.simplify_cross(self.segments)
-                print("This many verts %i" % len(cut_line.verts_simple))
+            
+            self.push_mesh_data(context)    
         
         #event click
         elif event.type == 'LEFTMOUSE':
@@ -197,13 +202,17 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         n_rings = len(self.cut_lines)
         n_lines = len(self.cut_lines[0].verts_simple)
         
-        for n in range(2,len(self.cut_lines)):
-            VO = self.cut_lines[n].verts_simple[0] - self.cut_lines[n-1].verts_simple[0]
-            VR = self.cut_lines[n].verts_simple[-1] - self.cut_lines[n-1].verts_simple[0]
+        #align verts
+        for i in range(0,len(self.cut_lines)-1):
+            vs_1 = self.cut_lines[i].verts_simple
+            vs_2 = self.cut_lines[i+1].verts_simple
+            es_1 = self.cut_lines[i].eds_simple
+            es_2 = self.cut_lines[i+1].eds_simple
             
-            if VR.length < VO.length:
-                self.cut_lines[n].verts_simple.reverse()
+            self.cut_lines[i+1].verts_simple = contour_utilities.align_edge_loops(vs_1, vs_2, es_1, es_2)
         
+                
+        #work out the connectivity
         for i, cut_line in enumerate(self.cut_lines):
             for v in cut_line.verts_simple:
                 total_verts.append(imx * v)
@@ -215,9 +224,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 for j in range(0,n_lines):
                     total_edges.append((i*n_lines + j, (i+1)*n_lines + j))
                 
-        self.tmp_mesh.from_pydata(total_verts,total_edges,[])
-        self.new_object.update_tag()
-        context.scene.update()    
+        self.follow_lines = []
+        for i in range(0,len(self.cut_lines[0].verts_simple)):
+            tmp_line = []
+            for cut_line in self.cut_lines:
+                tmp_line.append(cut_line.verts_simple[i])
+            self.follow_lines.append(tmp_line)
         
     def invoke(self, context, event):
         
@@ -236,6 +248,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.new_object.matrix_world = ob.matrix_world
             scene = bpy.context.scene
             scene.objects.link(self.new_object)
+            self.follow_lines = []
  
         self._handle = bpy.types.SpaceView3D.draw_handler_add(retopo_draw_callback, (self, context), 'WINDOW', 'POST_PIXEL')
 
