@@ -21,7 +21,7 @@ class ContourControlPoint(object):
     def __init__(self, x, y, color = (1,0,0,1), size = 2, mouse_radius=10):
         self.x = x
         self.y = y
-        self.world_position = Vector((0,0,0)) #to be updated later
+        self.world_position = None #to be updated later
         self.color = color
         self.size = size
         self.mouse_rad = mouse_radius
@@ -33,8 +33,18 @@ class ContourControlPoint(object):
             return True
         else:
             return False
-
-    
+        
+    def screen_from_world(self,context):
+        point = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.world_position)
+        self.x = point[0]
+        self.y = point[1]
+        
+    def screen_to_world(self,context):
+        region = context.region  
+        rv3d = context.space_data.region_3d
+        if self.world_position:
+            self.world_position = region_2d_to_location_3d(region, rv3d, (self.x, self.y),self.world_position)
+        
 class ContourCutLine(object): 
     
     def __init__(self, x, y, view_dir):
@@ -54,6 +64,11 @@ class ContourCutLine(object):
         
     def draw(self,context):
         
+        if self.head.world_position:
+            self.head.screen_from_world(context)
+        if self.tail.world_position:
+            self.tail.screen_from_world(context)
+            
         if not self.verts_simple:
             #draw connecting line
             points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
@@ -108,8 +123,21 @@ class ContourCutLine(object):
         
         if hit[2] != -1:
             self.plane_pt = mx * hit[0]
-            self.seed_face_index = hit[2] 
+            self.seed_face_index = hit[2]
+            depth = vec * ((mx * hit[0] - pos).length -1)
+            self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y), mx * hit[0])
+            self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y), mx * hit[0])
+    
+    def handles_to_screen(self,context):
         
+        region = context.region  
+        rv3d = context.space_data.region_3d
+        
+        
+        self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y),self.plane_pt)
+        self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y),self.plane_pt)
+        
+          
     def cut_object(self,context, bme):
         
         mx = context.object.matrix_world

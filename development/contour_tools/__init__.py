@@ -96,11 +96,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     self.drag_target.head.y = self.initial_location_head[1] + delta[1]
                     self.drag_target.tail.x = self.initial_location_tail[0] + delta[0]
                     self.drag_target.tail.y = self.initial_location_tail[1] + delta[1]
-                
+                    self.drag_target.head.screen_to_world(context)
+                    self.drag_target.tail.screen_to_world(context)
                 else:
                     self.drag_target.x = event.mouse_region_x
                     self.drag_target.y = event.mouse_region_y
-                
+                    self.drag_target.screen_to_world(context)
                 return {'RUNNING_MODAL'}
                 
             #else detect proximity to items around
@@ -128,6 +129,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'CANCELLED'}  
         
         if event.type in {'MIDDLEMOUSE'}:
+            for cut_line in self.cut_lines:
+                if cut_line.head.world_position:
+                    cut_line.head.screen_from_world(context)
+                    cut_line.tail.screen_from_world(context)
             return {'PASS_THROUGH'}
         
         if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE'}:
