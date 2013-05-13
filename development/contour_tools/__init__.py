@@ -78,6 +78,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     bl_idname = "cgcookie.retop_contour"
     bl_label = "Contour Retopologize"    
     
+    @classmethod
+    def poll(cls,context):
+        if context.active_object:
+            if len(context.selected_objects) > 0:
+                return True
+        return False
     
     def modal(self, context, event):
         context.area.tag_redraw()
@@ -223,7 +229,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     
     def push_mesh_data(self,context):
         
-        if len(self.cut_lines) < 3:
+        if len(self.cut_lines) < 2:
             print('waiting on other cut lines')
             return
         imx = context.object.matrix_world.inverted()
@@ -231,22 +237,22 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         total_verts = []
         total_edges = []
         
-        
-        n_rings = len(self.cut_lines)
-        n_lines = len(self.cut_lines[0].verts_simple)
+        valid_cuts = [c_line for c_line in self.cut_lines if c_line.verts != []]
+        n_rings = len(valid_cuts)
+        n_lines = len(valid_cuts[0].verts_simple)
         
         #align verts
-        for i in range(0,len(self.cut_lines)-1):
-            vs_1 = self.cut_lines[i].verts_simple
-            vs_2 = self.cut_lines[i+1].verts_simple
-            es_1 = self.cut_lines[i].eds_simple
-            es_2 = self.cut_lines[i+1].eds_simple
+        for i in range(0,n_rings-1):
+            vs_1 = valid_cuts[i].verts_simple
+            vs_2 = valid_cuts[i+1].verts_simple
+            es_1 = valid_cuts[i].eds_simple
+            es_2 = valid_cuts[i+1].eds_simple
             
-            self.cut_lines[i+1].verts_simple = contour_utilities.align_edge_loops(vs_1, vs_2, es_1, es_2)
+            valid_cuts[i+1].verts_simple = contour_utilities.align_edge_loops(vs_1, vs_2, es_1, es_2)
         
                 
         #work out the connectivity
-        for i, cut_line in enumerate(self.cut_lines):
+        for i, cut_line in enumerate(valid_cuts):
             for v in cut_line.verts_simple:
                 total_verts.append(imx * v)
             for ed in cut_line.eds_simple:
@@ -258,9 +264,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     total_edges.append((i*n_lines + j, (i+1)*n_lines + j))
                 
         self.follow_lines = []
-        for i in range(0,len(self.cut_lines[0].verts_simple)):
+        for i in range(0,len(valid_cuts[0].verts_simple)):
             tmp_line = []
-            for cut_line in self.cut_lines:
+            for cut_line in valid_cuts:
                 tmp_line.append(cut_line.verts_simple[i])
             self.follow_lines.append(tmp_line)
         

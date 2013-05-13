@@ -133,11 +133,16 @@ class ContourCutLine(object):
         
                 if hit[2] != -1:
                     self.plane_pt = mx * hit[0]
-            
                     self.seed_face_index = hit[2]
                     self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y), mx * hit[0])
                     self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y), mx * hit[0])
                     self.plane_tan.world_position = self.plane_pt + (self.head.world_position - self.tail.world_position).length/4 * view_z
+                    
+                else:
+                    self.plane_pt = None
+                    self.seed_face_index = None
+                    self.verts = []
+                    self.verts_simple = []
             
         elif method == 'HANDLE':
             
@@ -147,20 +152,24 @@ class ContourCutLine(object):
             
             z = a - b
             x = self.head.world_position - self.tail.world_position
+            self.plane_no = z.cross(x).normalized()
             
             mx = ob.matrix_world
             imx = mx.inverted() 
             hit = ob.ray_cast(imx * (a + 5 * z), imx * (b - 5 * z))
             if hit[2] != -1:
-                delta = hit[0] - self.plane_pt
                 self.plane_pt = mx * hit[0]
                 self.seed_face_index = hit[2]
-                self.plane_no = z.cross(x).normalized()
+                
                 self.head.world_position = self.plane_pt + .5*x
                 self.tail.world_position = self.plane_pt - .5*x
                 
                 print(self.plane_no)
             else:
+                self.plane_pt = None
+                self.seed_face_index = None
+                self.verts = []
+                self.verts_simple = []
                 print('aim better')
             
     def handles_to_screen(self,context):
@@ -184,10 +193,13 @@ class ContourCutLine(object):
                 self.verts = [mx*v for v in cross[0]]
                 self.eds = cross[1]
         else:
+            self.verts = []
+            self.eds = []
             print('no hit! aim better')
         
     def simplify_cross(self,segments):
-        [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments)
+        if self.verts !=[] and self.eds != []:
+            [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments)
         
           
     def active_element(self,context,x,y):
