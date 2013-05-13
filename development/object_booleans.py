@@ -12,8 +12,6 @@ bl_info = {
 
 import bpy
 
-scene = bpy.context.scene
-
 ###------ Create Boolean Operators -------###
    
 class boolean(bpy.types.Operator):
@@ -23,8 +21,14 @@ class boolean(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}     
             
     modOp = bpy.props.StringProperty()
-            
+    
+    @classmethod        
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
     def execute(self, context):
+ 
+        scene = bpy.context.scene
          
         modName = "Bool"
     
