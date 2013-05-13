@@ -96,8 +96,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     self.drag_target.head.y = self.initial_location_head[1] + delta[1]
                     self.drag_target.tail.x = self.initial_location_tail[0] + delta[0]
                     self.drag_target.tail.y = self.initial_location_tail[1] + delta[1]
+                    self.drag_target.plane_tan.x = self.initial_location_tan[0] + delta[0]
+                    self.drag_target.plane_tan.y = self.initial_location_tan[1] + delta[1]
                     self.drag_target.head.screen_to_world(context)
                     self.drag_target.tail.screen_to_world(context)
+                    self.drag_target.plane_tan.screen_to_world(context)
                 else:
                     self.drag_target.x = event.mouse_region_x
                     self.drag_target.y = event.mouse_region_y
@@ -159,13 +162,32 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.drag_target.head.y = self.initial_location_head[1] + delta[1]
                         self.drag_target.tail.x = self.initial_location_tail[0] + delta[0]
                         self.drag_target.tail.y = self.initial_location_tail[1] + delta[1]
+                        self.drag_target.plane_tan.x = self.initial_location_tan[0] + delta[0]
+                        self.drag_target.plane_tan.y = self.initial_location_tan[1] + delta[1]
                         
-                        self.drag_target.hit_object(context)
+                        self.drag_target.head.screen_to_world(context)
+                        self.drag_target.tail.screen_to_world(context)
+                        self.drag_target.plane_tan.screen_to_world(context)
+                        
+                        self.drag_target.hit_object(context,update_normal = False, method = 'HANDLE')
                         self.drag_target.cut_object(context, self.bme)
-                else:
-                    self.drag_target.x = event.mouse_region_x
-                    self.drag_target.y = event.mouse_region_y
-                    self.drag_target.parent.hit_object(self,context)
+                        self.drag_target.simplify_cross(self.segments)
+                        self.push_mesh_data(context)
+                    else:
+                        self.drag_target.x = event.mouse_region_x
+                        self.drag_target.y = event.mouse_region_y
+                        if self.drag_target == self.drag_target.parent.plane_tan:
+                            print('changing handle')
+                            self.drag_target.screen_to_world(context)
+                            self.drag_target.parent.hit_object(context, update_normal = False, method = 'HANDLE')
+                        else:
+                            self.drag_target.parent.hit_object(context, update_normal = True, method = 'VIEW')
+                            
+                        self.drag_target.parent.cut_object(context, self.bme)
+                        self.drag_target.parent.simplify_cross(self.segments)
+                        if self.new:
+                            self.new = False
+                    self.push_mesh_data(context)
                 
                 #clear the drag and hover
                 self.drag = False
@@ -179,6 +201,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 if hasattr(self.drag_target,"head"):
                     self.initial_location_head = (self.drag_target.head.x, self.drag_target.head.y)
                     self.initial_location_tail = (self.drag_target.tail.x, self.drag_target.tail.y)
+                    self.initial_location_tan = (self.drag_target.plane_tan.x, self.drag_target.plane_tan.y)
                     self.initial_location_mouse = (event.mouse_region_x,event.mouse_region_y)
                 
                 if not self.drag_target:
@@ -187,6 +210,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     view = region.view_rotation * Vector((0,0,1))
                     self.cut_lines.append(ContourCutLine(event.mouse_region_x, event.mouse_region_y, view))
                     self.drag_target = self.cut_lines[-1].tail
+                    self.new = True
             
                     return {'RUNNING_MODAL'}
                 return {'RUNNING_MODAL'}
@@ -198,6 +222,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #return ret_val
     
     def push_mesh_data(self,context):
+        
+        if len(self.cut_lines) < 3:
+            print('waiting on other cut lines')
+            return
         imx = context.object.matrix_world.inverted()
         
         total_verts = []
@@ -254,6 +282,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             scene = bpy.context.scene
             scene.objects.link(self.new_object)
             self.follow_lines = []
+            self.new = False #a wway to keep track of if we are moving something or makig anew one.
  
         self._handle = bpy.types.SpaceView3D.draw_handler_add(retopo_draw_callback, (self, context), 'WINDOW', 'POST_PIXEL')
 

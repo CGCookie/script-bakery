@@ -18,13 +18,14 @@ from bpy_extras.view3d_utils import region_2d_to_location_3d
 
 class ContourControlPoint(object):
     
-    def __init__(self, x, y, color = (1,0,0,1), size = 2, mouse_radius=10):
+    def __init__(self, parent, x, y, color = (1,0,0,1), size = 2, mouse_radius=10):
         self.x = x
         self.y = y
         self.world_position = None #to be updated later
         self.color = color
         self.size = size
         self.mouse_rad = mouse_radius
+        self.parent = parent
         
     def mouse_over(self,x,y):
         dist = (self.x -x)**2 + (self.y - y)**2
@@ -48,8 +49,9 @@ class ContourControlPoint(object):
 class ContourCutLine(object): 
     
     def __init__(self, x, y, view_dir):
-        self.head = ContourControlPoint(x,y, color = (1,0,0,1))
-        self.tail = ContourControlPoint(x,y, color = (0,1,0,1))
+        self.head = ContourControlPoint(self,x,y, color = (1,0,0,1))
+        self.tail = ContourControlPoint(self,x,y, color = (0,1,0,1))
+        self.plane_tan = ContourControlPoint(self,x,y, color = (.8,.8,.8,1))
         self.view_dir = view_dir  #this is imporatnt...no reason contours cant bend
         self.target = None
         self.depth = None #perhaps we need a depth value? 
@@ -68,17 +70,23 @@ class ContourCutLine(object):
             self.head.screen_from_world(context)
         if self.tail.world_position:
             self.tail.screen_from_world(context)
+        if self.plane_tan.world_position:
+            self.plane_tan.screen_from_world(context)
             
-        if not self.verts_simple:
+        
+        #if not self.verts_simple:
             #draw connecting line
-            points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
-            contour_utilities.draw_polyline_from_points(context, points, (0,.5,1,1), 1, "GL_LINE_STIPPLE")
-            #draw head #draw tail
-            contour_utilities.draw_points(context, points, (1,0,.2,1), 5)
+        points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
+        contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), 1, "GL_LINE_STIPPLE")
+        contour_utilities.draw_points(context, points, self.head.color, 5)
+        #no longer if not self.verts_simple ^^^^^^ look up  6 lines
         
         if self.plane_pt:
-            point = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.plane_pt)
-            contour_utilities.draw_points(context, [point], (1,0,.2,1), 5)
+            point1 = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_pt)
+            point2 = (self.plane_tan.x, self.plane_tan.y)
+            contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), 1, "GL_LINE_STIPPLE")
+            contour_utilities.draw_points(context, [point2], self.plane_tan.color, 5)
+            contour_utilities.draw_points(context, [point1], self.head.color, 5)
         
         if self.verts:
             contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), 1)
@@ -88,7 +96,7 @@ class ContourCutLine(object):
             
         #draw contour points? later
     
-    def hit_object(self,context):
+    def hit_object(self,context, update_normal = True, method = 'VIEW'):
         ob = context.object
         region = context.region  
         rv3d = context.space_data.region_3d
@@ -106,28 +114,55 @@ class ContourCutLine(object):
         cut_vec = (self.tail.x - self.head.x)*view_x + (self.tail.y - self.head.y)*view_y
         cut_vec.normalize()
         
-        self.plane_no = cut_vec.cross(view_z).normalized()
+        if update_normal:
+            if method == 'VIEW':
+                self.plane_no = cut_vec.cross(view_z).normalized()
         
         
-        vec = region_2d_to_vector_3d(region, rv3d, screen_coord)
-        loc = region_2d_to_location_3d(region, rv3d, screen_coord, vec)
+                vec = region_2d_to_vector_3d(region, rv3d, screen_coord)
+                loc = region_2d_to_location_3d(region, rv3d, screen_coord, vec)
         
-        #raycast what I think is the ray onto the object
-        #raycast needs to be in ob coordinates.
-        a = loc + 3000*vec
-        b = loc - 3000*vec
+                #raycast what I think is the ray onto the object
+                #raycast needs to be in ob coordinates.
+                a = loc + 3000*vec
+                b = loc - 3000*vec
     
-        mx = ob.matrix_world
-        imx = mx.inverted()
-        hit = ob.ray_cast(imx*a, imx*b)    
+                mx = ob.matrix_world
+                imx = mx.inverted()
+                hit = ob.ray_cast(imx*a, imx*b)    
         
-        if hit[2] != -1:
-            self.plane_pt = mx * hit[0]
-            self.seed_face_index = hit[2]
-            depth = vec * ((mx * hit[0] - pos).length -1)
-            self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y), mx * hit[0])
-            self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y), mx * hit[0])
-    
+                if hit[2] != -1:
+                    self.plane_pt = mx * hit[0]
+            
+                    self.seed_face_index = hit[2]
+                    self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y), mx * hit[0])
+                    self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y), mx * hit[0])
+                    self.plane_tan.world_position = self.plane_pt + (self.head.world_position - self.tail.world_position).length/4 * view_z
+            
+        elif method == 'HANDLE':
+            
+            #the midpoint between the two vectors
+            b = .5 * (self.head.world_position + self.tail.world_position)
+            a = self.plane_tan.world_position
+            
+            z = a - b
+            x = self.head.world_position - self.tail.world_position
+            
+            mx = ob.matrix_world
+            imx = mx.inverted() 
+            hit = ob.ray_cast(imx * (a + 5 * z), imx * (b - 5 * z))
+            if hit[2] != -1:
+                delta = hit[0] - self.plane_pt
+                self.plane_pt = mx * hit[0]
+                self.seed_face_index = hit[2]
+                self.plane_no = z.cross(x).normalized()
+                self.head.world_position = self.plane_pt + .5*x
+                self.tail.world_position = self.plane_pt - .5*x
+                
+                print(self.plane_no)
+            else:
+                print('aim better')
+            
     def handles_to_screen(self,context):
         
         region = context.region  
@@ -158,6 +193,7 @@ class ContourCutLine(object):
     def active_element(self,context,x,y):
         active_head = self.head.mouse_over(x, y)
         active_tail = self.tail.mouse_over(x, y)
+        active_tan = self.plane_tan.mouse_over(x, y)
         
         mouse_loc = Vector((x,y,0))
         head_loc = Vector((self.head.x, self.head.y, 0))
@@ -179,6 +215,9 @@ class ContourCutLine(object):
         elif active_head:
             #print('returning head')
             return self.head
+        
+        elif active_tan:
+            return self.plane_tan
         
         elif active_self:
             #print('returning line')
