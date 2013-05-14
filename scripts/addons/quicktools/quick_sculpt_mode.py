@@ -3,9 +3,9 @@ import bpy
 ### ------------ New Menus ------------ ###        
         
 # creates a menu for Sculpt mode tools
-class SculptTools(bpy.types.Menu):
+class QuickSculptTools(bpy.types.Menu):
     
-    bl_label = "Sculpt Tools"
+    bl_label = "Quick Sculpt Tools"
     bl_idname = "sculpt.tools_menu"
 
     def draw(self, context):
@@ -26,6 +26,10 @@ class SculptTools(bpy.types.Menu):
         
         layout.separator()
         
+        layout.operator("object.apply_modifiers", 'Apply All Modifiers')
+        
+        layout.separator()
+        
         layout.operator("sculpt.symmetry_x", icon='MOD_MIRROR')
         layout.operator("sculpt.symmetry_y")
         layout.operator("sculpt.symmetry_z")     
@@ -43,7 +47,7 @@ class SculptTools(bpy.types.Menu):
 addon_keymaps = []
 
 def register():
-    bpy.utils.register_class(SculptTools)
+    bpy.utils.register_class(QuickSculptTools)
     
     wm = bpy.context.window_manager   
     # create the Sculpt hotkeys
@@ -61,7 +65,7 @@ def register():
 def unregister():
 
     #unregister the new operators 
-    bpy.utils.unregister_class(SculptTools)
+    bpy.utils.unregister_class(QuickSculptTools)
     
     # remove keymaps when add-on is deactivated
     wm = bpy.context.window_manager

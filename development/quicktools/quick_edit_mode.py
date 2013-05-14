@@ -4,8 +4,8 @@ from bpy import context
  
 
 # creates a menu for edit mode tools         
-class JWMeshTools(bpy.types.Menu):
-    bl_label = "Jonathan's Mesh Tools"
+class QuickMeshTools(bpy.types.Menu):
+    bl_label = "Quick Mesh Tools"
     bl_idname = "mesh.tools_menu"
        
     def draw(self, context):
@@ -28,11 +28,6 @@ class JWMeshTools(bpy.types.Menu):
         
         layout.separator()
         
-        layout.operator("transform.edge_slide", icon='EDGESEL')
-        layout.operator("transform.vert_slide", icon='VERTEXSEL')
-        
-        layout.separator()
-        
         layout.operator("mesh.vertices_smooth")    
         
         layout.separator()
@@ -52,7 +47,7 @@ addon_keymaps = []
 
 def register():
     #register the new menus
-    bpy.utils.register_class(JWMeshTools)
+    bpy.utils.register_class(QuickMeshTools)
      
     
     wm = bpy.context.window_manager
@@ -66,7 +61,7 @@ def register():
 
 def unregister():
     #unregister the new menus
-    bpy.utils.unregister_class(JWMeshTools)
+    bpy.utils.unregister_class(QuickMeshTools)
         
     
     # remove keymaps when add-on is deactivated

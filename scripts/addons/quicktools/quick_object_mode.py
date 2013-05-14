@@ -4,8 +4,8 @@ from bpy import context
 
 
 # adds an object mode menu 
-class JWObjectTools(bpy.types.Menu):
-    bl_label = "Jonathan's Object Tools"
+class QuickObjectTools(bpy.types.Menu):
+    bl_label = "Quick Object Tools"
     bl_idname = "object.tools_menu"
        
     def draw(self, context):
@@ -34,9 +34,9 @@ class JWObjectTools(bpy.types.Menu):
         layout.operator("object.shade_flat", icon='MESH_UVSPHERE')
    
 # Create the Tool Bar section 
-class JWObjectToolbar(bpy.types.Panel):
-    bl_label = "Jay Tools"
-    bl_idname = "object.jw_object_toolbar"
+class QuickObjectToolbar(bpy.types.Panel):
+    bl_label = "Quick Tools"
+    bl_idname = "object.quick_object_toolbar"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
     bl_context = 'objectmode'
@@ -83,8 +83,8 @@ addon_keymaps = []
 
 def register():
     #register the new menus
-    bpy.utils.register_class(JWObjectTools)
-    bpy.utils.register_class(JWObjectToolbar)
+    bpy.utils.register_class(QuickObjectTools)
+    bpy.utils.register_class(QuickObjectToolbar)
      
     
     wm = bpy.context.window_manager
@@ -100,8 +100,8 @@ def register():
 
 def unregister():
     #unregister the new menus
-    bpy.utils.unregister_class(JWObjectTools)
-    bpy.utils.unregister_class(JWObjectToolbar)
+    bpy.utils.unregister_class(QuickObjectTools)
+    bpy.utils.unregister_class(QuickObjectToolbar)
         
     
     # remove keymaps when add-on is deactivated
