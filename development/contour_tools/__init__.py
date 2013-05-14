@@ -38,6 +38,7 @@ import bmesh
 from mathutils import Vector
 import contour_utilities
 from contour_classes import ContourCutLine
+from mathutils.geometry import intersect_line_plane, intersect_point_line
 
 methods = (('0','WALKING','0'),('1','BRUTE','1'))
 
@@ -271,7 +272,70 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         valid_cuts = [c_line for c_line in self.cut_lines if c_line.verts != [] and c_line.verts_simple != []]
         n_rings = len(valid_cuts)
         n_lines = len(valid_cuts[0].verts_simple)
-        print(n_rings)
+
+        #####order the cuts####
+        
+        #first dictionary their current indices
+        planes = [(cut.plane_pt, cut.plane_no) for cut in valid_cuts]
+        
+        valid_pairs = []
+        #test validity of all pairs
+        #a pair is valid if the line segment corosses
+        #none of the other planes reasonable close to
+        #the plane origin.  This will fail in hairpin turns
+        #but that case should be relatively uncommon
+        
+        for i in range(0,len(valid_cuts)):
+            for m in range(i,len(valid_cuts)):
+                if m != i:
+                    pair = (i,m)
+                    valid_pairs.append(pair)
+                    A = valid_cuts[i].plane_pt
+                    B = valid_cuts[m].plane_pt
+                    for j, plane in enumerate(planes):
+                        if j != i and j != m:
+                            pt = plane[0]
+                            no = plane[1]
+                            v = intersect_line_plane(A,B,pt,no)
+                            if v:
+                                check = intersect_point_line(v,A,B)
+                                pair_length = (B - A).length
+                                inval_length = (v - pt).length
+                                if check[1] >= 0 and check[1] <= 1 and inval_length < pair_length:
+                                    print('invalid pair')
+                                    print(pair)
+                                    if pair in valid_pairs:
+                                        valid_pairs.remove(pair)
+                                    
+        print(valid_pairs)
+        
+        #sort the pairs
+        new_order = []
+        new_order.append(valid_pairs[-1][0])
+        new_order.append(valid_pairs[-1][1])
+        valid_pairs.pop()
+        
+        while len(valid_pairs):
+            for pair in valid_pairs:
+                end = set(pair) & {new_order[-1]}
+                beg = set(pair) & {new_order[0]}
+                if end or beg:
+                    valid_pairs.remove(pair)
+                    if end:
+                        new_order.append(list(set(pair) - end)[0])
+                    else:
+                        new_order.insert(0, list(set(pair)-beg)[0])
+                        
+                    break
+                    
+        print(new_order)        
+        cuts_copy = valid_cuts.copy()
+        for i, n in enumerate(new_order):
+            valid_cuts[i] = cuts_copy[n]
+        
+        del cuts_copy
+           
+        #now
         #align verts
         for i in range(0,n_rings-1):
             vs_1 = valid_cuts[i].verts_simple
@@ -300,7 +364,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             for cut_line in valid_cuts:
                 tmp_line.append(cut_line.verts_simple[i])
             self.follow_lines.append(tmp_line)
+
+        #gather all the valid ones that have a plane_pt and plane_no
         
+        #a cutline belongs between the smallest segment that corosses the plane
+        
+        #intersect line plane[] > 0 < 1.    
     def invoke(self, context, event):
         
         if context.object:

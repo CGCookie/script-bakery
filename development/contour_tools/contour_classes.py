@@ -93,7 +93,7 @@ class ContourCutLine(object):
             contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), 1)
             
         if self.verts_simple:
-            points = self.verts_simple
+            points = self.verts_simple.copy()
             if 0 in self.eds[-1]:
                 points.append(self.verts_simple[0])
             contour_utilities.draw_polyline_from_3dpoints(context, points, (0,1,.2,1), 1,"GL_LINE_STIPPLE")
