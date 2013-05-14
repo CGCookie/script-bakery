@@ -184,7 +184,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     cut_line.simplify_cross(self.segments)
                 cut_line.simplify_cross(self.segments)
             
-            self.push_mesh_data(context)    
+            self.push_mesh_data(context,re_order = False)    
         
         #event click
         elif event.type == 'LEFTMOUSE':
@@ -259,7 +259,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #print(ret_val)
         #return ret_val
     
-    def push_mesh_data(self,context):
+    def push_mesh_data(self,context, re_order = True):
         
         if len(self.cut_lines) < 2:
             print('waiting on other cut lines')
@@ -270,8 +270,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         total_edges = []
         
         valid_cuts = [c_line for c_line in self.cut_lines if c_line.verts != [] and c_line.verts_simple != []]
-        n_rings = len(valid_cuts)
-        n_lines = len(valid_cuts[0].verts_simple)
+        self.cut_lines = valid_cuts
+        if len(valid_cuts) < 2:
+            return
+        
+
 
         #####order the cuts####
         
@@ -309,55 +312,59 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                 pair_length = (B - A).length/2
                                 inval_length = (v - pt).length
                                 if (check[1] >= 0 and check[1] <= 1 and inval_length < pair_length) or hit[2] == -1:
-                                    print('invalid pair')
-                                    print(pair)
+                                    print('invalid pair %s' % str(pair))
+                                    
                                     if pair in valid_pairs:
                                         valid_pairs.remove(pair)
                                     
         print(valid_pairs)
         
-        #sort the pairs
-        new_order = []
-        new_order.append(valid_pairs[-1][0])
-        new_order.append(valid_pairs[-1][1])
-        valid_pairs.pop()
-        
-        tests = 0
-        max_tests = len(valid_pairs) + 2
-        while len(valid_pairs) and tests < max_tests:
-            tests += 1
-            for pair in valid_pairs:
-                end = set(pair) & {new_order[-1]}
-                beg = set(pair) & {new_order[0]}
-                if end or beg:
-                    valid_pairs.remove(pair)
-                    if end:
-                        new_order.append(list(set(pair) - end)[0])
-                    else:
-                        new_order.insert(0, list(set(pair)-beg)[0])
-                        
-                    break
-                    
-        print(new_order)     
-        cuts_copy = valid_cuts.copy()
-        for i, n in enumerate(new_order):
-            valid_cuts[i] = cuts_copy[n]
-        
-        del cuts_copy
-        self.cut_lines = valid_cuts   
+        if re_order and len(valid_pairs) > 0:
+            #sort the pairs
+            new_order = []
+            new_order.append(valid_pairs[-1][0])
+            new_order.append(valid_pairs[-1][1])
+            valid_pairs.pop()
+            
+            tests = 0
+            max_tests = len(valid_pairs) + 2
+            while len(valid_pairs) and tests < max_tests:
+                tests += 1
+                for pair in valid_pairs:
+                    end = set(pair) & {new_order[-1]}
+                    beg = set(pair) & {new_order[0]}
+                    if end or beg:
+                        valid_pairs.remove(pair)
+                        if end:
+                            new_order.append(list(set(pair) - end)[0])
+                        else:
+                            new_order.insert(0, list(set(pair)-beg)[0])
+                            
+                        break
+            print('the new order is')            
+            print(new_order)     
+            cuts_copy = valid_cuts.copy()
+            valid_cuts = []
+            for i, n in enumerate(new_order):
+                valid_cuts.append(cuts_copy[n])
+            
+            del cuts_copy
+            self.valid_cuts = valid_cuts  
         #now
+        n_rings = len(self.valid_cuts)
+        n_lines = len(self.valid_cuts[0].verts_simple)
         #align verts
         for i in range(0,n_rings-1):
-            vs_1 = self.cut_lines[i].verts_simple
-            vs_2 = self.cut_lines[i+1].verts_simple
-            es_1 = self.cut_lines[i].eds_simple
-            es_2 = self.cut_lines[i+1].eds_simple
+            vs_1 = self.valid_cuts[i].verts_simple
+            vs_2 = self.valid_cuts[i+1].verts_simple
+            es_1 = self.valid_cuts[i].eds_simple
+            es_2 = self.valid_cuts[i+1].eds_simple
             
-            self.cut_lines[i+1].verts_simple = contour_utilities.align_edge_loops(vs_1, vs_2, es_1, es_2)
+            self.valid_cuts[i+1].verts_simple = contour_utilities.align_edge_loops(vs_1, vs_2, es_1, es_2)
         
                 
         #work out the connectivity
-        for i, cut_line in enumerate(self.cut_lines):
+        for i, cut_line in enumerate(self.valid_cuts):
             for v in cut_line.verts_simple:
                 total_verts.append(imx * v)
             for ed in cut_line.eds_simple:
@@ -369,9 +376,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     total_edges.append((i*n_lines + j, (i+1)*n_lines + j))
                 
         self.follow_lines = []
-        for i in range(0,len(self.cut_lines[0].verts_simple)):
+        for i in range(0,len(self.valid_cuts[0].verts_simple)):
             tmp_line = []
-            for cut_line in self.cut_lines:
+            for cut_line in self.valid_cuts:
                 tmp_line.append(cut_line.verts_simple[i])
             self.follow_lines.append(tmp_line)
 
@@ -404,6 +411,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 
         self.drag = False
         self.cut_lines = []
+        self.valid_cuts = []
         self.drag_target = None
         self.hover_target = None
         self.initial_location_head = None
