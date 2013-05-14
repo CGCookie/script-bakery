@@ -180,6 +180,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 if not cut_line.verts:
                     cut_line.hit_object(context)
                     cut_line.cut_object(context, self.bme)
+                    cut_line.simplify_cross(self.segments)
                 cut_line.simplify_cross(self.segments)
             
             self.push_mesh_data(context)    
@@ -267,10 +268,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         total_verts = []
         total_edges = []
         
-        valid_cuts = [c_line for c_line in self.cut_lines if (c_line.verts != [] and c_line.verts_simple != [])]
+        valid_cuts = [c_line for c_line in self.cut_lines if c_line.verts != [] and c_line.verts_simple != []]
         n_rings = len(valid_cuts)
         n_lines = len(valid_cuts[0].verts_simple)
-        
+        print(n_rings)
         #align verts
         for i in range(0,n_rings-1):
             vs_1 = valid_cuts[i].verts_simple

@@ -577,7 +577,7 @@ def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental C
         eds.append((i+1,0))
 
     
-    print(eds)     
+    print(eds)    
     return new_verts, eds
  
 def list_shift(seq, n):
@@ -607,6 +607,8 @@ def align_edge_loops(verts_1, verts_2, eds_1, eds_2):
         cyclic = False
     
     if len(verts_1) != len(verts_2):
+        print(len(verts_1))
+        print(len(verts_2))
         print('non uniform loops, stopping until your developer gets smarter')
         return verts_2
     
