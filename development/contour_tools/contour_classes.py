@@ -14,6 +14,7 @@ import contour_utilities
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 from bpy_extras.view3d_utils import region_2d_to_vector_3d
 from bpy_extras.view3d_utils import region_2d_to_location_3d
+import blf
 #from development.contour_tools import contour_utilities
 
 class ContourControlPoint(object):
@@ -64,7 +65,7 @@ class ContourCutLine(object):
         self.eds_simple = []
         self.edges = []
         
-    def draw(self,context):
+    def draw(self,context, debug = False):
         
         if self.head.world_position:
             self.head.screen_from_world(context)
@@ -88,12 +89,20 @@ class ContourCutLine(object):
             contour_utilities.draw_points(context, [point2], self.plane_tan.color, 5)
             contour_utilities.draw_points(context, [point1], self.head.color, 5)
         
-        if self.verts:
+        if self.verts and self.verts_simple == []:
             contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), 1)
             
         if self.verts_simple:
+            points = self.verts_simple
+            if 0 in self.eds[-1]:
+                points.append(self.verts_simple[0])
+            contour_utilities.draw_polyline_from_3dpoints(context, points, (0,1,.2,1), 1,"GL_LINE_STIPPLE")
             contour_utilities.draw_3d_points(context, self.verts_simple, (0,.2,1,1), 3)
-            
+            if debug:
+                for i, point in enumerate(self.verts_simple):
+                    loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, point)
+                    blf.position(0, loc[0], loc[1], 0)
+                    blf.draw(0, str(i))
         #draw contour points? later
     
     def hit_object(self,context, update_normal = True, method = 'VIEW'):

@@ -511,9 +511,9 @@ def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental C
         new_verts - list of new Vert Locations type list[Mathutils.Vector]
     '''
     
-    if segments > len(verts):
+    if segments >= len(verts):
         print('more segments requested than original verts...I refuse to subdivide until my developer gets smarter')
-        return verts
+        return verts, edges
      
     #determine if cyclic or not, first vert same as last vert
     if 0 in edges[-1]:
@@ -608,7 +608,7 @@ def align_edge_loops(verts_1, verts_2, eds_1, eds_2):
     
     if len(verts_1) != len(verts_2):
         print('non uniform loops, stopping until your developer gets smarter')
-        return
+        return verts_2
     
     
     #turns out, sum of diagonals is > than semi perimeter

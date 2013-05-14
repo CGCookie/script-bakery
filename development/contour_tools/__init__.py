@@ -44,7 +44,8 @@ methods = (('0','WALKING','0'),('1','BRUTE','1'))
 def retopo_draw_callback(self,context):
     if self.cut_lines:
         for c_cut in self.cut_lines:
-            c_cut.draw(context)
+            c_cut.draw(context, debug = bpy.app.debug)
+            
     
     if self.follow_lines != []:
         for follow in self.follow_lines:
@@ -132,10 +133,28 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         #even right click or escape
         if event.type in ('RIGHTMOUSE', 'ESC'):
-            #clean up callbacks to prevent crash
-            contour_utilities.callback_cleanup(self,context)
-            self.bme.free()
-            return {'CANCELLED'}  
+            
+            if event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target:
+                if hasattr(self.hover_target, "head"):
+                    self.cut_lines.remove(self.hover_target)
+                    self.hover_target = None
+                    
+                else:
+                    self.cut_lines.remove(self.hover_target.parent)
+                    self.hover_target = None
+                    
+                self.push_mesh_data(context)    
+                return {'RUNNING_MODAL'}
+            
+            elif event.type == 'RIGHTMOUSE' and event.value == 'RELEASE':
+                return {'RUNNING_MODAL'}        
+                
+                
+            else:
+                #clean up callbacks to prevent crash
+                contour_utilities.callback_cleanup(self,context)
+                self.bme.free()
+                return {'CANCELLED'}  
         
         if event.type in {'MIDDLEMOUSE'}:
             for cut_line in self.cut_lines:
@@ -146,9 +165,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE'}:
             if event.type == 'WHEELUPMOUSE':
-                self.segments += 1
+                
+                if self.segments >= .5 * len(self.cut_lines[0].verts):
+                    return {'RUNNING_MODAL'}
+                else:
+                    self.segments += 1
             else:
-                self.segments -= 1
+                if self.segments < 4:
+                    self.segments = 3
+                else:
+                    self.segments -= 1
             
             for cut_line in self.cut_lines:
                 if not cut_line.verts:
@@ -175,7 +201,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.drag_target.tail.screen_to_world(context)
                         self.drag_target.plane_tan.screen_to_world(context)
                         
-                        self.drag_target.hit_object(context,update_normal = False, method = 'HANDLE')
+                        if self.drag_target.head.world_position:
+                            self.drag_target.hit_object(context,update_normal = False, method = 'HANDLE')
+                        else:
+                            self.drag_target.hit_object(context, update_normal = True, method = 'VIEW')
+                            
                         self.drag_target.cut_object(context, self.bme)
                         self.drag_target.simplify_cross(self.segments)
                         self.push_mesh_data(context)
@@ -237,7 +267,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         total_verts = []
         total_edges = []
         
-        valid_cuts = [c_line for c_line in self.cut_lines if c_line.verts != []]
+        valid_cuts = [c_line for c_line in self.cut_lines if (c_line.verts != [] and c_line.verts_simple != [])]
         n_rings = len(valid_cuts)
         n_lines = len(valid_cuts[0].verts_simple)
         
