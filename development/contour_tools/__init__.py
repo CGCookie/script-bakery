@@ -292,6 +292,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     valid_pairs.append(pair)
                     A = valid_cuts[i].plane_pt
                     B = valid_cuts[m].plane_pt
+                    C = .5 * (A + B)
+                    ray1 = A - valid_cuts[i].plane_tan.world_position
+                    ray2 = B - valid_cuts[m].plane_tan.world_position
+                    ray = ray1.lerp(ray2,.5).normalized()
+                    
+                    hit = context.object.ray_cast(imx * (C + 100 * ray), imx * (C - 100 * ray))
+                    
                     for j, plane in enumerate(planes):
                         if j != i and j != m:
                             pt = plane[0]
@@ -299,9 +306,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             v = intersect_line_plane(A,B,pt,no)
                             if v:
                                 check = intersect_point_line(v,A,B)
-                                pair_length = (B - A).length
+                                pair_length = (B - A).length/2
                                 inval_length = (v - pt).length
-                                if check[1] >= 0 and check[1] <= 1 and inval_length < pair_length:
+                                if (check[1] >= 0 and check[1] <= 1 and inval_length < pair_length) or hit[2] == -1:
                                     print('invalid pair')
                                     print(pair)
                                     if pair in valid_pairs:
@@ -331,26 +338,26 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         
                     break
                     
-        print(new_order)      
+        print(new_order)     
         cuts_copy = valid_cuts.copy()
         for i, n in enumerate(new_order):
             valid_cuts[i] = cuts_copy[n]
         
         del cuts_copy
-           
+        self.cut_lines = valid_cuts   
         #now
         #align verts
         for i in range(0,n_rings-1):
-            vs_1 = valid_cuts[i].verts_simple
-            vs_2 = valid_cuts[i+1].verts_simple
-            es_1 = valid_cuts[i].eds_simple
-            es_2 = valid_cuts[i+1].eds_simple
+            vs_1 = self.cut_lines[i].verts_simple
+            vs_2 = self.cut_lines[i+1].verts_simple
+            es_1 = self.cut_lines[i].eds_simple
+            es_2 = self.cut_lines[i+1].eds_simple
             
-            valid_cuts[i+1].verts_simple = contour_utilities.align_edge_loops(vs_1, vs_2, es_1, es_2)
+            self.cut_lines[i+1].verts_simple = contour_utilities.align_edge_loops(vs_1, vs_2, es_1, es_2)
         
                 
         #work out the connectivity
-        for i, cut_line in enumerate(valid_cuts):
+        for i, cut_line in enumerate(self.cut_lines):
             for v in cut_line.verts_simple:
                 total_verts.append(imx * v)
             for ed in cut_line.eds_simple:
@@ -362,9 +369,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     total_edges.append((i*n_lines + j, (i+1)*n_lines + j))
                 
         self.follow_lines = []
-        for i in range(0,len(valid_cuts[0].verts_simple)):
+        for i in range(0,len(self.cut_lines[0].verts_simple)):
             tmp_line = []
-            for cut_line in valid_cuts:
+            for cut_line in self.cut_lines:
                 tmp_line.append(cut_line.verts_simple[i])
             self.follow_lines.append(tmp_line)
 
