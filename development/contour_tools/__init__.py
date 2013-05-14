@@ -315,7 +315,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         new_order.append(valid_pairs[-1][1])
         valid_pairs.pop()
         
-        while len(valid_pairs):
+        tests = 0
+        max_tests = len(valid_pairs) + 2
+        while len(valid_pairs) and tests < max_tests:
+            tests += 1
             for pair in valid_pairs:
                 end = set(pair) & {new_order[-1]}
                 beg = set(pair) & {new_order[0]}
@@ -328,7 +331,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         
                     break
                     
-        print(new_order)        
+        print(new_order)      
         cuts_copy = valid_cuts.copy()
         for i, n in enumerate(new_order):
             valid_cuts[i] = cuts_copy[n]
