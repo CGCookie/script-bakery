@@ -105,8 +105,7 @@ class ContourCutLine(object):
                     blf.draw(0, str(i))
         #draw contour points? later
     
-    def hit_object(self,context, update_normal = True, method = 'VIEW'):
-        ob = context.object
+    def hit_object(self,context, ob, update_normal = True, method = 'VIEW'):
         region = context.region  
         rv3d = context.space_data.region_3d
         
@@ -191,9 +190,9 @@ class ContourCutLine(object):
         self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y),self.plane_pt)
         
           
-    def cut_object(self,context, bme):
+    def cut_object(self,context, ob, bme):
         
-        mx = context.object.matrix_world
+        mx = ob.matrix_world
         pt = self.plane_pt
         pno = self.plane_no
         if pt and pno:

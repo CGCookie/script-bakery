@@ -35,6 +35,7 @@ else:
 '''
 import bpy
 import bmesh
+import math
 from mathutils import Vector
 import contour_utilities
 from contour_classes import ContourCutLine
@@ -82,17 +83,96 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     
     @classmethod
     def poll(cls,context):
+        if context.mode not in {'EDIT_MESH','OBJECT'}:
+            return False
+        
         if context.active_object:
-            if len(context.selected_objects) > 0:
-                return True
-        return False
+            if context.mode == 'EDIT_MESH':
+                if len(context.selected_objects) > 1:
+                    return True
+                else:
+                    return False
+            else:
+                return context.object.type == 'MESH'
+        else:
+            return False
     
     def modal(self, context, event):
         context.area.tag_redraw()
         
         if event.type == 'RET' and event.value == 'PRESS':
-            self.push_mesh_data(context)
-            return{'RUNNING_MODAL'}
+            
+            back_to_edit = False
+            if context.mode == 'EDIT_MESH':
+                bpy.ops.object.mode_set(mode='OBJECT')
+                back_to_edit = True
+                bm = self.tmp_bme
+                
+            else:
+                bm = self.dest_bme
+                
+            #the world_matris of the orignal form
+            orig_mx = self.original_form.matrix_world
+            orig_ims = orig_mx.inverted()
+            
+            #the world matrix of the destination (retopo) mesh
+            reto_mx = self.desination_ob.matrix_world
+            reto_imx = reto_mx.inverted()
+            
+            #make list of bmverts...these should go smoothly into            
+            bmverts = []
+            for vert in self.verts:
+                bmverts.append(bm.verts.new(tuple(reto_imx * (orig_mx * vert))))
+            
+            # Initialize the index values of this sequence...stupi they aren't going in there!)
+            self.dest_bme.verts.index_update()
+
+            #this is tricky, I'm hoping that because my vert list is
+            #actually composed of BMVerts that this will add in mesh data
+            #smoothly with no problems.
+            bmfaces = []
+            for face in self.faces:
+
+                #actual BMVerts not indices I think?
+                new_face = tuple([bmverts[i] for i in face])
+                bmfaces.append(bm.faces.new(new_face))
+            
+            if not back_to_edit:
+                # Finish up, write the bmesh back to the mesh
+                bm.to_mesh(self.dest_me)
+            
+                #thies means we created a new object
+                context.scene.objects.link(self.desination_ob)
+            
+            else:
+                #disabled unti the BMesh API supports the dest keyword argument
+                #bmesh.ops.duplicate(bm, geom = bm.verts[:] + bm.edges[:] + bm.faces[:],dest = self.dest_bme)
+                
+                # Finish up, write the bmesh back to the mesh
+                bm.to_mesh(self.dest_me)
+                
+                context.scene.objects.link(self.retopo_ob)
+                self.retopo_ob.update_tag()
+                
+                bpy.ops.object.select_all(action='DESELECT')
+                self.retopo_ob.select = True
+                context.scene.objects.active = self.desination_ob
+                self.desination_ob.select = True
+                bpy.ops.object.join()
+                self.original_form.select = True
+                
+                    
+            self.desination_ob.update_tag()
+            context.scene.update()
+            if back_to_edit:
+                bpy.ops.object.mode_set(mode = 'EDIT')
+            
+            contour_utilities.callback_cleanup(self,context)
+            bm.free()
+            self.dest_bme.free()
+            self.bme.free()
+            
+            return{'FINISHED'}
             
         if event.type == 'MOUSEMOVE':
             
@@ -165,26 +245,39 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'PASS_THROUGH'}
         
         if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE'}:
-            if event.type == 'WHEELUPMOUSE':
+            
+            if event.ctrl:
+                if event.type == 'WHEELUPMOUSE':
+
+                    if self.segments >= .5 * len(self.cut_lines[0].verts):
+                        return {'RUNNING_MODAL'}
+                    else:
+                        self.segments += 1
+                    
+                elif event.type == 'WHEELDOWNMOUSE':
                 
-                if self.segments >= .5 * len(self.cut_lines[0].verts):
-                    return {'RUNNING_MODAL'}
-                else:
-                    self.segments += 1
-            else:
-                if self.segments < 4:
-                    self.segments = 3
-                else:
-                    self.segments -= 1
+                    if self.segments < 4:
+                        self.segments = 3
+                    else:
+                        self.segments -= 1
             
-            for cut_line in self.cut_lines:
-                if not cut_line.verts:
-                    cut_line.hit_object(context)
-                    cut_line.cut_object(context, self.bme)
+                for cut_line in self.cut_lines:
+                    if not cut_line.verts:
+                        cut_line.hit_object(context, self.original_form)
+                        cut_line.cut_object(context, self.original_form, self.bme)
+                        cut_line.simplify_cross(self.segments)
                     cut_line.simplify_cross(self.segments)
-                cut_line.simplify_cross(self.segments)
+                
+                self.push_mesh_data(context,re_order = False)
+                
+                return {'RUNNING_MODAL'}
             
-            self.push_mesh_data(context,re_order = False)    
+            else:
+                for cut_line in self.cut_lines:
+                    if cut_line.head.world_position:
+                        cut_line.head.screen_from_world(context)
+                        cut_line.tail.screen_from_world(context)
+                return{'PASS_THROUGH'}  
         
         #event click
         elif event.type == 'LEFTMOUSE':
@@ -204,11 +297,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.drag_target.plane_tan.screen_to_world(context)
                         
                         if self.drag_target.head.world_position:
-                            self.drag_target.hit_object(context,update_normal = False, method = 'HANDLE')
+                            self.drag_target.hit_object(context, self.original_form, update_normal = False, method = 'HANDLE')
                         else:
-                            self.drag_target.hit_object(context, update_normal = True, method = 'VIEW')
+                            self.drag_target.hit_object(context, self.original_form, update_normal = True, method = 'VIEW')
                             
-                        self.drag_target.cut_object(context, self.bme)
+                        self.drag_target.cut_object(context, self.original_form, self.bme)
                         self.drag_target.simplify_cross(self.segments)
                         self.push_mesh_data(context)
                     else:
@@ -217,11 +310,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         if self.drag_target == self.drag_target.parent.plane_tan:
                             print('changing handle')
                             self.drag_target.screen_to_world(context)
-                            self.drag_target.parent.hit_object(context, update_normal = False, method = 'HANDLE')
+                            self.drag_target.parent.hit_object(context, self.original_form, update_normal = False, method = 'HANDLE')
                         else:
-                            self.drag_target.parent.hit_object(context, update_normal = True, method = 'VIEW')
+                            self.drag_target.parent.hit_object(context, self.original_form, update_normal = True, method = 'VIEW')
                             
-                        self.drag_target.parent.cut_object(context, self.bme)
+                        self.drag_target.parent.cut_object(context, self.original_form, self.bme)
                         self.drag_target.parent.simplify_cross(self.segments)
                         if self.new:
                             self.new = False
@@ -264,10 +357,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         if len(self.cut_lines) < 2:
             print('waiting on other cut lines')
             return
-        imx = context.object.matrix_world.inverted()
+        
+        imx = self.original_form.matrix_world.inverted()
         
         total_verts = []
         total_edges = []
+        total_faces = []
         
         valid_cuts = [c_line for c_line in self.cut_lines if c_line.verts != [] and c_line.verts_simple != []]
         self.cut_lines = valid_cuts
@@ -300,7 +395,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     ray2 = B - valid_cuts[m].plane_tan.world_position
                     ray = ray1.lerp(ray2,.5).normalized()
                     
-                    hit = context.object.ray_cast(imx * (C + 100 * ray), imx * (C - 100 * ray))
+                    hit = self.original_form.ray_cast(imx * (C + 100 * ray), imx * (C - 100 * ray))
                     
                     for j, plane in enumerate(planes):
                         if j != i and j != m:
@@ -363,7 +458,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.valid_cuts[i+1].verts_simple = contour_utilities.align_edge_loops(vs_1, vs_2, es_1, es_2)
         
                 
-        #work out the connectivity
+        #work out the connectivity edges
         for i, cut_line in enumerate(self.valid_cuts):
             for v in cut_line.verts_simple:
                 total_verts.append(imx * v)
@@ -374,7 +469,26 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 #make connections between loops
                 for j in range(0,n_lines):
                     total_edges.append((i*n_lines + j, (i+1)*n_lines + j))
-                
+        
+        cyclic = 0 in valid_cuts[0].eds_simple[-1]
+        #work out the connectivity faces:
+        for j in range(0,len(valid_cuts) - 1):
+            for i in range(0,n_lines-1):
+                ind0 = j * n_lines + i
+                ind1 = j * n_lines + (i + 1)
+                ind2 = (j + 1) * n_lines + (i + 1)
+                ind3 = (j + 1) * n_lines + i
+                total_faces.append((ind0,ind1,ind2,ind3))
+            
+            if cyclic:
+                ind0 = (j + 1) * n_lines - 1
+                ind1 = j * n_lines + int(math.fmod((j+1)*n_lines, n_lines))
+                ind2 = ind0 + 1
+                ind3 = ind0 + n_lines
+                total_faces.append((ind0,ind1,ind2,ind3))
+                print('part implemented')
+        print(len(total_verts))       
+        print(total_faces)
         self.follow_lines = []
         for i in range(0,len(self.valid_cuts[0].verts_simple)):
             tmp_line = []
@@ -382,43 +496,128 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 tmp_line.append(cut_line.verts_simple[i])
             self.follow_lines.append(tmp_line)
 
-        #gather all the valid ones that have a plane_pt and plane_no
-        
-        #a cutline belongs between the smallest segment that corosses the plane
-        
-        #intersect line plane[] > 0 < 1.    
-    def invoke(self, context, event):
-        
-        if context.object:
-            ob = context.object
-            me = ob.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
-            self.bme = bmesh.new()
-            self.bme.from_mesh(me)
-            self.segments = 10
-            #self.bme.normal_update() #necessary?  nope...we don't need normals..save some time
-            
-            self.tmp_mesh = bpy.data.meshes.new(ob.name + "ctrt") 
-            self.new_object = bpy.data.objects.new(ob.name + "ctrt", self.tmp_mesh)
-            self.new_object.data = self.tmp_mesh
-            self.new_object.show_wire = True
-            self.new_object.matrix_world = ob.matrix_world
-            scene = bpy.context.scene
-            scene.objects.link(self.new_object)
-            self.follow_lines = []
-            self.new = False #a wway to keep track of if we are moving something or makig anew one.
- 
-        self._handle = bpy.types.SpaceView3D.draw_handler_add(retopo_draw_callback, (self, context), 'WINDOW', 'POST_PIXEL')
 
+        self.verts = total_verts
+        self.faces = total_faces
+        self.edges = total_edges
+        '''
+        ideasman42_> bmesh.ops.duplicate
+        <ideasman42_> this has a destination argument
+        <ideasman42_> you can duplicate into another mesh
+        <ideasman42_> but this api isnt well tested :S
+        <ideasman42_> bmesh.ops.duplicate(bm_from, dest=bm_to, geom=bm_to.verts[:] + bm_to.edges[:] + bm_to.faces[:])
+        <ideasman42_> Patrick_Moore, try that
+        <ideasman42_> might be good to have a simple function for this though
+        <ideasman42_> bm.join(other)
+        '''
+  
+    def invoke(self, context, event):
+        #if edit mode
+        if context.mode == 'EDIT_MESH':
+            bpy.ops.object.editmode_toggle()
+            
+            '''
+            self.desination_ob = context.object
+            self.dest_me = context.object.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
+            self.dest_bme = bmesh.new()
+            
+            #we will build this bmesh then add it to the existing one
+            self.tmp_bme = bmesh.new()
+            
+            self.dest_bme.from_mesh(self.dest_me)
+            '''
+            
+            ########################################################
+            #### This is temporary code until bmesh.ops improves ###
+            ########################################################
+            
+            #new object to build to then join
+            self.desination_ob = context.object
+            #new blank mesh
+            self.dest_me = bpy.data.meshes.new("tmp_recontour")
+            self.retopo_ob = bpy.data.objects.new('tmp',self.dest_me) #this is an empty currently
+            self.retopo_ob.matrix_world = self.desination_ob.matrix_world
+            
+            #we will build this bmesh then to_mesh it into
+            #self.dest_me....then join retopo ob to dest ob
+            #and be frustrated.
+            self.tmp_bme = bmesh.new()
+            self.dest_bme = bmesh.new()
+            bpy.ops.object.editmode_toggle()
+            
+            #the selected object will be the original form
+            self.original_form = [ob for ob in context.selected_objects if ob.name != context.object.name][0]
+            
+            
+        else:
+            
+            #the active object will be the target
+            self.original_form  = context.object
+            
+            #no temp mesh needed
+            self.tmp_bme = None
+            
+            #new blank mesh
+            self.dest_me = bpy.data.meshes.new(self.original_form.name + "_recontour")
+            #new object to hold it
+            self.desination_ob = bpy.data.objects.new('ReContour_ob',self.dest_me) #this is an empty currently
+            #bmesh to operate on
+            self.dest_bme = self.bme = bmesh.new()
+            self.dest_bme.from_mesh(self.dest_me)
+            
+        
+        #get the info about the original form 
+        me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
+        self.bme = bmesh.new()
+        self.bme.from_mesh(me)
+        
+        #default segments (spans)
+        self.segments = 10
+            
+            
+        #here is where we will cache verts edges and faces
+        #unti lthe user confirms and we output a real mesh.
+        self.verts = []
+        self.edges = []
+        self.faces = []
+            
+       
+        #These are all variables/values used in the user interaction
+        #and drawing
+        
+        
+        #is the user moving and existing entity or a new one.
+        self.new = False 
+        #is the mouse clicked and held down
         self.drag = False
-        self.cut_lines = []
-        self.valid_cuts = []
+        
+        #what is the user dragging..a cutline, a handle etc
         self.drag_target = None
+        #what is the mouse over top of currently
         self.hover_target = None
+        
+        #at the begniinging of a drag, we want to keep track
+        #of where things started out
         self.initial_location_head = None
         self.initial_location_tail = None
         self.initial_location_mouse = None
         
+        #cut_linse are actual instances of the
+        #ContourCutLine calss which controls the extraction of
+        #the contours.
+        self.cut_lines = []
+        #the validity of a cut is determined by the inferred connectivity to
+        #other cut_lines, we make a subset here.  CutLines are cheap so we duplicate
+        #instead of referencing indices for now.
+        self.valid_cuts = []
+        
+        #this iw a collection of verts used for open GL drawing the spans
+        self.follow_lines = []
+        
+        #add in the draw callback and modal method
+        self._handle = bpy.types.SpaceView3D.draw_handler_add(retopo_draw_callback, (self, context), 'WINDOW', 'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
+        
         return {'RUNNING_MODAL'}
     
     def execute(self,context):
