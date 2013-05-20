@@ -40,18 +40,106 @@ from mathutils import Vector
 import contour_utilities
 from contour_classes import ContourCutLine
 from mathutils.geometry import intersect_line_plane, intersect_point_line
+from bpy.props import EnumProperty, StringProperty,BoolProperty, IntProperty
+from bpy.types import Operator, AddonPreferences
 
 methods = (('0','WALKING','0'),('1','BRUTE','1'))
 
+
+class ContourToolsAddonPreferences(AddonPreferences):
+    bl_idname = __name__
+    
+    simple_vert_inds = BoolProperty(
+            name="Simple Inds",
+            default=False,
+            )
+    
+    vert_inds = BoolProperty(
+            name="Vert Inds",
+            description = "Display indices of the raw contour verts",
+            default=False,
+            )
+    
+    show_verts = BoolProperty(
+            name="Show Raw Verts",
+            description = "Display the raw contour verts",
+            default=False,
+            )
+    
+    show_edges = BoolProperty(
+            name="Show Span Edges",
+            description = "Display the extracted mesh edges.  Usually only turned off for debugging",
+            default=True,
+            )
+    
+    show_ring_edges = BoolProperty(
+            name="Show Ring Edges",
+            description = "Display the extracted mesh edges.  Usually only turned off for debugging",
+            default=True,
+            )
+    
+    debug = IntProperty(
+            name="Debug Level",
+            default=1,
+            min = 0,
+            max = 4,
+            )
+    
+    vert_size = IntProperty(
+            name="Vertex Size",
+            default=3,
+            min = 1,
+            max = 10,
+            )
+    
+    raw_vert_size = IntProperty(
+            name="Raw Vertex Size",
+            default=1,
+            min = 1,
+            max = 10,
+            )
+    
+    handle_size = IntProperty(
+            name="Handle Vertex Size",
+            default=5,
+            min = 1,
+            max = 10,
+            )
+    
+ 
+    line_thick = IntProperty(
+            name="Line Thickness",
+            default=1,
+            min = 1,
+            max = 10,
+            )
+    
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="Contour Tools Beta Preferences and Settings")
+        layout.prop(self, "debug")
+        layout.prop(self, "show_verts")
+        layout.prop(self, "show_edges")
+        layout.prop(self, "show_ring_edges")
+        layout.prop(self, "vert_inds")
+        layout.prop(self, "simple_vert_inds")
+        layout.prop(self, "vert_size")
+        layout.prop(self, "raw_vert_size")
+        layout.prop(self, "handle_size")
+        layout.prop(self, "line_thick")
+        
+
 def retopo_draw_callback(self,context):
+    
+    settings = context.user_preferences.addons['contour_tools'].preferences
     if self.cut_lines:
         for c_cut in self.cut_lines:
-            c_cut.draw(context, debug = bpy.app.debug)
+            c_cut.draw(context, settings)
             
     
-    if self.follow_lines != []:
+    if self.follow_lines != [] and settings.show_edges:
         for follow in self.follow_lines:
-            contour_utilities.draw_polyline_from_3dpoints(context, follow, (0,1,.2,1), 1,"GL_LINE_STIPPLE")
+            contour_utilities.draw_polyline_from_3dpoints(context, follow, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
         #event value press
             #asses proximity for hovering
             #if no proximity:
@@ -258,6 +346,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         return {'RUNNING_MODAL'}
                     else:
                         self.segments += 1
+                    self.report({'INFO'}, "Segments: %i" % self.segments)
                     
                 elif event.type == 'WHEELDOWNMOUSE':
                 
@@ -266,6 +355,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     else:
                         self.segments -= 1
             
+                    self.report({'INFO'}, "Segments: %i" % self.segments)
+                    
                 for cut_line in self.cut_lines:
                     if not cut_line.verts:
                         cut_line.hit_object(context, self.original_form)
@@ -642,8 +733,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 
 #resgistration
 def register():
+    bpy.utils.register_class(ContourToolsAddonPreferences)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour)
+    
 
 #unregistration
 def unregister():
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour)
+    bpy.utils.unregister_class(ContourToolsAddonPreferences)

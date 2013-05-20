@@ -65,8 +65,16 @@ class ContourCutLine(object):
         self.eds_simple = []
         self.edges = []
         
-    def draw(self,context, debug = False):
+    def draw(self,context, settings):
+        '''
+        setings are the addon preferences for contour tools
+        '''
         
+        debug = settings.debug
+        #settings = context.user_preferences.addons['contour_tools'].preferences
+        
+        #this should be moved to only happen if the view changes :-/  I'ts only
+        #a few hundred calcs even with a lot of lines. Waste not want not.
         if self.head.world_position:
             self.head.screen_from_world(context)
         if self.tail.world_position:
@@ -75,34 +83,48 @@ class ContourCutLine(object):
             self.plane_tan.screen_from_world(context)
             
         
-        #if not self.verts_simple:
-            #draw connecting line
+        #draw connecting line
         points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
-        contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), 1, "GL_LINE_STIPPLE")
-        contour_utilities.draw_points(context, points, self.head.color, 5)
-        #no longer if not self.verts_simple ^^^^^^ look up  6 lines
+        if settings.show_edges:
+            contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), settings.line_thick, "GL_LINE_STIPPLE")
         
+        #draw the two handles
+        contour_utilities.draw_points(context, points, self.head.color, settings.handle_size)
+        
+        #draw the current plane point and the handle to change plane orientation
         if self.plane_pt:
             point1 = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_pt)
             point2 = (self.plane_tan.x, self.plane_tan.y)
-            contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), 1, "GL_LINE_STIPPLE")
-            contour_utilities.draw_points(context, [point2], self.plane_tan.color, 5)
-            contour_utilities.draw_points(context, [point1], self.head.color, 5)
+            if settings.show_edges:
+                contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), settings.line_thick, "GL_LINE_STIPPLE")
+            contour_utilities.draw_points(context, [point2], self.plane_tan.color, settings.handle_size)
+            contour_utilities.draw_points(context, [point1], self.head.color, settings.handle_size)
         
-        if self.verts and self.verts_simple == []:
-            contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), 1)
-            
+        #draw the raw contour vertices
+        if (self.verts and self.verts_simple == []) or (debug > 0 and settings.show_verts):
+            contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), settings.raw_vert_size)
+        
+        #draw the simplified contour vertices and edges (rings)    
         if self.verts_simple:
             points = self.verts_simple.copy()
             if 0 in self.eds[-1]:
                 points.append(self.verts_simple[0])
-            contour_utilities.draw_polyline_from_3dpoints(context, points, (0,1,.2,1), 1,"GL_LINE_STIPPLE")
-            contour_utilities.draw_3d_points(context, self.verts_simple, (0,.2,1,1), 3)
+            
+            if settings.show_ring_edges:
+                contour_utilities.draw_polyline_from_3dpoints(context, points, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
+            contour_utilities.draw_3d_points(context, self.verts_simple, (0,.2,1,1), settings.vert_size)
             if debug:
-                for i, point in enumerate(self.verts_simple):
-                    loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, point)
-                    blf.position(0, loc[0], loc[1], 0)
-                    blf.draw(0, str(i))
+                if settings.vert_inds:
+                    for i, point in enumerate(self.verts):
+                        loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, point)
+                        blf.position(0, loc[0], loc[1], 0)
+                        blf.draw(0, str(i))
+                    
+                if settings.simple_vert_inds:    
+                    for i, point in enumerate(self.verts_simple):
+                        loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, point)
+                        blf.position(0, loc[0], loc[1], 0)
+                        blf.draw(0, str(i))
         #draw contour points? later
     
     def hit_object(self,context, ob, update_normal = True, method = 'VIEW'):
