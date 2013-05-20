@@ -248,8 +248,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
             if event.ctrl:
                 if event.type == 'WHEELUPMOUSE':
-
-                    if self.segments >= .5 * len(self.cut_lines[0].verts):
+                    if len(self.cut_lines):
+                        max_segments =  min([len(cut.verts) for cut in self.cut_lines])
+                    else:
+                        max_segments = 10
+                        
+                    if self.segments >= max_segments:
+                        self.segments = max_segments
                         return {'RUNNING_MODAL'}
                     else:
                         self.segments += 1
@@ -302,6 +307,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.drag_target.hit_object(context, self.original_form, update_normal = True, method = 'VIEW')
                             
                         self.drag_target.cut_object(context, self.original_form, self.bme)
+                        
+                        #now we have a new cut, make sure our max segments aren't overwhelmed
+                        if len(self.cut_lines):
+                            max_segments =  min([len(cut.verts) for cut in self.cut_lines])
+                        else:
+                            max_segments = 10
+                            
+                        if self.segments >= max_segments:
+                            self.segments = max_segments
+                        
                         self.drag_target.simplify_cross(self.segments)
                         self.push_mesh_data(context)
                     else:
@@ -573,6 +588,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         #default segments (spans)
         self.segments = 10
+        self.report({'OPERATOR'}, "Segments: %i" % self.segments)
             
             
         #here is where we will cache verts edges and faces
