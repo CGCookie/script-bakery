@@ -164,6 +164,7 @@ class ContourCutLine(object):
                 if hit[2] != -1:
                     self.plane_pt = mx * hit[0]
                     self.seed_face_index = hit[2]
+                    print(hit[2])
                     self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y), mx * hit[0])
                     self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y), mx * hit[0])
                     self.plane_tan.world_position = self.plane_pt + (self.head.world_position - self.tail.world_position).length/4 * view_z

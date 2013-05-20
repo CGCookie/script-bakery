@@ -397,6 +397,12 @@ def face_cycle(face, pt, no, prev_eds, verts, connection):
     return:
         element - either a BMVert or a BMFace depending on what it finds.
     '''
+    if len(face.edges) > 4:
+        ngon = True
+        print('oh shit an ngon')
+    else:
+        ngon = False
+        
     for ed in face.edges:
         if ed.index not in prev_eds:
             prev_eds.append(ed.index)
@@ -431,7 +437,7 @@ def face_cycle(face, pt, no, prev_eds, verts, connection):
 def vert_cycle(vert, pt, no, prev_eds, verts, connection):
     '''
     args:
-        face - Blender BMFace
+        vert - Blender BMVert
         pt - Vector, point on plane
         no - Vector, normal of plane
         
@@ -702,6 +708,11 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     seed_search = 0
     prev_eds = []
     seeds =[]
+    
+    if len(bme.faces[seed_index].edges) > 4:
+        print('no NGon Support for initial seed yet! try again')
+        return None
+    
     for ed in bme.faces[seed_index].edges:
         seed_search += 1        
         prev_eds.append(ed.index)
