@@ -554,11 +554,11 @@ def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental C
         new_verts[0] = verts[0]
         new_verts[-1] = verts[-1]
     
-    n = 1 #index to save some looping through the cumulative lengths list
+    n = 0 #index to save some looping through the cumulative lengths list
     for i in range(0,segments-1):
         desired_length = (i+1)/segments * arch_len
         
-        #fid the original vert with the largets legnth
+        #find the original vert with the largets legnth
         #not greater than the desired length
         for j in range(n, len(verts)-1):
             if cumulative_lengths[j] > desired_length:
@@ -576,7 +576,8 @@ def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental C
         #close the loop
         eds.append((i+1,0))
 
-    
+    print(cumulative_lengths)
+    print(arch_len)
     print(eds)    
     return new_verts, eds
  
