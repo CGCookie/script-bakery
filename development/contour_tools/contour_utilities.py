@@ -724,6 +724,8 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
 
     total_tests = 0
     
+    #by the way we append the verts in the first face...we find A then B then start at A... so there is a little  reverse in teh vert order at the middle.
+    verts.reverse()
     for element in seeds: #this will go both ways if they dont meet up.
         element_tests = 0
         while element and total_tests < 10000:
