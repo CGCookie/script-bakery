@@ -188,7 +188,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     def modal(self, context, event):
         context.area.tag_redraw()
         
-        if event.type == 'RET' and event.value == 'PRESS':
+        if event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
             back_to_edit = False
             if context.mode == 'EDIT_MESH':
@@ -255,6 +255,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             if back_to_edit:
                 bpy.ops.object.mode_set(mode = 'EDIT')
             
+            context.area.header_text_set()
             contour_utilities.callback_cleanup(self,context)
             bm.free()
             self.dest_bme.free()
@@ -321,6 +322,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
             else:
                 #clean up callbacks to prevent crash
+                context.area.header_text_set()
                 contour_utilities.callback_cleanup(self,context)
                 self.bme.free()
                 return {'CANCELLED'}  
@@ -332,31 +334,22 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     cut_line.tail.screen_from_world(context)
             return {'PASS_THROUGH'}
         
-        if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE'}:
+        if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE','NUMPAD_PLUS','NUMPAD_MINUS'}:
             
-            if event.ctrl:
-                if event.type == 'WHEELUPMOUSE':
-                    if len(self.cut_lines):
-                        max_segments =  min([len(cut.verts) for cut in self.cut_lines])
-                    else:
-                        max_segments = 10
-                        
-                    if self.segments >= max_segments:
-                        self.segments = max_segments
-                        return {'RUNNING_MODAL'}
-                    else:
-                        self.segments += 1
-                    self.report({'INFO'}, "Segments: %i" % self.segments)
+            if (event.type == 'WHEELUPMOUSE' and event.ctrl) or event.type == 'NUMPAD_PLUS':
+                if len(self.cut_lines):
+                    max_segments =  min([len(cut.verts) for cut in self.cut_lines])
+                else:
+                    max_segments = 10
                     
-                elif event.type == 'WHEELDOWNMOUSE':
+                if self.segments >= max_segments:
+                    self.segments = max_segments
+                    return {'RUNNING_MODAL'}
+                else:
+                    self.segments += 1
+                message = "Segments: %i" % self.segments
+                context.area.header_text_set(text = message)
                 
-                    if self.segments < 4:
-                        self.segments = 3
-                    else:
-                        self.segments -= 1
-            
-                    self.report({'INFO'}, "Segments: %i" % self.segments)
-                    
                 for cut_line in self.cut_lines:
                     if not cut_line.verts:
                         cut_line.hit_object(context, self.original_form)
@@ -365,8 +358,28 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     cut_line.simplify_cross(self.segments)
                 
                 self.push_mesh_data(context,re_order = False)
-                
                 return {'RUNNING_MODAL'}
+            
+            elif (event.type == 'WHEELDOWNMOUSE' and event.ctrl) or event.type == 'NUMPAD_MINUS':
+            
+                if self.segments < 4:
+                    self.segments = 3
+                else:
+                    self.segments -= 1
+        
+                message = "Segments: %i" % self.segments
+                context.area.header_text_set(text = message)
+                
+                for cut_line in self.cut_lines:
+                    if not cut_line.verts:
+                        cut_line.hit_object(context, self.original_form)
+                        cut_line.cut_object(context, self.original_form, self.bme)
+                        cut_line.simplify_cross(self.segments)
+                    cut_line.simplify_cross(self.segments)
+            
+                self.push_mesh_data(context,re_order = False)
+                return {'RUNNING_MODAL'}
+            
             
             else:
                 for cut_line in self.cut_lines:
@@ -679,7 +692,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         #default segments (spans)
         self.segments = 10
-        self.report({'OPERATOR'}, "Segments: %i" % self.segments)
+        message = "Segments: %i" % self.segments
+        context.area.header_text_set(text = message)
             
             
         #here is where we will cache verts edges and faces
