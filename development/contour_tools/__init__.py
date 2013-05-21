@@ -336,7 +336,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE','NUMPAD_PLUS','NUMPAD_MINUS'}:
             
-            if (event.type == 'WHEELUPMOUSE' and event.ctrl) or event.type == 'NUMPAD_PLUS':
+            if (event.type == 'WHEELUPMOUSE' and event.ctrl) or (event.type == 'NUMPAD_PLUS' and event.value == 'PRESS'):
                 if len(self.cut_lines):
                     max_segments =  min([len(cut.verts) for cut in self.cut_lines])
                 else:
@@ -360,7 +360,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.push_mesh_data(context,re_order = False)
                 return {'RUNNING_MODAL'}
             
-            elif (event.type == 'WHEELDOWNMOUSE' and event.ctrl) or event.type == 'NUMPAD_MINUS':
+            elif (event.type == 'WHEELDOWNMOUSE' and event.ctrl) or (event.type == 'NUMPAD_MINUS' and event.value == 'PRESS'):
             
                 if self.segments < 4:
                     self.segments = 3
