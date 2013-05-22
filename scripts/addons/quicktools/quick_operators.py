@@ -155,7 +155,37 @@ class addMirror(bpy.types.Operator):
         return {"FINISHED"}
     
 
+################################################### 
+# Halve the mesh and add a Mirror modifier   
+################################################### 
 
+class mirrorMesh(bpy.types.Operator):    
+    """Delete one half of a mesh and add a mirror modifier"""
+    bl_idname = "object.mesh_mirror"
+    bl_label = "Halve and mirror mesh"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        
+        obj = bpy.context.active_object.data
+        
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        for verts in obj.vertices:
+            if verts.co.x < -0.001:    
+                verts.select = True
+                
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.delete(type='VERT')
+        
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.add_mirror()
+
+        return {'FINISHED'}
+    
+    
 ################################################### 
 # Apply only subsurf modifiers   
 ################################################### 
@@ -394,6 +424,11 @@ class sculptAxisLockZ(bpy.types.Operator):
         
         return {"FINISHED"}   
     
+
+################################################### 
+# Creating operator for toggling collapse short edges
+################################################### 
+
 class sculptCollapseShortEdges(bpy.types.Operator):
     """"Toggle Collapse Short Edges Option"""
     bl_label = "Toggle Collapse Short Edges"
@@ -422,6 +457,77 @@ class sculptCollapseShortEdges(bpy.types.Operator):
             
         return {"FINISHED"}
 
+################################################### 
+# Creating operator for toggling double sided
+################################################### 
+
+class objectDoubleSided(bpy.types.Operator):
+    """Toggle Double Sided Option"""
+    bl_label = "Toggle Double Sided"
+    bl_idname = "object.double_sided"
+    bl_description = "Toggle double-sided on all selected objects"
+
+    def execute(self, context):
+
+        scene = bpy.context.scene
+        selected = bpy.context.selected_objects
+
+        origActive = bpy.context.active_object
+        
+        doubleSided = bpy.context.object.data.show_double_sided
+
+        for obj in selected:
+            scene.objects.active = obj
+                
+            if doubleSided:
+                context.object.data.show_double_sided = False
+            else:
+                context.object.data.show_double_sided = True
+
+        scene.objects.active = origActive
+
+        return {"FINISHED"}
+
+################################################### 
+# Creating operator for toggling all edges wire
+################################################### 
+
+class allEdgesWire(bpy.types.Operator):
+    """Toggle Wire Display With All Edges"""
+    bl_label = "Toggle All Edges Wire"
+    bl_idname = "object.all_edges_wire"
+    bl_description = "Toggle all-edges wireframe on all selected objects"
+
+    def execute(self, context):
+
+        scene = bpy.context.scene
+        selected = bpy.context.selected_objects
+
+        origActive = bpy.context.active_object
+        
+        allEdges = bpy.context.object.show_all_edges
+        wire = bpy.context.object.show_wire
+
+        for obj in selected:
+            scene.objects.active = obj
+                
+            if allEdges:
+                context.object.show_all_edges = False
+            else:
+                context.object.show_all_edges = True
+        
+        for obj in selected:
+            scene.objects.active = obj
+
+            if wire:
+                context.object.show_wire = False
+            else:
+                context.object.show_wire = True
+
+        scene.objects.active = origActive
+
+        return {"FINISHED"}
+
 
 ######### Register and unregister the operators ###########
 
@@ -429,6 +535,7 @@ def register():
     bpy.utils.register_class(addTarget)
     bpy.utils.register_class(addSubsurf)
     bpy.utils.register_class(addMirror)
+    bpy.utils.register_class(mirrorMesh)
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(applyRemesh)
     bpy.utils.register_class(applyModifiers)
@@ -440,12 +547,15 @@ def register():
     bpy.utils.register_class(sculptAxisLockY)
     bpy.utils.register_class(sculptAxisLockZ)
     bpy.utils.register_class(sculptCollapseShortEdges)
+    bpy.utils.register_class(objectDoubleSided)
+    bpy.utils.register_class(allEdgesWire)
 
     
 def unregister():
     bpy.utils.unregister_class(addTarget)
     bpy.utils.unregister_class(addSubsurf)
     bpy.utils.unregister_class(addMirror)
+    bpy.utils.register_class(mirrorMesh)
     bpy.utils.unregister_class(applySubsurf)
     bpy.utils.unregister_class(applyRemesh)
     bpy.utils.unregister_class(applyModifiers)
@@ -457,7 +567,8 @@ def unregister():
     bpy.utils.unregister_class(sculptAxisLockY)
     bpy.utils.unregister_class(sculptAxisLockZ)
     bpy.utils.unregister_class(sculptCollapseShortEdges)
-    
+    bpy.utils.unregister_class(objectDoubleSided)
+    bpy.utils.unregister_class(allEdgesWire)
 
     
 if __name__ == "__main__":

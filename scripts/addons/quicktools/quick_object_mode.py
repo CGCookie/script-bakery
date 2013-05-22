@@ -32,6 +32,24 @@ class QuickObjectTools(bpy.types.Menu):
         
         layout.operator("object.shade_smooth", icon='SOLID')
         layout.operator("object.shade_flat", icon='MESH_UVSPHERE')
+        
+        layout.separator()
+        
+        layout.operator("gpencil.active_frame_delete", "Delete Grease", icon='GREASEPENCIL')
+
+        layout.separator()
+
+        layout.menu(ObjectDisplayOptions.bl_idname)
+
+class ObjectDisplayOptions(bpy.types.Menu):
+    bl_idname = "object.display_options"
+    bl_label = "Object Display Options"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("object.double_sided")
+        layout.operator("object.all_edges_wire")
+        # add "Outline Selected" here.
    
 # Create the Tool Bar section 
 class QuickObjectToolbar(bpy.types.Panel):
@@ -84,6 +102,7 @@ addon_keymaps = []
 def register():
     #register the new menus
     bpy.utils.register_class(QuickObjectTools)
+    bpy.utils.register_class(ObjectDisplayOptions)
     bpy.utils.register_class(QuickObjectToolbar)
      
     
@@ -101,6 +120,7 @@ def register():
 def unregister():
     #unregister the new menus
     bpy.utils.unregister_class(QuickObjectTools)
+    bpy.utils.unregister_class(ObjectDisplayOptions)
     bpy.utils.unregister_class(QuickObjectToolbar)
         
     

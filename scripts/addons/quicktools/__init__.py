@@ -2,8 +2,8 @@ bl_info = {
     "name": "Quick Tools",
     "description": "A series of tools and menus to enhance and speed up workflow",
     "author": "Jonathan Williamson",
-    "version": (0, 6),
-    "blender": (2, 6, 6),
+    "version": (0, 7),
+    "blender": (2, 6, 7),
     "location": "View3D - 'Q' key gives a menu in Object, Edit, and Sculpt modes.",
     "warning": '',  # used for warning icon and text in addons panel
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/3D_interaction/quicktools",
