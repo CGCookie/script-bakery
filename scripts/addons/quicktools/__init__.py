@@ -2,7 +2,7 @@ bl_info = {
     "name": "Quick Tools",
     "description": "A series of tools and menus to enhance and speed up workflow",
     "author": "Jonathan Williamson",
-    "version": (0, 7),
+    "version": (0, 8),
     "blender": (2, 6, 7),
     "location": "View3D - 'Q' key gives a menu in Object, Edit, and Sculpt modes.",
     "warning": '',  # used for warning icon and text in addons panel
@@ -20,6 +20,7 @@ if "bpy" in locals():
     imp.reload(quick_object_mode)
     imp.reload(quick_edit_mode)
     imp.reload(quick_sculpt_mode)
+    imp.reload(quick_mode_switch)
     print("Reloaded multifiles")
 	
 else:
