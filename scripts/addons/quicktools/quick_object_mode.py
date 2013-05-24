@@ -19,7 +19,9 @@ class QuickObjectTools(bpy.types.Menu):
         layout.operator("object.empty_add_unactive", "Add Target")
         
         layout.separator()
-                
+        
+        layout.menu(SmartModifiers.bl_idname, "Add Smart Modifier", icon='MODIFIER')
+
         layout.operator_menu_enum("object.modifier_add", "type",
                                       icon='MODIFIER') 
         layout.operator("object.apply_modifiers")
@@ -40,6 +42,15 @@ class QuickObjectTools(bpy.types.Menu):
         layout.separator()
 
         layout.menu(ObjectDisplayOptions.bl_idname)
+
+class SmartModifiers(bpy.types.Menu):
+    bl_idname = "object.smart_mod"
+    bl_label = "Smart Modifiers"
+
+    def draw (self, context):
+        layout = self.layout
+        layout.operator("object.add_mirror")
+        layout.operator("object.add_lattice")
 
 class ObjectDisplayOptions(bpy.types.Menu):
     bl_idname = "object.display_options"
@@ -102,6 +113,7 @@ addon_keymaps = []
 def register():
     #register the new menus
     bpy.utils.register_class(QuickObjectTools)
+    bpy.utils.register_class(SmartModifiers)
     bpy.utils.register_class(ObjectDisplayOptions)
     bpy.utils.register_class(QuickObjectToolbar)
      
@@ -120,6 +132,7 @@ def register():
 def unregister():
     #unregister the new menus
     bpy.utils.unregister_class(QuickObjectTools)
+    bpy.utils.unregister_class(SmartModifiers)
     bpy.utils.unregister_class(ObjectDisplayOptions)
     bpy.utils.unregister_class(QuickObjectToolbar)
         

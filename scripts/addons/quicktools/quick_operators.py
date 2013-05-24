@@ -155,6 +155,75 @@ class addMirror(bpy.types.Operator):
         return {"FINISHED"}
     
 
+class addLattice(bpy.types.Operator):
+    """Add a Lattice Modifier and auto-assign to selected lattice object"""
+    bl_idname = "object.add_lattice"
+    bl_label = "Add a lattice modifier"
+    bl_options = {'REGISTER', 'UNDO'}
+
+   # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+
+    # Add the modifier
+    def execute(self, context):
+
+        scene = bpy.context.scene
+        
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Find all selected objects
+        targetObj = context.selected_objects
+        
+        # Add a lattice modifier
+        bpy.ops.object.modifier_add(type='LATTICE')
+
+        # Store the mesh object
+        selectedObj = activeObj
+        print("Selected:", selectedObj)
+        print("Active:", activeObj)
+
+
+        useLatticeObj = False
+
+        # If an second object is not selected, don't use lattice object
+        if len(targetObj) > 1:
+            useLatticeObj = True
+
+        # Make the targetObj active
+        try:
+            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
+        except:
+            pass
+        
+        print("Scene Active:", scene.objects.active)
+                
+        # Check for active object
+        activeObj = context.active_object
+        print("Active:", activeObj)
+        
+        # Swap the selected and active objects
+        (selectedObj, activeObj) = (activeObj, selectedObj)
+        print("Swapped Active:", activeObj)
+        print("Swapped Selected:", selectedObj)
+        
+        # Deselect the empty object and select the mesh object again, making it active
+        selectedObj.select = False
+        activeObj.select = True
+        scene.objects.active = activeObj
+        
+        # Find the added modifier, set the lattice object
+        for mod in activeObj.modifiers:
+            if mod.type == 'LATTICE':
+                if useLatticeObj == True:
+                    mod.object = bpy.data.objects[selectedObj.name]      
+
+        return {"FINISHED"}
+
+
+
 ################################################### 
 # Halve the mesh and add a Mirror modifier   
 ################################################### 
@@ -535,6 +604,7 @@ def register():
     bpy.utils.register_class(addTarget)
     bpy.utils.register_class(addSubsurf)
     bpy.utils.register_class(addMirror)
+    bpy.utils.register_class(addLattice)
     bpy.utils.register_class(mirrorMesh)
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(applyRemesh)
@@ -555,6 +625,7 @@ def unregister():
     bpy.utils.unregister_class(addTarget)
     bpy.utils.unregister_class(addSubsurf)
     bpy.utils.unregister_class(addMirror)
+    bpy.utils.unregister_class(addLattice)
     bpy.utils.register_class(mirrorMesh)
     bpy.utils.unregister_class(applySubsurf)
     bpy.utils.unregister_class(applyRemesh)
