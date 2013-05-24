@@ -54,6 +54,10 @@ class QuickSculptTools(bpy.types.Menu):
         layout.operator("sculpt.axislock_y")
         layout.operator("sculpt.axislock_z")
 
+        layout.separator()
+        
+        layout.operator("gpencil.active_frame_delete", "Delete Grease", icon='GREASEPENCIL')
+
         layout.menu(SculptDisplayOptions.bl_idname)
 
         

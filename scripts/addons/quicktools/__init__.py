@@ -23,7 +23,7 @@ if "bpy" in locals():
     print("Reloaded multifiles")
 	
 else:
-    from . import quick_operators, quick_object_mode, quick_edit_mode, quick_sculpt_mode
+    from . import quick_operators, quick_object_mode, quick_edit_mode, quick_sculpt_mode, quick_mode_switch
     
     print("Imported multifiles")
 
@@ -31,6 +31,7 @@ import quick_operators
 import quick_object_mode
 import quick_edit_mode
 import quick_sculpt_mode
+import quick_mode_switch
 
 import bpy
 
@@ -41,6 +42,7 @@ def register():
    quick_object_mode.register()
    quick_edit_mode.register()
    quick_sculpt_mode.register()
+   quick_mode_switch.register()
    
    bpy.utils.register_module(__name__)
    
@@ -52,7 +54,8 @@ def unregister():
     quick_object_mode.unregister()
     quick_edit_mode.unregister()
     quick_sculpt_mode.unregister()
-    
+    quick_mode_switch.unregister()
+
     bpy.utils.unregister_module(__name__)
     
 if __name__ == "__main__":
