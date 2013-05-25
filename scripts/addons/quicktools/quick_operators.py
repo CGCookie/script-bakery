@@ -229,7 +229,7 @@ def halve_mesh(self, context):
                     verts.select = True
 
 class halveMesh(bpy.types.Operator):    
-    """Delete one half of a mesh and add a mirror modifier"""
+    """Delete all vertices on the -X side of center"""
     bl_idname = "object.mesh_halve"
     bl_label = "Halve and mirror mesh"
     bl_options = {'REGISTER', 'UNDO'}
@@ -260,6 +260,8 @@ class halveMesh(bpy.types.Operator):
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.add_mirror()
 
+            self.report({'INFO'}, "Mesh half removed and Mirror modifier added")
+
         elif bpy.context.object.mode == 'EDIT':
             bpy.ops.mesh.select_all(action='DESELECT')
             bpy.ops.object.mode_set(mode='OBJECT')
@@ -270,6 +272,8 @@ class halveMesh(bpy.types.Operator):
             # Toggle edit mode and delete the selection
             bpy.ops.object.mode_set(mode='EDIT')
             bpy.ops.mesh.delete(type='VERT')
+
+            self.report({'INFO'}, "Mesh half removed")
 
         return {'FINISHED'}
     
