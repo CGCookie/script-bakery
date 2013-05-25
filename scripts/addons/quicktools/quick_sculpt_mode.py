@@ -12,7 +12,7 @@ class QuickSculptTools(bpy.types.Menu):
         layout = self.layout
         dyntopo = bpy.context.sculpt_object.use_dynamic_topology_sculpting
         shortEdges = bpy.context.scene.tool_settings.sculpt.use_edge_collapse
-        
+
         if dyntopo:
             layout.operator("sculpt.dynamic_topology_toggle", 'Disable Dynamic Topology',)
         else:
@@ -38,9 +38,24 @@ class QuickSculptTools(bpy.types.Menu):
         
         layout.separator()
         
-        layout.operator("sculpt.symmetry_x", icon='MOD_MIRROR')
-        layout.operator("sculpt.symmetry_y")
-        layout.operator("sculpt.symmetry_z")     
+        symmetry_x = bpy.context.tool_settings.sculpt.use_symmetry_x
+        if symmetry_x:
+            layout.operator("sculpt.symmetry_x", 'Disable X Symmetry', icon='MOD_MIRROR')
+        else:
+            layout.operator("sculpt.symmetry_x", 'Enable X Symmetry', icon='MOD_MIRROR')
+
+        
+        symmetry_y = bpy.context.tool_settings.sculpt.use_symmetry_y
+        if symmetry_y:
+            layout.operator("sculpt.symmetry_y", 'Disable Y Symmetry')
+        else:
+            layout.operator("sculpt.symmetry_y", 'Enable Y Symmetry')
+
+        symmetry_z = bpy.context.tool_settings.sculpt.use_symmetry_z
+        if symmetry_z:
+            layout.operator("sculpt.symmetry_z", 'Disable Z Symmetry')
+        else:
+            layout.operator("sculpt.symmetry_z", 'Enable Z Symmetry')   
 
         layout.separator()
         
