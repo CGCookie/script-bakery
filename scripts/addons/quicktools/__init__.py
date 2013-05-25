@@ -21,10 +21,11 @@ if "bpy" in locals():
     imp.reload(quick_edit_mode)
     imp.reload(quick_sculpt_mode)
     imp.reload(quick_mode_switch)
+    imp.reload(quick_scene)
     print("Reloaded multifiles")
 	
 else:
-    from . import quick_operators, quick_object_mode, quick_edit_mode, quick_sculpt_mode, quick_mode_switch
+    from . import quick_operators, quick_object_mode, quick_edit_mode, quick_sculpt_mode, quick_mode_switch, quick_scene
     
     print("Imported multifiles")
 
@@ -33,6 +34,7 @@ import quick_object_mode
 import quick_edit_mode
 import quick_sculpt_mode
 import quick_mode_switch
+import quick_scene
 
 import bpy
 
@@ -44,6 +46,7 @@ def register():
    quick_edit_mode.register()
    quick_sculpt_mode.register()
    quick_mode_switch.register()
+   quick_scene.register()
    
    bpy.utils.register_module(__name__)
    
@@ -56,6 +59,7 @@ def unregister():
     quick_edit_mode.unregister()
     quick_sculpt_mode.unregister()
     quick_mode_switch.unregister()
+    quick_scene.unregister()
 
     bpy.utils.unregister_module(__name__)
     

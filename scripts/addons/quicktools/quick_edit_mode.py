@@ -31,6 +31,10 @@ class QuickMeshTools(bpy.types.Menu):
         layout.operator("mesh.vertices_smooth")    
         
         layout.separator()
+
+        layout.operator("object.mesh_halve", "Halve mesh")
+
+        layout.separator()
         
         layout.operator("object.add_mirror", icon='MOD_MIRROR')  
         layout.operator("object.add_subsurf", 'Add Subsurf', icon='MOD_SUBSURF')

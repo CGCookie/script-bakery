@@ -2,21 +2,7 @@ import bpy
 
 ### ------------ New Menus ------------ ###        
         
-class SculptDisplayOptions(bpy.types.Menu):
-    bl_idname = "sculpt.display_options"
-    bl_label = "Sculpt Display Options"
-
-    def draw(self, context):
-        layout = self.layout
-        layout.operator("object.double_sided")
-
-
-
-
-
 # creates a menu for Sculpt mode tools
-
-
 class QuickSculptTools(bpy.types.Menu):
     
     bl_label = "Quick Sculpt Tools"
@@ -56,9 +42,6 @@ class QuickSculptTools(bpy.types.Menu):
 
         layout.separator()
         
-        layout.operator("gpencil.active_frame_delete", "Delete Grease", icon='GREASEPENCIL')
-
-        layout.menu(SculptDisplayOptions.bl_idname)
 
         
 
@@ -69,7 +52,6 @@ class QuickSculptTools(bpy.types.Menu):
 addon_keymaps = []
 
 def register():
-    bpy.utils.register_class(SculptDisplayOptions)
     bpy.utils.register_class(QuickSculptTools)
     
     wm = bpy.context.window_manager   
@@ -89,7 +71,6 @@ def unregister():
 
     #unregister the new operators 
     bpy.utils.unregister_class(QuickSculptTools)
-    bpy.utils.unregister_class(SculptDisplayOptions)
     
     # remove keymaps when add-on is deactivated
     wm = bpy.context.window_manager
