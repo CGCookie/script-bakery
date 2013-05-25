@@ -40,15 +40,7 @@ class QuickSculptTools(bpy.types.Menu):
         layout.operator("sculpt.axislock_y")
         layout.operator("sculpt.axislock_z")
 
-        layout.separator()
-        
-<<<<<<< HEAD
-=======
-
-        layout.menu(SculptDisplayOptions.bl_idname)
->>>>>>> ff6c9251c1a2023f5ad50e0c086d1e48dba87453
-
-        
+        layout.separator()       
 
 
 

@@ -43,10 +43,7 @@ class QuickMeshTools(bpy.types.Menu):
         
         layout.operator("mesh.faces_shade_smooth", icon='SOLID')
         layout.operator("mesh.faces_shade_flat", icon='MESH_UVSPHERE')
-        
-        layout.separator()
-        
-        layout.operator("gpencil.active_frame_delete", "Delete Grease", icon='GREASEPENCIL')
+
 
 
 ### ------------ New hotkeys and registration ------------ ###

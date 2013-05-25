@@ -32,10 +32,7 @@ class QuickObjectTools(bpy.types.Menu):
         layout.separator()
 
         layout.operator("object.mesh_halve", "Halve and Mirror")
-        
-        layout.separator()
-        
-        layout.operator("gpencil.active_frame_delete", "Delete Grease", icon='GREASEPENCIL')
+
 
 class SmartModifiers(bpy.types.Menu):
     bl_idname = "object.smart_mod"
