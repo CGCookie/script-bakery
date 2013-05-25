@@ -1,5 +1,11 @@
 import bpy
 
+################################################### 
+# Convienence variables
+################################################### 
+
+applyModifier = bpy.ops.object.modifier_apply
+
 ### ------------ New Operators ------------ ###
 
         
@@ -108,37 +114,26 @@ class addMirror(bpy.types.Operator):
         bpy.ops.object.modifier_add(type='MIRROR')
                 
         # Store the mesh object
-        selectedObj = activeObj
-        print("Selected:", selectedObj)
-        print("Active:", activeObj)
+        selectedObj = activeObj        
         
-        
+        # Set status of mirror object usage
         useMirrorObj = False
         
-        # If an second object is not selected, don't use mirror object
+        # If a second object is not selected, don't use mirror object
         if len(targetObj) > 1:
             useMirrorObj = True
-            
-        ### No long needed, used for auto-creation of the mirror empty    
-#            if not [obj for obj in targetObj if obj.type == 'EMPTY']:
-#                bpy.ops.object.empty_add(type='PLAIN_AXES')
 
         # Make the targetObj active
         try:
             scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
         except:
             pass
-        
-        print("Scene Active:", scene.objects.active)
                 
         # Check for active object
         activeObj = context.active_object
-        print("Active:", activeObj)
         
         # Swap the selected and active objects
         (selectedObj, activeObj) = (activeObj, selectedObj)
-        print("Swapped Active:", activeObj)
-        print("Swapped Selected:", selectedObj)
         
         # Deselect the empty object and select the mesh object again, making it active
         selectedObj.select = False
@@ -154,6 +149,10 @@ class addMirror(bpy.types.Operator):
 
         return {"FINISHED"}
     
+################################################### 
+# Add a Lattice with auto assigning of the lattice object   
+################################################### 
+
 
 class addLattice(bpy.types.Operator):
     """Add a Lattice Modifier and auto-assign to selected lattice object"""
@@ -182,10 +181,8 @@ class addLattice(bpy.types.Operator):
 
         # Store the mesh object
         selectedObj = activeObj
-        print("Selected:", selectedObj)
-        print("Active:", activeObj)
 
-
+        # Set status of lattice object usage
         useLatticeObj = False
 
         # If an second object is not selected, don't use lattice object
@@ -197,17 +194,12 @@ class addLattice(bpy.types.Operator):
             scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
         except:
             pass
-        
-        print("Scene Active:", scene.objects.active)
                 
         # Check for active object
         activeObj = context.active_object
-        print("Active:", activeObj)
         
         # Swap the selected and active objects
         (selectedObj, activeObj) = (activeObj, selectedObj)
-        print("Swapped Active:", activeObj)
-        print("Swapped Selected:", selectedObj)
         
         # Deselect the empty object and select the mesh object again, making it active
         selectedObj.select = False
@@ -228,9 +220,17 @@ class addLattice(bpy.types.Operator):
 # Halve the mesh and add a Mirror modifier   
 ################################################### 
 
-class mirrorMesh(bpy.types.Operator):    
+def halve_mesh(self, context):
+
+    obj = bpy.context.active_object.data
+
+    for verts in obj.vertices:
+                if verts.co.x < -0.001:    
+                    verts.select = True
+
+class halveMesh(bpy.types.Operator):    
     """Delete one half of a mesh and add a mirror modifier"""
-    bl_idname = "object.mesh_mirror"
+    bl_idname = "object.mesh_halve"
     bl_label = "Halve and mirror mesh"
     bl_options = {'REGISTER', 'UNDO'}
     
@@ -238,19 +238,38 @@ class mirrorMesh(bpy.types.Operator):
         
         obj = bpy.context.active_object.data
         
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='DESELECT')
-        bpy.ops.object.mode_set(mode='OBJECT')
+        # Go to edit mode and ensure all vertices are deselected, preventing accidental deletions
         
-        for verts in obj.vertices:
-            if verts.co.x < -0.001:    
-                verts.select = True
-                
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.delete(type='VERT')
-        
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.add_mirror()
+        if bpy.context.object.mode == 'OBJECT':
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='DESELECT')
+            bpy.ops.object.mode_set(mode='OBJECT')
+            
+            # Find verts left of center and select them
+            halve_mesh(self, context)
+
+            # for verts in obj.vertices:
+            #     if verts.co.x < -0.001:    
+            #         verts.select = True
+                    
+            # Toggle edit mode and delete the selection
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.delete(type='VERT')
+            
+            # Switch back to object mode and add the mirror modifier
+            bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.add_mirror()
+
+        elif bpy.context.object.mode == 'EDIT':
+            bpy.ops.mesh.select_all(action='DESELECT')
+            bpy.ops.object.mode_set(mode='OBJECT')
+            
+            # Find verts left of center and select them
+            halve_mesh(self, context)
+                    
+            # Toggle edit mode and delete the selection
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.delete(type='VERT')
 
         return {'FINISHED'}
     
@@ -284,9 +303,7 @@ class applySubsurf(bpy.types.Operator):
     def execute(self, context):
         
         #check for active object
-        obj = context.active_object
-        
-        applyModifier = bpy.ops.object.modifier_apply
+        obj = context.active_object    
         
         # If any subsurf modifiers exist on object, apply them.
         for mod in obj.modifiers:
@@ -346,8 +363,6 @@ class applyRemesh(bpy.types.Operator):
         #check for active object
         obj = context.active_object
         
-        applyModifier = bpy.ops.object.modifier_apply
-        
         # If any remesh modifiers exist on object, apply them.
         for mod in obj.modifiers:
             if mod.type == 'REMESH':
@@ -374,8 +389,6 @@ class applyModifiers(bpy.types.Operator):
         
         # find all selected objects
         sel = context.selected_objects
-        
-        applyModifier = bpy.ops.object.modifier_apply
         
         # loop through all selected objects
         for obj in sel:
@@ -441,6 +454,7 @@ class sculptSymmetryZ(bpy.types.Operator):
         
         return {"FINISHED"}     
     
+
 ################################################### 
 # Creating operators for toggling Axis Locks
 ################################################### 
@@ -519,6 +533,8 @@ class sculptCollapseShortEdges(bpy.types.Operator):
     def execute(self, context):
         
         shortEdges = bpy.context.scene.tool_settings.sculpt.use_edge_collapse
+
+        # Toggle collapse short edges
         if shortEdges:
             context.scene.tool_settings.sculpt.use_edge_collapse = False
         else:
@@ -539,6 +555,7 @@ class objectDoubleSided(bpy.types.Operator):
     def execute(self, context):
 
         scene = bpy.context.scene
+
         selected = bpy.context.selected_objects
 
         origActive = bpy.context.active_object
@@ -570,6 +587,7 @@ class allEdgesWire(bpy.types.Operator):
     def execute(self, context):
 
         scene = bpy.context.scene
+
         selected = bpy.context.selected_objects
 
         origActive = bpy.context.active_object
@@ -605,7 +623,7 @@ def register():
     bpy.utils.register_class(addSubsurf)
     bpy.utils.register_class(addMirror)
     bpy.utils.register_class(addLattice)
-    bpy.utils.register_class(mirrorMesh)
+    bpy.utils.register_class(halveMesh)
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(applyRemesh)
     bpy.utils.register_class(applyModifiers)
@@ -626,7 +644,7 @@ def unregister():
     bpy.utils.unregister_class(addSubsurf)
     bpy.utils.unregister_class(addMirror)
     bpy.utils.unregister_class(addLattice)
-    bpy.utils.register_class(mirrorMesh)
+    bpy.utils.register_class(halveMesh)
     bpy.utils.unregister_class(applySubsurf)
     bpy.utils.unregister_class(applyRemesh)
     bpy.utils.unregister_class(applyModifiers)

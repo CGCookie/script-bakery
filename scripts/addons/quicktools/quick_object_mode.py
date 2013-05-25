@@ -22,8 +22,7 @@ class QuickObjectTools(bpy.types.Menu):
         
         layout.menu(SmartModifiers.bl_idname, "Add Smart Modifier", icon='MODIFIER')
 
-        layout.operator_menu_enum("object.modifier_add", "type",
-                                      icon='MODIFIER') 
+        layout.operator_menu_enum("object.modifier_add", "type") 
         layout.operator("object.apply_modifiers")
         
         layout.separator() 
@@ -31,17 +30,12 @@ class QuickObjectTools(bpy.types.Menu):
         layout.operator_menu_enum("object.origin_set", "type")
 
         layout.separator()
-        
-        layout.operator("object.shade_smooth", icon='SOLID')
-        layout.operator("object.shade_flat", icon='MESH_UVSPHERE')
+
+        layout.operator("object.mesh_halve", "Halve and Mirror")
         
         layout.separator()
         
         layout.operator("gpencil.active_frame_delete", "Delete Grease", icon='GREASEPENCIL')
-
-        layout.separator()
-
-        layout.menu(ObjectDisplayOptions.bl_idname)
 
 class SmartModifiers(bpy.types.Menu):
     bl_idname = "object.smart_mod"
@@ -49,17 +43,22 @@ class SmartModifiers(bpy.types.Menu):
 
     def draw (self, context):
         layout = self.layout
-        layout.operator("object.add_mirror")
-        layout.operator("object.add_lattice")
+        layout.operator("object.add_mirror", "Mirror", icon='MOD_MIRROR')
+        layout.operator("object.add_lattice", "Lattice", icon='MOD_LATTICE')
 
-class ObjectDisplayOptions(bpy.types.Menu):
+class QuickObjectOptions(bpy.types.Menu):
     bl_idname = "object.display_options"
-    bl_label = "Object Display Options"
+    bl_label = "Quick Object Options"
 
     def draw(self, context):
         layout = self.layout
         layout.operator("object.double_sided")
         layout.operator("object.all_edges_wire")
+
+        layout.separator()
+
+        layout.operator("object.shade_smooth", icon='SOLID')
+        layout.operator("object.shade_flat", icon='MESH_UVSPHERE')
         # add "Outline Selected" here.
    
 # Create the Tool Bar section 
@@ -114,17 +113,22 @@ def register():
     #register the new menus
     bpy.utils.register_class(QuickObjectTools)
     bpy.utils.register_class(SmartModifiers)
-    bpy.utils.register_class(ObjectDisplayOptions)
+    bpy.utils.register_class(QuickObjectOptions)
     bpy.utils.register_class(QuickObjectToolbar)
      
     
     wm = bpy.context.window_manager
     
     
-    # create the object mode menu hotkey
+    # create the object mode Quick Tools menu hotkey
     km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
     kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
     kmi.properties.name = 'object.tools_menu' 
+
+    # create the object mode Display and Scene Tools menu hotkey
+    km = wm.keyconfigs.addon.keymaps.new(name='3D View', space_type='VIEW_3D')
+    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS', shift=True)
+    kmi.properties.name = 'object.display_options' 
 
 
     addon_keymaps.append(km)
@@ -133,7 +137,7 @@ def unregister():
     #unregister the new menus
     bpy.utils.unregister_class(QuickObjectTools)
     bpy.utils.unregister_class(SmartModifiers)
-    bpy.utils.unregister_class(ObjectDisplayOptions)
+    bpy.utils.unregister_class(QuickObjectOptions)
     bpy.utils.unregister_class(QuickObjectToolbar)
         
     
