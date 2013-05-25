@@ -10,10 +10,18 @@ class QuickSculptTools(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        dyntopo = bpy.context.sculpt_object.use_dynamic_topology_sculpting
+        shortEdges = bpy.context.scene.tool_settings.sculpt.use_edge_collapse
         
-        layout.operator("sculpt.dynamic_topology_toggle", 'Dynamic Topology',)
-        layout.operator("sculpt.collapse_short_edges", 'Collapse Short Edges',)
-        
+        if dyntopo:
+            layout.operator("sculpt.dynamic_topology_toggle", 'Disable Dynamic Topology',)
+        else:
+            layout.operator("sculpt.dynamic_topology_toggle", 'Enable Dynamic Topology')
+
+        if shortEdges:
+            layout.operator("sculpt.collapse_short_edges", 'Disable Collapse Short Edges',)
+        else:
+            layout.operator("sculpt.collapse_short_edges", 'Enable Collpase Short Edges')
         layout.separator()
         
         layout.operator("object.modifier_add", 'Add Subsurf', icon='MOD_SUBSURF').type='SUBSURF'

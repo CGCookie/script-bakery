@@ -48,15 +48,27 @@ class QuickObjectOptions(bpy.types.Menu):
     bl_label = "Quick Object Options"
 
     def draw(self, context):
+
+        mode = bpy.context.object.mode
+
         layout = self.layout
         layout.operator("object.double_sided")
         layout.operator("object.all_edges_wire")
 
         layout.separator()
 
-        layout.operator("object.shade_smooth", icon='SOLID')
-        layout.operator("object.shade_flat", icon='MESH_UVSPHERE')
         # add "Outline Selected" here.
+
+        if mode == 'OBJECT' or mode == 'SCULPT':
+            layout.operator("object.shade_smooth", icon='SOLID')
+            layout.operator("object.shade_flat", icon='MESH_UVSPHERE')
+        elif mode == 'EDIT':
+            layout.operator("mesh.faces_shade_smooth", icon='SOLID')
+            layout.operator("mesh.faces_shade_flat", icon='MESH_UVSPHERE')
+        
+        
+
+        
    
 # Create the Tool Bar section 
 class QuickObjectToolbar(bpy.types.Panel):
