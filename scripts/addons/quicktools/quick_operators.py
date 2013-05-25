@@ -41,7 +41,8 @@ class addTarget(bpy.types.Operator):
                 for obj in selectedObj:
                     if obj.type == 'EMPTY':
                         mod.mirror_object = bpy.data.objects[obj.name]
-                        obj.select = False    
+                        obj.select = False
+                        self.report({'INFO'}, "Assigned target object to existing modifier")       
 
         # Select the previously stored current object and make it active                    
         scene.objects.active = currentObj
@@ -145,7 +146,8 @@ class addMirror(bpy.types.Operator):
             if mod.type == 'MIRROR':
                 mod.use_clip = True
                 if useMirrorObj == True:
-                    mod.mirror_object = bpy.data.objects[selectedObj.name]      
+                    mod.mirror_object = bpy.data.objects[selectedObj.name]
+                    self.report({'INFO'}, "Assigned target object to modifier")      
 
         return {"FINISHED"}
     
@@ -210,7 +212,8 @@ class addLattice(bpy.types.Operator):
         for mod in activeObj.modifiers:
             if mod.type == 'LATTICE':
                 if useLatticeObj == True:
-                    mod.object = bpy.data.objects[selectedObj.name]      
+                    mod.object = bpy.data.objects[selectedObj.name]
+                    self.report({'INFO'}, "Assigned lattice object to modifier")         
 
         return {"FINISHED"}
 
@@ -313,6 +316,7 @@ class applySubsurf(bpy.types.Operator):
         for mod in obj.modifiers:
             if mod.type == 'SUBSURF':
                 applyModifier(apply_as='DATA', modifier=mod.name)
+                self.report({'INFO'}, "Applied Subsurf modifier(s)")   
         
         return {"FINISHED"}
     
@@ -371,6 +375,7 @@ class applyRemesh(bpy.types.Operator):
         for mod in obj.modifiers:
             if mod.type == 'REMESH':
                 applyModifier(apply_as='DATA', modifier=mod.name)
+                self.report({'INFO'}, "Applied remesh modifier(s)")   
         
         return {"FINISHED"}
     
@@ -402,6 +407,7 @@ class applyModifiers(bpy.types.Operator):
             # If any modifiers exist on current object object, apply them.
             for mod in obj.modifiers:
                 applyModifier(apply_as='DATA', modifier=mod.name)
+                self.report({'INFO'}, "Applied all modifiers on selected objects")   
         
         return {"FINISHED"}    
 
