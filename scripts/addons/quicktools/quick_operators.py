@@ -1,9 +1,10 @@
 import bpy
+from bpy import ops
 
 ################################################### 
 # Convienence variables
 ################################################### 
-ops = bpy.ops
+
 applyModifier = ops.object.modifier_apply
 
 
@@ -13,8 +14,6 @@ applyModifier = ops.object.modifier_apply
 ################################################### 
 # Set object origin to center of current mesh selection in edit mdoe   
 ################################################### 
-
-import bpy
 
 class setObjectOrigin(bpy.types.Operator):
     """Set Object Origin To Center Of Current Mesh Selection"""
@@ -29,10 +28,10 @@ class setObjectOrigin(bpy.types.Operator):
             self.report({'INFO'}, "Must be run in Edit Mode")
         else:
             # Set the 3D Cursor to the selected mesh and then center the origin in object mode, followed by returning to edit mode.
-            bpy.ops.view3d.snap_cursor_to_selected()
-            bpy.ops.object.mode_set(mode='OBJECT')
-            bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
-            bpy.ops.object.mode_set(mode='EDIT')
+            ops.view3d.snap_cursor_to_selected()
+            ops.object.mode_set(mode='OBJECT')
+            ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
+            ops.object.mode_set(mode='EDIT')
             
         return {"FINISHED"}
 
@@ -802,51 +801,57 @@ class allEdgesWire(bpy.types.Operator):
 ######### Register and unregister the operators ###########
 
 def register():
-    bpy.utils.register_class(setObjectOrigin)
-    bpy.utils.register_class(addTarget)
-    bpy.utils.register_class(addSubsurf)
-    bpy.utils.register_class(addMirror)
-    bpy.utils.register_class(addLattice)
-    bpy.utils.register_class(addArray)
-    bpy.utils.register_class(addScrew)
-    bpy.utils.register_class(halveMesh)
-    bpy.utils.register_class(applySubsurf)
-    bpy.utils.register_class(applyRemesh)
-    bpy.utils.register_class(applyModifiers)
-    bpy.utils.register_class(smoothRemesh)
-    bpy.utils.register_class(sculptSymmetryX)
-    bpy.utils.register_class(sculptSymmetryY)
-    bpy.utils.register_class(sculptSymmetryZ)
-    bpy.utils.register_class(sculptAxisLockX)
-    bpy.utils.register_class(sculptAxisLockY)
-    bpy.utils.register_class(sculptAxisLockZ)
-    bpy.utils.register_class(sculptCollapseShortEdges)
-    bpy.utils.register_class(objectDoubleSided)
-    bpy.utils.register_class(allEdgesWire)
+    bpy.utils.register_module(__name__)
+
+def unregister():
+    bpy.utils.unregister_module(__name__)
+
+# def register():
+#     bpy.utils.register_class(setObjectOrigin)
+#     bpy.utils.register_class(addTarget)
+#     bpy.utils.register_class(addSubsurf)
+#     bpy.utils.register_class(addMirror)
+#     bpy.utils.register_class(addLattice)
+#     bpy.utils.register_class(addArray)
+#     bpy.utils.register_class(addScrew)
+#     bpy.utils.register_class(halveMesh)
+#     bpy.utils.register_class(applySubsurf)
+#     bpy.utils.register_class(applyRemesh)
+#     bpy.utils.register_class(applyModifiers)
+#     bpy.utils.register_class(smoothRemesh)
+#     bpy.utils.register_class(sculptSymmetryX)
+#     bpy.utils.register_class(sculptSymmetryY)
+#     bpy.utils.register_class(sculptSymmetryZ)
+#     bpy.utils.register_class(sculptAxisLockX)
+#     bpy.utils.register_class(sculptAxisLockY)
+#     bpy.utils.register_class(sculptAxisLockZ)
+#     bpy.utils.register_class(sculptCollapseShortEdges)
+#     bpy.utils.register_class(objectDoubleSided)
+#     bpy.utils.register_class(allEdgesWire)
 
     
-def unregister():
-    bpy.utils.unregister_class(setObjectOrigin)
-    bpy.utils.unregister_class(addTarget)
-    bpy.utils.unregister_class(addSubsurf)
-    bpy.utils.unregister_class(addMirror)
-    bpy.utils.unregister_class(addLattice)
-    bpy.utils.unregister_class(addArray)
-    bpy.utils.unregister_class(addScrew)
-    bpy.utils.unregister_class(halveMesh)
-    bpy.utils.unregister_class(applySubsurf)
-    bpy.utils.unregister_class(applyRemesh)
-    bpy.utils.unregister_class(applyModifiers)
-    bpy.utils.unregister_class(smoothRemesh)
-    bpy.utils.unregister_class(sculptSymmetryX)
-    bpy.utils.unregister_class(sculptSymmetryY)
-    bpy.utils.unregister_class(sculptSymmetryZ)
-    bpy.utils.unregister_class(sculptAxisLockX)
-    bpy.utils.unregister_class(sculptAxisLockY)
-    bpy.utils.unregister_class(sculptAxisLockZ)
-    bpy.utils.unregister_class(sculptCollapseShortEdges)
-    bpy.utils.unregister_class(objectDoubleSided)
-    bpy.utils.unregister_class(allEdgesWire)
+# def unregister():
+#     bpy.utils.unregister_class(setObjectOrigin)
+#     bpy.utils.unregister_class(addTarget)
+#     bpy.utils.unregister_class(addSubsurf)
+#     bpy.utils.unregister_class(addMirror)
+#     bpy.utils.unregister_class(addLattice)
+#     bpy.utils.unregister_class(addArray)
+#     bpy.utils.unregister_class(addScrew)
+#     bpy.utils.unregister_class(halveMesh)
+#     bpy.utils.unregister_class(applySubsurf)
+#     bpy.utils.unregister_class(applyRemesh)
+#     bpy.utils.unregister_class(applyModifiers)
+#     bpy.utils.unregister_class(smoothRemesh)
+#     bpy.utils.unregister_class(sculptSymmetryX)
+#     bpy.utils.unregister_class(sculptSymmetryY)
+#     bpy.utils.unregister_class(sculptSymmetryZ)
+#     bpy.utils.unregister_class(sculptAxisLockX)
+#     bpy.utils.unregister_class(sculptAxisLockY)
+#     bpy.utils.unregister_class(sculptAxisLockZ)
+#     bpy.utils.unregister_class(sculptCollapseShortEdges)
+#     bpy.utils.unregister_class(objectDoubleSided)
+#     bpy.utils.unregister_class(allEdgesWire)
 
     
 if __name__ == "__main__":
