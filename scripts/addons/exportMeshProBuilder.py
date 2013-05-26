@@ -25,7 +25,7 @@ class exportData(bpy.types.Operator):
     bl_idname = "export.export_data"
     bl_label = "Export Data"
     #user specified file path for file output
-        obV = bpy.context.active_object.data.vertices
+    obV = bpy.context.active_object.data.vertices
     filepath = bpy.props.StringProperty(subtype="FILE_PATH")
     #actual code for functions
     def execute(self, context):
