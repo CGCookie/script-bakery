@@ -9,7 +9,34 @@ applyModifier = ops.object.modifier_apply
 
 ### ------------ New Operators ------------ ###
 
-        
+
+################################################### 
+# Set object origin to center of current mesh selection in edit mdoe   
+################################################### 
+
+import bpy
+
+class setObjectOrigin(bpy.types.Operator):
+    """Set Object Origin To Center Of Current Mesh Selection"""
+    bl_idname = "mesh.set_object_origin"
+    bl_label = "Set origin to the selection center"
+    bl_options = {'REGISTER', 'UNDO'}    
+    
+    def execute(self, context):
+        mode = bpy.context.object.mode
+        if mode != 'EDIT':
+            # If user is not in object mode, don't run the operator and report reason to the Info header
+            self.report({'INFO'}, "Must be run in Edit Mode")
+        else:
+            # Set the 3D Cursor to the selected mesh and then center the origin in object mode, followed by returning to edit mode.
+            bpy.ops.view3d.snap_cursor_to_selected()
+            bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
+            bpy.ops.object.mode_set(mode='EDIT')
+            
+        return {"FINISHED"}
+
+
 ################################################### 
 # Add empty at cursor, making it inactively selected   
 ################################################### 
@@ -84,10 +111,9 @@ class addSubsurf(bpy.types.Operator):
                 
         return {"FINISHED"}
         
-###################################################         
+       
 ################################################### 
 # Add Modifier function, for use with smart mod classes.  
-################################################### 
 ################################################### 
 
 def addMod(modifier):
@@ -776,6 +802,7 @@ class allEdgesWire(bpy.types.Operator):
 ######### Register and unregister the operators ###########
 
 def register():
+    bpy.utils.register_class(setObjectOrigin)
     bpy.utils.register_class(addTarget)
     bpy.utils.register_class(addSubsurf)
     bpy.utils.register_class(addMirror)
@@ -799,6 +826,7 @@ def register():
 
     
 def unregister():
+    bpy.utils.unregister_class(setObjectOrigin)
     bpy.utils.unregister_class(addTarget)
     bpy.utils.unregister_class(addSubsurf)
     bpy.utils.unregister_class(addMirror)

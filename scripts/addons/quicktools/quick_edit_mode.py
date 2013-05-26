@@ -32,6 +32,8 @@ class QuickMeshTools(bpy.types.Menu):
         
         layout.separator()
 
+        layout.operator("mesh.set_object_origin", "Origin to Selection")
+
         layout.operator("object.mesh_halve", "Halve mesh")
 
         layout.separator()
