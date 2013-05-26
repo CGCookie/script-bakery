@@ -217,7 +217,141 @@ class addLattice(bpy.types.Operator):
 
         return {"FINISHED"}
 
+################################################### 
+# Add an Array modifier with object offset enabled 
+################################################### 
 
+class addArray(bpy.types.Operator):
+    """Add a Array modifier with object offset, use 2nd selected object as offset object"""
+    bl_label = "Add Array Modifier"
+    bl_idname = "object.add_array"
+    bl_options = {'REGISTER', 'UNDO'}
+       
+    
+    # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    # Add the modifier
+    def execute(self, context):
+              
+        scene = bpy.context.scene
+        
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Find all selected objects
+        targetObj = context.selected_objects
+        
+        # Add a array modifier
+        bpy.ops.object.modifier_add(type='ARRAY')
+                
+        # Store the mesh object
+        selectedObj = activeObj        
+        
+        # Set status of array object usage
+        useArrayObj = False
+        
+        # If a second object is not selected, don't use mirror object
+        if len(targetObj) > 1:
+            useArrayObj = True
+
+        # Make the targetObj active
+        try:
+            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
+        except:
+            pass
+                
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Swap the selected and active objects
+        (selectedObj, activeObj) = (activeObj, selectedObj)
+        
+        # Deselect the empty object and select the mesh object again, making it active
+        selectedObj.select = False
+        activeObj.select = True
+        scene.objects.active = activeObj
+        
+        # Find the added modifier, and check for status of useArrayObj
+        if useArrayObj == True:
+            for mod in activeObj.modifiers:
+                if mod.type == 'ARRAY':
+                    mod.use_relative_offset = False
+                    mod.use_object_offset = True
+                    if useArrayObj == True:
+                        mod.offset_object = bpy.data.objects[selectedObj.name]
+                        self.report({'INFO'}, "Assigned target object to modifier")      
+
+        return {"FINISHED"}
+
+
+################################################### 
+# Add a Screw modifier with an object axis set  
+################################################### 
+
+class addScrew(bpy.types.Operator):
+    """Add a Screw modifier, use 2nd selected object as object axis"""
+    bl_label = "Add Screw Modifier"
+    bl_idname = "object.add_screw"
+    bl_options = {'REGISTER', 'UNDO'}
+       
+    
+    # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    # Add the modifier
+    def execute(self, context):
+              
+        scene = bpy.context.scene
+        
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Find all selected objects
+        targetObj = context.selected_objects
+        
+        # Add a array modifier
+        bpy.ops.object.modifier_add(type='SCREW')
+                
+        # Store the mesh object
+        selectedObj = activeObj        
+        
+        # Set status of array object usage
+        useScrewObj = False
+        
+        # If a second object is not selected, don't use mirror object
+        if len(targetObj) > 1:
+            useScrewObj = True
+
+        # Make the targetObj active
+        try:
+            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
+        except:
+            pass
+                
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Swap the selected and active objects
+        (selectedObj, activeObj) = (activeObj, selectedObj)
+        
+        # Deselect the empty object and select the mesh object again, making it active
+        selectedObj.select = False
+        activeObj.select = True
+        scene.objects.active = activeObj
+        
+        # Find the added modifier, enable clipping, set the mirror object
+        for mod in activeObj.modifiers:
+            if mod.type == 'SCREW':
+                if useScrewObj == True:
+                    mod.object = bpy.data.objects[selectedObj.name]
+                    self.report({'INFO'}, "Assigned target axis object to modifier")      
+
+        return {"FINISHED"}
 
 ################################################### 
 # Halve the mesh and add a Mirror modifier   
@@ -633,6 +767,8 @@ def register():
     bpy.utils.register_class(addSubsurf)
     bpy.utils.register_class(addMirror)
     bpy.utils.register_class(addLattice)
+    bpy.utils.register_class(addArray)
+    bpy.utils.register_class(addScrew)
     bpy.utils.register_class(halveMesh)
     bpy.utils.register_class(applySubsurf)
     bpy.utils.register_class(applyRemesh)
@@ -654,7 +790,9 @@ def unregister():
     bpy.utils.unregister_class(addSubsurf)
     bpy.utils.unregister_class(addMirror)
     bpy.utils.unregister_class(addLattice)
-    bpy.utils.register_class(halveMesh)
+    bpy.utils.unregister_class(addArray)
+    bpy.utils.unregister_class(addScrew)
+    bpy.utils.unregister_class(halveMesh)
     bpy.utils.unregister_class(applySubsurf)
     bpy.utils.unregister_class(applyRemesh)
     bpy.utils.unregister_class(applyModifiers)
