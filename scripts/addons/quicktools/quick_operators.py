@@ -20,24 +20,15 @@ class setObjectOrigin(bpy.types.Operator):
     """Set Object Origin To Center Of Current Mesh Selection"""
     bl_idname = "mesh.set_object_origin"
     bl_label = "Set origin to the selection center"
-<<<<<<< HEAD
-=======
-    bl_context = "EDIT"
->>>>>>> 4defbff4c5c6bc5ea01b47a45281121b3b7596ed
     bl_options = {'REGISTER', 'UNDO'}    
     
     def execute(self, context):
         mode = bpy.context.object.mode
         if mode != 'EDIT':
-<<<<<<< HEAD
             # If user is not in object mode, don't run the operator and report reason to the Info header
             self.report({'INFO'}, "Must be run in Edit Mode")
         else:
             # Set the 3D Cursor to the selected mesh and then center the origin in object mode, followed by returning to edit mode.
-=======
-            self.report({'INFO'}, "Must be run in Edit Mode")
-        else:
->>>>>>> 4defbff4c5c6bc5ea01b47a45281121b3b7596ed
             bpy.ops.view3d.snap_cursor_to_selected()
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
@@ -46,10 +37,6 @@ class setObjectOrigin(bpy.types.Operator):
         return {"FINISHED"}
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 4defbff4c5c6bc5ea01b47a45281121b3b7596ed
 ################################################### 
 # Add empty at cursor, making it inactively selected   
 ################################################### 
