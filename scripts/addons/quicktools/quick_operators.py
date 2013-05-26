@@ -3,8 +3,9 @@ import bpy
 ################################################### 
 # Convienence variables
 ################################################### 
+ops = bpy.ops
+applyModifier = ops.object.modifier_apply
 
-applyModifier = bpy.ops.object.modifier_apply
 
 ### ------------ New Operators ------------ ###
 
@@ -32,7 +33,7 @@ class addTarget(bpy.types.Operator):
             if obj.type == 'EMPTY':
                 break
             elif obj.type != 'EMPTY':
-                bpy.ops.object.empty_add(type='PLAIN_AXES')
+                ops.object.empty_add(type='PLAIN_AXES')
                 selectedObj = context.selected_objects
             
         # Check if a mirror modifier exists, if it does then assign the empty
@@ -73,7 +74,7 @@ class addSubsurf(bpy.types.Operator):
         
         for obj in sel:
             scene.objects.active = obj
-            bpy.ops.object.modifier_add(type='SUBSURF')
+            ops.object.modifier_add(type='SUBSURF')
             print("Added Subsurf Modifier")
         
             for mod in obj.modifiers:
@@ -83,7 +84,18 @@ class addSubsurf(bpy.types.Operator):
                 
         return {"FINISHED"}
         
-        
+###################################################         
+################################################### 
+# Add Modifier function, for use with smart mod classes.  
+################################################### 
+################################################### 
+
+def addMod(modifier):
+    ops.object.modifier_add(type=modifier)
+    return {"FINISHED"}
+
+
+
 ################################################### 
 # Add a Mirror Modifier with clipping enabled   
 ################################################### 
@@ -112,7 +124,7 @@ class addMirror(bpy.types.Operator):
         targetObj = context.selected_objects
         
         # Add a mirror modifier
-        bpy.ops.object.modifier_add(type='MIRROR')
+        addMod("MIRROR")
                 
         # Store the mesh object
         selectedObj = activeObj        
@@ -179,7 +191,7 @@ class addLattice(bpy.types.Operator):
         targetObj = context.selected_objects
         
         # Add a lattice modifier
-        bpy.ops.object.modifier_add(type='LATTICE')
+        addMod("LATTICE")
 
         # Store the mesh object
         selectedObj = activeObj
@@ -219,7 +231,7 @@ class addLattice(bpy.types.Operator):
 
 ################################################### 
 # Add an Array modifier with object offset enabled 
-################################################### 
+###################################################      
 
 class addArray(bpy.types.Operator):
     """Add a Array modifier with object offset, use 2nd selected object as offset object"""
@@ -235,9 +247,8 @@ class addArray(bpy.types.Operator):
     
     # Add the modifier
     def execute(self, context):
-              
         scene = bpy.context.scene
-        
+ 
         # Check for active object
         activeObj = context.active_object
         
@@ -245,7 +256,9 @@ class addArray(bpy.types.Operator):
         targetObj = context.selected_objects
         
         # Add a array modifier
-        bpy.ops.object.modifier_add(type='ARRAY')
+        addMod("ARRAY")
+
+        # ops.object.modifier_add(type='ARRAY')
                 
         # Store the mesh object
         selectedObj = activeObj        
@@ -315,7 +328,7 @@ class addScrew(bpy.types.Operator):
         targetObj = context.selected_objects
         
         # Add a array modifier
-        bpy.ops.object.modifier_add(type='SCREW')
+        addMod("ARRAY")
                 
         # Store the mesh object
         selectedObj = activeObj        
@@ -378,9 +391,9 @@ class halveMesh(bpy.types.Operator):
         # Go to edit mode and ensure all vertices are deselected, preventing accidental deletions
         
         if bpy.context.object.mode == 'OBJECT':
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action='DESELECT')
-            bpy.ops.object.mode_set(mode='OBJECT')
+            ops.object.mode_set(mode='EDIT')
+            ops.mesh.select_all(action='DESELECT')
+            ops.object.mode_set(mode='OBJECT')
             
             # Find verts left of center and select them
             halve_mesh(self, context)
@@ -390,25 +403,25 @@ class halveMesh(bpy.types.Operator):
             #         verts.select = True
                     
             # Toggle edit mode and delete the selection
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.delete(type='VERT')
+            ops.object.mode_set(mode='EDIT')
+            ops.mesh.delete(type='VERT')
             
             # Switch back to object mode and add the mirror modifier
-            bpy.ops.object.mode_set(mode='OBJECT')
-            bpy.ops.object.add_mirror()
+            ops.object.mode_set(mode='OBJECT')
+            ops.object.add_mirror()
 
             self.report({'INFO'}, "Mesh half removed and Mirror modifier added")
 
         elif bpy.context.object.mode == 'EDIT':
-            bpy.ops.mesh.select_all(action='DESELECT')
-            bpy.ops.object.mode_set(mode='OBJECT')
+            ops.mesh.select_all(action='DESELECT')
+            ops.object.mode_set(mode='OBJECT')
             
             # Find verts left of center and select them
             halve_mesh(self, context)
                     
             # Toggle edit mode and delete the selection
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.delete(type='VERT')
+            ops.object.mode_set(mode='EDIT')
+            ops.mesh.delete(type='VERT')
 
             self.report({'INFO'}, "Mesh half removed")
 
@@ -467,7 +480,7 @@ class smoothRemesh(bpy.types.Operator):
     
     def execute(self, context):
     
-        bpy.ops.object.modifier_add(type='REMESH')
+        ops.object.modifier_add(type='REMESH')
         bpy.context.object.modifiers['Remesh'].mode = 'SMOOTH'
     
         return {"FINISHED"}
