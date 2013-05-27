@@ -524,7 +524,8 @@ class addRemesh(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
-        return context.sculpt_object.use_dynamic_topology_sculpting
+        # 
+        return not context.sculpt_object.use_dynamic_topology_sculpting
 
     def execute(self, context):
         ops.object.modifier_add(type='REMESH')
@@ -584,6 +585,7 @@ class applyModifiers(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
+        # Make sure there's a selected object and that that object has modifiers to apply
         return len(context.selected_objects) > 0 and len(context.active_object.modifiers) > 0
    
     def execute(self, context):
