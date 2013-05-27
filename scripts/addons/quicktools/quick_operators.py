@@ -91,9 +91,8 @@ class addSubsurf(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return len(context.selected_objects) > 0
-    
-    def execute(self, context):
-        
+
+    def execute(self, context):       
     #    obj = context.active_object
         scene = bpy.context.scene
         sel = context.selected_objects
@@ -497,12 +496,23 @@ class applySubsurf(bpy.types.Operator):
 # Add a Remesh Modifier with Smooth set as the type   
 ################################################### 
 
-class smoothRemesh(bpy.types.Operator):
+class addRemesh(bpy.types.Operator):
     """Add a Smooth Remesh Modifier"""
     bl_label = "Smooth Remesh"
     bl_idname = "object.smooth_remesh"
     bl_options = {'REGISTER', 'UNDO'}
     
+    @classmethod
+    def poll(cls, context):
+
+        # assign a convience variable
+       dyntopo = bpy.context.sculpt_object.use_dynamic_topology_sculpting
+       
+       # test if dyntopo is active
+       if dyntopo == False:
+           return True
+       return False
+
     def execute(self, context):
     
         ops.object.modifier_add(type='REMESH')
@@ -703,12 +713,11 @@ class sculptCollapseShortEdges(bpy.types.Operator):
     @classmethod    
     def poll(cls, context):
        
-       # get the active object
+       # assign a convience variable
        dyntopo = bpy.context.sculpt_object.use_dynamic_topology_sculpting
        
-       # test if there's an active object
-       if dyntopo:
-           context.sculpt_object.use_dynamic_topology_sculpting = False
+       # test if dyntopo is active
+       if dyntopo == True:
            return True
        return False
    
@@ -818,7 +827,7 @@ def unregister():
 #     bpy.utils.register_class(applySubsurf)
 #     bpy.utils.register_class(applyRemesh)
 #     bpy.utils.register_class(applyModifiers)
-#     bpy.utils.register_class(smoothRemesh)
+#     bpy.utils.register_class(addRemesh)
 #     bpy.utils.register_class(sculptSymmetryX)
 #     bpy.utils.register_class(sculptSymmetryY)
 #     bpy.utils.register_class(sculptSymmetryZ)
@@ -842,7 +851,7 @@ def unregister():
 #     bpy.utils.unregister_class(applySubsurf)
 #     bpy.utils.unregister_class(applyRemesh)
 #     bpy.utils.unregister_class(applyModifiers)
-#     bpy.utils.unregister_class(smoothRemesh)
+#     bpy.utils.unregister_class(addRemesh)
 #     bpy.utils.unregister_class(sculptSymmetryX)
 #     bpy.utils.unregister_class(sculptSymmetryY)
 #     bpy.utils.unregister_class(sculptSymmetryZ)

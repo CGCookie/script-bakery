@@ -24,7 +24,7 @@ class QuickSculptTools(bpy.types.Menu):
             layout.operator("sculpt.collapse_short_edges", 'Enable Collpase Short Edges')
         layout.separator()
         
-        layout.operator("object.modifier_add", 'Add Subsurf', icon='MOD_SUBSURF').type='SUBSURF'
+        layout.operator("object.add_subsurf", 'Add Subsurf', icon='MOD_SUBSURF')
         layout.operator("object.apply_subsurf", 'Apply Subsurf')
         
         layout.separator()
