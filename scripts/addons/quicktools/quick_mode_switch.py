@@ -43,7 +43,7 @@ class ModeSwitch(bpy.types.Menu):
         
         if mode == 'EDIT' or mode == 'OBJECT' or mode == 'SCULPT' or mode == 'TEXTURE_PAINT' or mode == 'WEIGHT_PAINT':
             sculptMode = layout.operator("object.working_mode", "Vertex Paint", icon="VPAINT_HLT"    )
-            sculptMode.setMode = 'VERTEXT_PAINT'
+            sculptMode.setMode = 'VERTEX_PAINT'
 
         if mode == 'EDIT' or mode == 'OBJECT' or mode == 'SCULPT' or mode == 'TEXTURE_PAINT' or mode == 'VERTEX_PAINT':
             sculptMode = layout.operator("object.working_mode", "Weight Paint", icon="WPAINT_HLT"    )
