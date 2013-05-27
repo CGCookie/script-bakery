@@ -81,8 +81,6 @@ class addTarget(bpy.types.Operator):
         # Select the previously stored current object and make it active                    
         scene.objects.active = currentObj
         currentObj.select = True
-
-
         return {"FINISHED"}
 
         
@@ -101,7 +99,7 @@ class addSubsurf(bpy.types.Operator):
         return len(context.selected_objects) > 0
 
     def execute(self, context):       
-    #    obj = context.active_object
+        #    obj = context.active_object
         scene = bpy.context.scene
         sel = context.selected_objects
         
@@ -127,7 +125,6 @@ def addMod(modifier):
     return {"FINISHED"}
 
 
-
 ################################################### 
 # Add a Mirror Modifier with clipping enabled   
 ################################################### 
@@ -147,7 +144,7 @@ class addMirror(bpy.types.Operator):
     # Add the modifier
     def execute(self, context):
               
-        scene = bpy.context.scene
+        scene = context.scene
         
         # Check for active object
         activeObj = context.active_object
@@ -178,7 +175,7 @@ class addMirror(bpy.types.Operator):
         activeObj = context.active_object
         
         # Swap the selected and active objects
-        (selectedObj, activeObj) = (activeObj, selectedObj)
+        selectedObj, activeObj = activeObj, selectedObj
         
         # Deselect the empty object and select the mesh object again, making it active
         selectedObj.select = False
@@ -312,7 +309,7 @@ class addArray(bpy.types.Operator):
         activeObj = context.active_object
         
         # Swap the selected and active objects
-        (selectedObj, activeObj) = (activeObj, selectedObj)
+        selectedObj, activeObj = activeObj, selectedObj
         
         # Deselect the empty object and select the mesh object again, making it active
         selectedObj.select = False
@@ -351,7 +348,7 @@ class addScrew(bpy.types.Operator):
     # Add the modifier
     def execute(self, context):
               
-        scene = bpy.context.scene
+        scene = context.scene
         
         # Check for active object
         activeObj = context.active_object
@@ -404,11 +401,12 @@ class addScrew(bpy.types.Operator):
 
 def halve_mesh(self, context):
 
-    obj = bpy.context.active_object.data
+    obj = context.active_object.data
 
     for verts in obj.vertices:
-                if verts.co.x < -0.001:    
-                    verts.select = True
+        if verts.co.x < -0.001:    
+            verts.select = True
+
 
 class halveMesh(bpy.types.Operator):    
     """Delete all vertices on the -X side of center"""
@@ -425,16 +423,15 @@ class halveMesh(bpy.types.Operator):
 
     def execute(self, context):
         
-        obj = bpy.context.active_object.data
-        
-        selected = bpy.context.selected_objects
+        obj = context.active_object.data
+        selected = context.selected_objects
         # Go to edit mode and ensure all vertices are deselected, preventing accidental deletions
         
-        if bpy.context.object.mode == 'OBJECT':
+        if context.object.mode == 'OBJECT':
         
             for obj in selected:
                 if obj.type == 'MESH':
-                    bpy.context.scene.objects.active = obj
+                    context.scene.objects.active = obj
 
                     ops.object.mode_set(mode='EDIT')
                     ops.mesh.select_all(action='DESELECT')
@@ -489,24 +486,23 @@ class applySubsurf(bpy.types.Operator):
     # Test if it is possible to apply a subsurf modifier, thanks to Richard Van Der Oost
     @classmethod    
     def poll(cls, context):
-       
-       # Get the active object
-       obj = context.active_object
-       
-       # Test if there's an active object
-       if obj:
-           
+        # Get the active object
+        obj = context.active_object
+
+        # Test if there's an active object
+        if obj:
+
            # Find modifiers with "SUBSURF" type
            for mod in obj.modifiers:
                if mod.type == 'SUBSURF':
                    return True
-       return False
+        return False
     
     def execute(self, context):
-        
+
         #check for active object
         obj = context.active_object    
-        
+
         # If any subsurf modifiers exist on object, apply them.
         for mod in obj.modifiers:
             if mod.type == 'SUBSURF':
@@ -528,20 +524,11 @@ class addRemesh(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
-
-        # assign a convience variable
-       dyntopo = bpy.context.sculpt_object.use_dynamic_topology_sculpting
-       
-       # test if dyntopo is active
-       if dyntopo == False:
-           return True
-       return False
+        return context.sculpt_object.use_dynamic_topology_sculpting
 
     def execute(self, context):
-    
         ops.object.modifier_add(type='REMESH')
-        bpy.context.object.modifiers['Remesh'].mode = 'SMOOTH'
-    
+        context.object.modifiers['Remesh'].mode = 'SMOOTH'
         return {"FINISHED"}
 
 
@@ -555,37 +542,36 @@ class applyRemesh(bpy.types.Operator):
     bl_label = "Apply Only Remesh Modifiers"
     bl_idname = "object.apply_remesh"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     # test if it is possible to apply a remesh modifier
     @classmethod    
     def poll(cls, context):
-       
-       # get the active object
-       obj = context.active_object
-       
-       # test if there's an active object
-       if obj:
-           
-           # find modifiers with "REMESH" type
-           for mod in obj.modifiers:
-               if mod.type == 'REMESH':
-                   return True
-       return False
-    
+
+        # get the active object
+        obj = context.active_object
+
+        # test if there's an active object
+        if obj:
+            # find modifiers with "REMESH" type
+            for mod in obj.modifiers:
+                if mod.type == 'REMESH':
+                    return True
+        return False
+
     def execute(self, context):
-        
+
         #check for active object
         obj = context.active_object
-        
+
         # If any remesh modifiers exist on object, apply them.
         for mod in obj.modifiers:
             if mod.type == 'REMESH':
                 applyModifier(apply_as='DATA', modifier=mod.name)
                 self.report({'INFO'}, "Applied remesh modifier(s)")   
-        
+
         return {"FINISHED"}
-    
-    
+
+
 ################################################### 
 # Apply all modifiers on the active object
 ################################################### 
@@ -601,22 +587,21 @@ class applyModifiers(bpy.types.Operator):
         return len(context.selected_objects) > 0 and len(context.active_object.modifiers) > 0
    
     def execute(self, context):
-        
-        # find all selected objects
+
         sel = context.selected_objects
-        
-        # loop through all selected objects
         for obj in sel:
             # set the current object in the loop to active
-            bpy.context.scene.objects.active = obj
+            context.scene.objects.active = obj
             
             # If any modifiers exist on current object object, apply them.
             for mod in obj.modifiers:
                 applyModifier(apply_as='DATA', modifier=mod.name)
-                self.report({'INFO'}, "Applied all modifiers on selected objects")   
-        
-        return {"FINISHED"}    
 
+            # maybe for debug you might do an 'applied to obj.name' in before
+            # iterating to the next
+            
+        self.report({'INFO'}, "Applied all modifiers on selected objects")   
+        return {"FINISHED"}    
 
     
 ################################################### 
@@ -629,16 +614,10 @@ class sculptSymmetryX(bpy.types.Operator):
     bl_idname = "sculpt.symmetry_x"
     
     def execute(self, context):
-       
-       # checks the current state of x-axis symmetry then toggles it. 
-        symmetry_x = bpy.context.tool_settings.sculpt.use_symmetry_x
-        if symmetry_x:
-            context.tool_settings.sculpt.use_symmetry_x = False
-        else:
-            context.tool_settings.sculpt.use_symmetry_x = True
-        
+        # checks the current state of x-axis symmetry then inverts the state
+        symmetry_x = context.tool_settings.sculpt.use_symmetry_x
+        context.tool_settings.sculpt.use_symmetry_x = not symmetry_x
         return {"FINISHED"}
-
 
 class sculptSymmetryY(bpy.types.Operator):
     """Enable Y-axis symmetry"""
@@ -646,13 +625,8 @@ class sculptSymmetryY(bpy.types.Operator):
     bl_idname = "sculpt.symmetry_y"
     
     def execute(self, context):
-        
-        symmetry_y = bpy.context.tool_settings.sculpt.use_symmetry_y
-        if symmetry_y:
-            context.tool_settings.sculpt.use_symmetry_y = False
-        else:
-            context.tool_settings.sculpt.use_symmetry_y = True
-        
+        symmetry_y = context.tool_settings.sculpt.use_symmetry_y
+        context.tool_settings.sculpt.use_symmetry_y = not symmetry_y
         return {"FINISHED"}   
     
 class sculptSymmetryZ(bpy.types.Operator):
@@ -661,13 +635,8 @@ class sculptSymmetryZ(bpy.types.Operator):
     bl_idname = "sculpt.symmetry_z"
     
     def execute(self, context):
-        
-        symmetry_z = bpy.context.tool_settings.sculpt.use_symmetry_z
-        if symmetry_z:
-            context.tool_settings.sculpt.use_symmetry_z = False
-        else:
-            context.tool_settings.sculpt.use_symmetry_z = True
-        
+        symmetry_z = context.tool_settings.sculpt.use_symmetry_z
+        context.tool_settings.sculpt.use_symmetry_z = not symmetry_z
         return {"FINISHED"}     
     
 
@@ -681,14 +650,8 @@ class sculptAxisLockX(bpy.types.Operator):
     bl_idname = "sculpt.axislock_x"
     
     def execute(self, context):
-       
-       # checks the current state of x-axis symmetry then toggles it. 
-        axisLock_x = bpy.context.tool_settings.sculpt.lock_x
-        if axisLock_x:
-            context.tool_settings.sculpt.lock_x = False
-        else:
-            context.tool_settings.sculpt.lock_x = True
-        
+        axisLock_x = context.tool_settings.sculpt.lock_x
+        context.tool_settings.sculpt.lock_x = not axisLock_x
         return {"FINISHED"}      
     
 class sculptAxisLockY(bpy.types.Operator):
@@ -697,14 +660,8 @@ class sculptAxisLockY(bpy.types.Operator):
     bl_idname = "sculpt.axislock_y"
     
     def execute(self, context):
-       
-       # checks the current state of y-axis lock then toggles it. 
-        axisLock_y = bpy.context.tool_settings.sculpt.lock_y
-        if axisLock_y:
-            context.tool_settings.sculpt.lock_y = False
-        else:
-            context.tool_settings.sculpt.lock_y = True
-        
+        axisLock_y = context.tool_settings.sculpt.lock_y
+        context.tool_settings.sculpt.lock_y = not axisLock_y
         return {"FINISHED"}    
     
 class sculptAxisLockZ(bpy.types.Operator):
@@ -713,14 +670,8 @@ class sculptAxisLockZ(bpy.types.Operator):
     bl_idname = "sculpt.axislock_z"
     
     def execute(self, context):
-       
-       # checks the current state of z-axis lock then toggles it. 
-        axisLock_z = bpy.context.tool_settings.sculpt.lock_z
-        if axisLock_z:
-            context.tool_settings.sculpt.lock_z = False
-        else:
-            context.tool_settings.sculpt.lock_z = True
-        
+        axisLock_z = context.tool_settings.sculpt.lock_z
+        context.tool_settings.sculpt.lock_z = not axisLock_z
         return {"FINISHED"}   
     
 
@@ -736,25 +687,13 @@ class sculptCollapseShortEdges(bpy.types.Operator):
     # test if it is possible to toggle short edge collapse
     @classmethod    
     def poll(cls, context):
-       
-       # assign a convience variable
-       dyntopo = bpy.context.sculpt_object.use_dynamic_topology_sculpting
-       
-       # test if dyntopo is active
-       if dyntopo == True:
-           return True
-       return False
+        # if dyntopo True, returns True, else returns False :)
+        return context.sculpt_object.use_dynamic_topology_sculpting
    
     def execute(self, context):
-        
-        shortEdges = bpy.context.scene.tool_settings.sculpt.use_edge_collapse
-
-        # Toggle collapse short edges
-        if shortEdges:
-            context.scene.tool_settings.sculpt.use_edge_collapse = False
-        else:
-            context.scene.tool_settings.sculpt.use_edge_collapse = True
-            
+        #invert current state
+        shortEdges = context.scene.tool_settings.sculpt.use_edge_collapse
+        context.scene.tool_settings.sculpt.use_edge_collapse = not shortEdges
         return {"FINISHED"}
 
 ################################################### 
@@ -769,24 +708,16 @@ class objectDoubleSided(bpy.types.Operator):
 
     def execute(self, context):
 
-        scene = bpy.context.scene
-
-        selected = bpy.context.selected_objects
-
-        origActive = bpy.context.active_object
-        
-        doubleSided = bpy.context.object.data.show_double_sided
+        scene = context.scene
+        selected = context.selected_objects
+        origActive = context.active_object
+        doubleSided = context.object.data.show_double_sided
 
         for obj in selected:
             scene.objects.active = obj
-                
-            if doubleSided:
-                context.object.data.show_double_sided = False
-            else:
-                context.object.data.show_double_sided = True
+            context.object.data.show_double_sided = not doubleSided
 
         scene.objects.active = origActive
-
         return {"FINISHED"}
 
 ################################################### 
@@ -801,91 +732,29 @@ class allEdgesWire(bpy.types.Operator):
 
     def execute(self, context):
 
-        scene = bpy.context.scene
-
-        selected = bpy.context.selected_objects
-
-        origActive = bpy.context.active_object
+        scene = context.scene
+        selected = context.selected_objects
+        origActive = context.active_object
         
-        allEdges = bpy.context.object.show_all_edges
-        wire = bpy.context.object.show_wire
+        allEdges = context.object.show_all_edges
+        wire = context.object.show_wire
 
         for obj in selected:
             scene.objects.active = obj
-                
-            if allEdges:
-                context.object.show_all_edges = False
-            else:
-                context.object.show_all_edges = True
-        
-        for obj in selected:
-            scene.objects.active = obj
-
-            if wire:
-                context.object.show_wire = False
-            else:
-                context.object.show_wire = True
+            context.object.show_all_edges = not allEdges
+            context.object.show_wire = not wire
 
         scene.objects.active = origActive
-
         return {"FINISHED"}
 
 
-######### Register and unregister the operators ###########
+# boiler plate: register / unregister
 
 def register():
     bpy.utils.register_module(__name__)
 
 def unregister():
     bpy.utils.unregister_module(__name__)
-
-# def register():
-#     bpy.utils.register_class(setObjectOrigin)
-#     bpy.utils.register_class(addTarget)
-#     bpy.utils.register_class(addSubsurf)
-#     bpy.utils.register_class(addMirror)
-#     bpy.utils.register_class(addLattice)
-#     bpy.utils.register_class(addArray)
-#     bpy.utils.register_class(addScrew)
-#     bpy.utils.register_class(halveMesh)
-#     bpy.utils.register_class(applySubsurf)
-#     bpy.utils.register_class(applyRemesh)
-#     bpy.utils.register_class(applyModifiers)
-#     bpy.utils.register_class(addRemesh)
-#     bpy.utils.register_class(sculptSymmetryX)
-#     bpy.utils.register_class(sculptSymmetryY)
-#     bpy.utils.register_class(sculptSymmetryZ)
-#     bpy.utils.register_class(sculptAxisLockX)
-#     bpy.utils.register_class(sculptAxisLockY)
-#     bpy.utils.register_class(sculptAxisLockZ)
-#     bpy.utils.register_class(sculptCollapseShortEdges)
-#     bpy.utils.register_class(objectDoubleSided)
-#     bpy.utils.register_class(allEdgesWire)
-
-    
-# def unregister():
-#     bpy.utils.unregister_class(setObjectOrigin)
-#     bpy.utils.unregister_class(addTarget)
-#     bpy.utils.unregister_class(addSubsurf)
-#     bpy.utils.unregister_class(addMirror)
-#     bpy.utils.unregister_class(addLattice)
-#     bpy.utils.unregister_class(addArray)
-#     bpy.utils.unregister_class(addScrew)
-#     bpy.utils.unregister_class(halveMesh)
-#     bpy.utils.unregister_class(applySubsurf)
-#     bpy.utils.unregister_class(applyRemesh)
-#     bpy.utils.unregister_class(applyModifiers)
-#     bpy.utils.unregister_class(addRemesh)
-#     bpy.utils.unregister_class(sculptSymmetryX)
-#     bpy.utils.unregister_class(sculptSymmetryY)
-#     bpy.utils.unregister_class(sculptSymmetryZ)
-#     bpy.utils.unregister_class(sculptAxisLockX)
-#     bpy.utils.unregister_class(sculptAxisLockY)
-#     bpy.utils.unregister_class(sculptAxisLockZ)
-#     bpy.utils.unregister_class(sculptCollapseShortEdges)
-#     bpy.utils.unregister_class(objectDoubleSided)
-#     bpy.utils.unregister_class(allEdgesWire)
-
     
 if __name__ == "__main__":
     register()
