@@ -45,8 +45,15 @@ class addTarget(bpy.types.Operator):
     bl_idname = "object.empty_add_unactive"
     bl_options = {'REGISTER', 'UNDO'}
     
+    @classmethod
+    def poll(cls, context):
+        if len(context.selected_objects) > 0:
+            return True
+        return False
+
     def execute(self, context):
         scene = context.scene
+
         # Get the currently active object
         activeObj = context.active_object
         
@@ -74,7 +81,8 @@ class addTarget(bpy.types.Operator):
         # Select the previously stored current object and make it active                    
         scene.objects.active = currentObj
         currentObj.select = True
-     
+
+
         return {"FINISHED"}
 
         
