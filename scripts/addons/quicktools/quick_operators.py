@@ -408,6 +408,13 @@ class halveMesh(bpy.types.Operator):
     bl_label = "Halve and mirror mesh"
     bl_options = {'REGISTER', 'UNDO'}
     
+    @classmethod
+    def poll(cls, context):
+
+        if bpy.context.active_object.type == 'MESH':
+            return True
+        return False
+
     def execute(self, context):
         
         obj = bpy.context.active_object.data
