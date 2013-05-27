@@ -351,16 +351,16 @@ class addScrew(bpy.types.Operator):
         # Find all selected objects
         targetObj = context.selected_objects
         
-        # Add a array modifier
-        addMod("ARRAY")
+        # Add a screw modifier
+        addMod("SCREW")
                 
         # Store the mesh object
         selectedObj = activeObj        
         
-        # Set status of array object usage
+        # Set status of screw object usage
         useScrewObj = False
         
-        # If a second object is not selected, don't use mirror object
+        # If a second object is not selected, don't use screw object
         if len(targetObj) > 1:
             useScrewObj = True
 
