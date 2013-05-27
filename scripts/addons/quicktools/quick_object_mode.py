@@ -15,8 +15,8 @@ class QuickObjectTools(bpy.types.Menu):
         layout.operator("object.add_subsurf", 'Add Subsurf', icon='MOD_SUBSURF')
         layout.operator("object.apply_subsurf", 'Apply Subsurf')
         
-        layout.operator("object.add_mirror", 'Add Mirror', icon='MOD_MIRROR')
-        layout.operator("object.empty_add_unactive", "Add Target")
+        #layout.operator("object.add_mirror", 'Add Mirror', icon='MOD_MIRROR')
+        #layout.operator("object.empty_add_unactive", "Add Target")
         
         layout.separator()
         
@@ -25,13 +25,13 @@ class QuickObjectTools(bpy.types.Menu):
         layout.operator_menu_enum("object.modifier_add", "type") 
         layout.operator("object.apply_modifiers")
         
-        layout.separator() 
-                
-        layout.operator_menu_enum("object.origin_set", "type")
-
         layout.separator()
 
         layout.operator("object.mesh_halve", "Halve and Mirror")
+
+        layout.separator() 
+                
+        layout.operator_menu_enum("object.origin_set", "type")
 
 
 class SmartModifiers(bpy.types.Menu):
@@ -40,6 +40,10 @@ class SmartModifiers(bpy.types.Menu):
 
     def draw (self, context):
         layout = self.layout
+        layout.operator("object.empty_add_unactive", "Add Target", icon='CURSOR')
+
+        layout.separator()
+
         layout.operator("object.add_array", "Array", icon='MOD_ARRAY')
         layout.operator("object.add_mirror", "Mirror", icon='MOD_MIRROR')
         layout.operator("object.add_lattice", "Lattice", icon='MOD_LATTICE')
