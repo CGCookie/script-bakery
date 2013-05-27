@@ -418,29 +418,32 @@ class halveMesh(bpy.types.Operator):
         if bpy.context.object.mode == 'OBJECT':
         
             for obj in selected:
+                if obj.type == 'MESH':
+                    bpy.context.scene.objects.active = obj
 
-                bpy.context.scene.objects.active = obj
+                    ops.object.mode_set(mode='EDIT')
+                    ops.mesh.select_all(action='DESELECT')
+                    ops.object.mode_set(mode='OBJECT')
+                    
+                    # Find verts left of center and select them
+                    halve_mesh(self, context)
 
-                ops.object.mode_set(mode='EDIT')
-                ops.mesh.select_all(action='DESELECT')
-                ops.object.mode_set(mode='OBJECT')
-                
-                # Find verts left of center and select them
-                halve_mesh(self, context)
+                    # for verts in obj.vertices:
+                    #     if verts.co.x < -0.001:    
+                    #         verts.select = True
+                            
+                    # Toggle edit mode and delete the selection
+                    ops.object.mode_set(mode='EDIT')
+                    ops.mesh.delete(type='VERT')
+                    
+                    # Switch back to object mode and add the mirror modifier
+                    ops.object.mode_set(mode='OBJECT')
+                    addMod("MIRROR")
 
-                # for verts in obj.vertices:
-                #     if verts.co.x < -0.001:    
-                #         verts.select = True
-                        
-                # Toggle edit mode and delete the selection
-                ops.object.mode_set(mode='EDIT')
-                ops.mesh.delete(type='VERT')
-                
-                # Switch back to object mode and add the mirror modifier
-                ops.object.mode_set(mode='OBJECT')
-                addMod("MIRROR")
+                    self.report({'INFO'}, "Mesh half removed and Mirror modifier added")
+                else:
+                    self.report({'INFO'}, "Only works on mesh objects")
 
-            self.report({'INFO'}, "Mesh half removed and Mirror modifier added")
 
         elif bpy.context.object.mode == 'EDIT':
             ops.mesh.select_all(action='DESELECT')
