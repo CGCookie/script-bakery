@@ -78,16 +78,18 @@ class addTarget(bpy.types.Operator):
                         mod.mirror_object = bpy.data.objects[obj.name]
                         obj.select = False
                         self.report({'INFO'}, "Assigned target object to existing modifier")
-            if mod.type == 'ARRAY':
+            elif mod.type == 'ARRAY':
                 for obj in selectedObj:
                     if obj.type =='EMPTY':
                         mod.use_relative_offset = False
                         mod.use_object_offset = True
                         mod.offset_object = bpy.data.objects[obj.name]
-            if mod.type == 'SCREW':
+                        self.report({'INFO'}, "Assigned target object to existing modifier")
+            elif mod.type == 'SCREW':
                 for obj in selectedObj:
                     if obj.type =='EMPTY':
-                        mod.object = bpy.data.objects[obj.name]       
+                        mod.object = bpy.data.objects[obj.name]
+                        self.report({'INFO'}, "Assigned target object to existing modifier")       
 
         # Select the previously stored current object and make it active                    
         scene.objects.active = currentObj
@@ -158,22 +160,27 @@ class addMirror(bpy.types.Operator):
         
         # Check for active object
         activeObj = context.active_object
+        selected = context.selected_objects
         
-        # Find all selected objects
-        targetObj = context.selected_objects
-        
-        # Add a mirror modifier
-        addMod("MIRROR")
-                
         # Store the mesh object
-        selectedObj = activeObj        
+        origActive = activeObj        
         
         # Set status of mirror object usage
         useMirrorObj = False
+
+        # If no Empty is selected, don't use mirror object
+        for obj in context.selected_objects:
+            if obj.type == 'EMPTY':
+                useMirrorObj = True
         
-        # If no second object is selected, don't use mirror object
-        if len(targetObj) > 1:
-            useMirrorObj = True
+        # Find all selected objects
+        for obj in context.selected_objects:
+            scene.objects.active = obj
+            if obj.type == 'EMPTY':
+                targetObj = obj
+            elif obj.type == 'MESH' or obj.type == 'CURVE':
+                # Add a mirror modifier
+                addMod("MIRROR")
 
         # Make the targetObj active
         try:
@@ -185,20 +192,23 @@ class addMirror(bpy.types.Operator):
         activeObj = context.active_object
         
         # Swap the selected and active objects
-        selectedObj, activeObj = activeObj, selectedObj
+        origActive, activeObj = activeObj, origActive
         
         # Deselect the empty object and select the mesh object again, making it active
-        selectedObj.select = False
+        origActive.select = False
         activeObj.select = True
         scene.objects.active = activeObj
         
-        # Find the added modifier, enable clipping, set the mirror object
-        for mod in activeObj.modifiers:
-            if mod.type == 'MIRROR':
-                mod.use_clip = True
-                if useMirrorObj:
-                    mod.mirror_object = bpy.data.objects[selectedObj.name]
-                    self.report({'INFO'}, "Assigned target object to modifier")      
+        
+        for obj in selected:
+            scene.objects.active = obj
+            # Find the added modifier, enable clipping, set the mirror object
+            for mod in obj.modifiers:
+                if mod.type == 'MIRROR':
+                    mod.use_clip = True
+                    if useMirrorObj:
+                        mod.mirror_object = bpy.data.objects[targetObj.name]
+                        self.report({'INFO'}, "Assigned target object to modifier")      
 
         return {"FINISHED"}
     
