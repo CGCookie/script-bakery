@@ -27,7 +27,8 @@ class setObjectOrigin(bpy.types.Operator):
             # If user is not in object mode, don't run the operator and report reason to the Info header
             self.report({'INFO'}, "Must be run in Edit Mode")
         else:
-            # Set the 3D Cursor to the selected mesh and then center the origin in object mode, followed by returning to edit mode.
+            # Set the 3D Cursor to the selected mesh and then center the origin
+            # in object mode followed by returning to edit mode.
             ops.view3d.snap_cursor_to_selected()
             ops.object.mode_set(mode='OBJECT')
             ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
@@ -54,10 +55,8 @@ class addTarget(bpy.types.Operator):
     def execute(self, context):
         scene = context.scene
 
-        # Get the currently active object
         activeObj = context.active_object
         
-        # Store the current object
         currentObj = activeObj
         
         # Check to see if a target exists, if it does not then create one
@@ -111,7 +110,7 @@ class addSubsurf(bpy.types.Operator):
         return len(context.selected_objects) > 0
 
     def execute(self, context):       
-        scene = bpy.context.scene
+        scene = context.scene
         sel = context.selected_objects
         
         for obj in sel:
@@ -197,7 +196,7 @@ class addMirror(bpy.types.Operator):
         for mod in activeObj.modifiers:
             if mod.type == 'MIRROR':
                 mod.use_clip = True
-                if useMirrorObj == True:
+                if useMirrorObj:
                     mod.mirror_object = bpy.data.objects[selectedObj.name]
                     self.report({'INFO'}, "Assigned target object to modifier")      
 
@@ -223,11 +222,7 @@ class addLattice(bpy.types.Operator):
     def execute(self, context):
 
         scene = bpy.context.scene
-        
-        # Check for active object
         activeObj = context.active_object
-        
-        # Find all selected objects
         targetObj = context.selected_objects
         
         # Add a lattice modifier
@@ -253,7 +248,7 @@ class addLattice(bpy.types.Operator):
         activeObj = context.active_object
         
         # Swap the selected and active objects
-        (selectedObj, activeObj) = (activeObj, selectedObj)
+        selectedObj, activeObj = activeObj, selectedObj
         
         # Deselect the empty object and select the mesh object again, making it active
         selectedObj.select = False
@@ -288,17 +283,11 @@ class addArray(bpy.types.Operator):
     # Add the modifier
     def execute(self, context):
         scene = bpy.context.scene
- 
-        # Check for active object
         activeObj = context.active_object
-        
-        # Find all selected objects
         targetObj = context.selected_objects
         
         # Add a array modifier
         addMod("ARRAY")
-
-        # ops.object.modifier_add(type='ARRAY')
                 
         # Store the mesh object
         selectedObj = activeObj        
@@ -333,7 +322,7 @@ class addArray(bpy.types.Operator):
                 if mod.type == 'ARRAY':
                     mod.use_relative_offset = False
                     mod.use_object_offset = True
-                    if useArrayObj == True:
+                    if useArrayObj:
                         mod.offset_object = bpy.data.objects[selectedObj.name]
                         self.report({'INFO'}, "Assigned target object to modifier")      
 
