@@ -134,7 +134,7 @@ def register():
     bpy.utils.register_class(QuickObjectTools)
     bpy.utils.register_class(SmartModifiers)
     bpy.utils.register_class(QuickObjectOptions)
-    bpy.utils.register_class(QuickObjectToolbar)
+#    bpy.utils.register_class(QuickObjectToolbar)
      
     
     wm = bpy.context.window_manager
@@ -158,7 +158,7 @@ def unregister():
     bpy.utils.unregister_class(QuickObjectTools)
     bpy.utils.unregister_class(SmartModifiers)
     bpy.utils.unregister_class(QuickObjectOptions)
-    bpy.utils.unregister_class(QuickObjectToolbar)
+#    bpy.utils.unregister_class(QuickObjectToolbar)
         
     
     # remove keymaps when add-on is deactivated

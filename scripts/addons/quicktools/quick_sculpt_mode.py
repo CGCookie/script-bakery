@@ -66,19 +66,19 @@ class QuickSculptTools(bpy.types.Menu):
         layout.separator()
         
         if lock_x:
-            layout.operator("sculpt.axislock_x", 'Disable X Lock', icon='MANIPUL')
+            layout.operator("sculpt.axislock", 'Disable X Lock', icon='MANIPUL').axis = -1
         else:
-            layout.operator("sculpt.axislock_x", 'Enable X Lock', icon='MANIPUL')
+            layout.operator("sculpt.axislock", 'Enable X Lock', icon='MANIPUL').axis = -1
 
         if lock_y:
-            layout.operator("sculpt.axislock_y", 'Disable Y Lock')
+            layout.operator("sculpt.axislock", 'Disable Y Lock').axis = 0
         else:
-            layout.operator("sculpt.axislock_y", 'Enable Y Lock')
+            layout.operator("sculpt.axislock", 'Enable Y Lock').axis = 0
 
         if lock_z:
-            layout.operator("sculpt.axislock_z", 'Disable Z Lock')
+            layout.operator("sculpt.axislock", 'Disable Z Lock').axis = 1
         else:
-            layout.operator("sculpt.axislock_z", 'Enable Z Lock')
+            layout.operator("sculpt.axislock", 'Enable Z Lock').axis = 1
 
 
 

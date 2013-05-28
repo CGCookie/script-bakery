@@ -607,7 +607,7 @@ class applyModifiers(bpy.types.Operator):
 
     
 ################################################### 
-# Creating operators for toggling Sculpt Symmetry
+# Creating operator for toggling Sculpt Symmetry
 ################################################### 
 
 class sculptSymmetry(bpy.types.Operator):
@@ -631,42 +631,33 @@ class sculptSymmetry(bpy.types.Operator):
             symmetry_z = context.tool_settings.sculpt.use_symmetry_z
             context.tool_settings.sculpt.use_symmetry_z = not symmetry_z
         return {"FINISHED"}
-
+    
 
 ################################################### 
-# Creating operators for toggling Axis Locks
+# Creating operator for toggling Axis Locks
 ################################################### 
 
-class sculptAxisLockX(bpy.types.Operator):
-    """Toggle X-axis Locking"""
-    bl_label = "Toggle X-axis Lock"
-    bl_idname = "sculpt.axislock_x"
-    
+class sculptAxisLock(bpy.types.Operator):
+    """Toggle Axis Lock In Sculpting"""
+    bl_idname = "sculpt.axislock"
+    bl_label = "Toggle Axis Lock"
+
+
+    axis = bpy.props.IntProperty(name = "Axis",
+                    description = "switch axis' to lock",
+                    default = 0)
+
     def execute(self, context):
-        axisLock_x = context.tool_settings.sculpt.lock_x
-        context.tool_settings.sculpt.lock_x = not axisLock_x
-        return {"FINISHED"}      
-    
-class sculptAxisLockY(bpy.types.Operator):
-    """Toggle Y-axis Locking"""
-    bl_label = "Toggle Y-axis Lock"
-    bl_idname = "sculpt.axislock_y"
-    
-    def execute(self, context):
-        axisLock_y = context.tool_settings.sculpt.lock_y
-        context.tool_settings.sculpt.lock_y = not axisLock_y
-        return {"FINISHED"}    
-    
-class sculptAxisLockZ(bpy.types.Operator):
-    """Toggle Z-axis Locking"""
-    bl_label = "Toggle Z-axis Lock"
-    bl_idname = "sculpt.axislock_z"
-    
-    def execute(self, context):
-        axisLock_z = context.tool_settings.sculpt.lock_z
-        context.tool_settings.sculpt.lock_z = not axisLock_z
-        return {"FINISHED"}   
-    
+        if self.axis == -1:
+            lock_x = context.tool_settings.sculpt.lock_x
+            context.tool_settings.sculpt.lock_x = not lock_x
+        if self.axis == 0:
+            lock_y = context.tool_settings.sculpt.lock_y
+            context.tool_settings.sculpt.lock_y = not lock_y
+        if self.axis == 1:
+            lock_z = context.tool_settings.sculpt.lock_z
+            context.tool_settings.sculpt.lock_z = not lock_z
+        return {"FINISHED"}
 
 ################################################### 
 # Creating operator for toggling collapse short edges
