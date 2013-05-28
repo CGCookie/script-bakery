@@ -41,10 +41,6 @@ class QuickMeshTools(bpy.types.Menu):
         layout.operator("object.add_mirror", icon='MOD_MIRROR')  
         layout.operator("object.add_subsurf", 'Add Subsurf', icon='MOD_SUBSURF')
 
-        layout.separator()
-        
-        layout.operator("mesh.faces_shade_smooth", icon='SOLID')
-        layout.operator("mesh.faces_shade_flat", icon='MESH_UVSPHERE')
 
 
 
