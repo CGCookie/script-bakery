@@ -69,14 +69,26 @@ class addTarget(bpy.types.Operator):
                 ops.object.empty_add(type='PLAIN_AXES')
                 selectedObj = context.selected_objects
             
-        # Check if a mirror modifier exists, if it does then assign the empty
+        # Check if a smart modifier exists and assign the empty if necessary
+
+        ### ---- dev note: this should all be combined into a reusable function. --- ###
         for mod in currentObj.modifiers:
             if mod.type == 'MIRROR':
                 for obj in selectedObj:
                     if obj.type == 'EMPTY':
                         mod.mirror_object = bpy.data.objects[obj.name]
                         obj.select = False
-                        self.report({'INFO'}, "Assigned target object to existing modifier")       
+                        self.report({'INFO'}, "Assigned target object to existing modifier")
+            if mod.type == 'ARRAY':
+                for obj in selectedObj:
+                    if obj.type =='EMPTY':
+                        mod.use_relative_offset = False
+                        mod.use_object_offset = True
+                        mod.offset_object = bpy.data.objects[obj.name]
+            if mod.type == 'SCREW':
+                for obj in selectedObj:
+                    if obj.type =='EMPTY':
+                        mod.object = bpy.data.objects[obj.name]       
 
         # Select the previously stored current object and make it active                    
         scene.objects.active = currentObj
@@ -99,7 +111,6 @@ class addSubsurf(bpy.types.Operator):
         return len(context.selected_objects) > 0
 
     def execute(self, context):       
-        #    obj = context.active_object
         scene = bpy.context.scene
         sel = context.selected_objects
         
@@ -161,7 +172,7 @@ class addMirror(bpy.types.Operator):
         # Set status of mirror object usage
         useMirrorObj = False
         
-        # If a second object is not selected, don't use mirror object
+        # If no second object is selected, don't use mirror object
         if len(targetObj) > 1:
             useMirrorObj = True
 
