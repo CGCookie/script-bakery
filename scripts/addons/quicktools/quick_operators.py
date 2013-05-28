@@ -610,37 +610,28 @@ class applyModifiers(bpy.types.Operator):
 # Creating operators for toggling Sculpt Symmetry
 ################################################### 
 
-class sculptSymmetryX(bpy.types.Operator):
-    """Enable X-axis symmetry"""
-    bl_label = "Toggle X-axis Symmetry"
-    bl_idname = "sculpt.symmetry_x"
+class sculptSymmetry(bpy.types.Operator):
+    """Toggle Symmetry For Sculpting"""
+    bl_idname = "sculpt.symmetry"
+    bl_label = "Toggle Sculpt Symmetry"
+
     
+    axis = bpy.props.IntProperty(name = "Axis",
+                    description = "switch between symmetry axis'",
+                    default = 0)
+
     def execute(self, context):
-        # checks the current state of x-axis symmetry then inverts the state
-        symmetry_x = context.tool_settings.sculpt.use_symmetry_x
-        context.tool_settings.sculpt.use_symmetry_x = not symmetry_x
+        if self.axis == -1:
+            symmetry_x = context.tool_settings.sculpt.use_symmetry_x
+            context.tool_settings.sculpt.use_symmetry_x = not symmetry_x
+        if self.axis == 0:
+            symmetry_y = context.tool_settings.sculpt.use_symmetry_y
+            context.tool_settings.sculpt.use_symmetry_y = not symmetry_y
+        if self.axis == 1:
+            symmetry_z = context.tool_settings.sculpt.use_symmetry_z
+            context.tool_settings.sculpt.use_symmetry_z = not symmetry_z
         return {"FINISHED"}
 
-class sculptSymmetryY(bpy.types.Operator):
-    """Enable Y-axis symmetry"""
-    bl_label = "Toggle Y-axis Symmetry"
-    bl_idname = "sculpt.symmetry_y"
-    
-    def execute(self, context):
-        symmetry_y = context.tool_settings.sculpt.use_symmetry_y
-        context.tool_settings.sculpt.use_symmetry_y = not symmetry_y
-        return {"FINISHED"}   
-    
-class sculptSymmetryZ(bpy.types.Operator):
-    """Enable Z-axis symmetry"""
-    bl_label = "Toggle Z-axis Symmetry"
-    bl_idname = "sculpt.symmetry_z"
-    
-    def execute(self, context):
-        symmetry_z = context.tool_settings.sculpt.use_symmetry_z
-        context.tool_settings.sculpt.use_symmetry_z = not symmetry_z
-        return {"FINISHED"}     
-    
 
 ################################################### 
 # Creating operators for toggling Axis Locks
