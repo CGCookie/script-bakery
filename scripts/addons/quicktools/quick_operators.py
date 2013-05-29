@@ -615,7 +615,31 @@ class applyModifiers(bpy.types.Operator):
         self.report({'INFO'}, "Applied all modifiers on selected objects")   
         return {"FINISHED"}    
 
+################################################### 
+# Remove all modifiers on selected objects
+###################################################
+
+class removeModifiers(bpy.types.Operator):
+    """Remove Modifiers From Selected Objects"""
+    bl_idname = "object.modifier_remove_all"
+    bl_label = "Remove modifiers on all selected objects"
+    bl_options = {'REGISTER', 'UNDO'}    
     
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+
+    def execute(self, context):
+        selected = context.selected_objects
+        
+        for obj in selected:
+            context.scene.objects.active = obj
+            for mod in obj.modifiers:
+                ops.object.modifier_remove(modifier=mod.name)
+        self.report({'INFO'}, "Removed all modifiers on selected objects")
+        return {'FINISHED'}
+
+
 ################################################### 
 # Creating operator for toggling Sculpt Symmetry
 ################################################### 

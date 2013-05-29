@@ -24,6 +24,7 @@ class QuickObjectTools(bpy.types.Menu):
 
         layout.operator_menu_enum("object.modifier_add", "type") 
         layout.operator("object.apply_modifiers")
+        layout.operator("object.modifier_remove_all", "Remove All Modifiers")
         
         layout.separator()
 
