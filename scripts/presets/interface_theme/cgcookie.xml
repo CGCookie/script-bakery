@@ -227,6 +227,7 @@
     <view_3d>
       <ThemeView3D grid="#5c5c5c"
                    wire="#000000"
+                   wire_edit="#7c7c7c"
                    lamp="#00000028"
                    speaker="#000000"
                    camera="#000000"
@@ -236,7 +237,7 @@
                    object_grouped="#106410"
                    object_grouped_active="#5bc85b"
                    transform="#ffffff"
-                   vertex="#a8a8a8"
+                   vertex="#cfcfcf"
                    vertex_select="#c28d45"
                    vertex_size="3"
                    vertex_unreferenced="#000000"
@@ -982,4 +983,36 @@
       </ThemeBoneColorSet>
     </bone_color_sets>
   </Theme>
+  <ThemeStyle>
+    <panel_title>
+      <ThemeFontStyle points="12"
+                      font_kerning_style="FITTED"
+                      shadow="1"
+                      shadow_offset_x="0"
+                      shadow_offset_y="-1"
+                      shadow_alpha="0.15"
+                      shadow_value="1">
+      </ThemeFontStyle>
+    </panel_title>
+    <widget_label>
+      <ThemeFontStyle points="11"
+                      font_kerning_style="FITTED"
+                      shadow="3"
+                      shadow_offset_x="0"
+                      shadow_offset_y="-1"
+                      shadow_alpha="0.15"
+                      shadow_value="1">
+      </ThemeFontStyle>
+    </widget_label>
+    <widget>
+      <ThemeFontStyle points="11"
+                      font_kerning_style="FITTED"
+                      shadow="0"
+                      shadow_offset_x="0"
+                      shadow_offset_y="0"
+                      shadow_alpha="0.25"
+                      shadow_value="0">
+      </ThemeFontStyle>
+    </widget>
+  </ThemeStyle>
 </bpy>
