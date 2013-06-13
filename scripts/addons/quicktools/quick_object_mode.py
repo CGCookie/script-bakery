@@ -46,6 +46,7 @@ class SmartModifiers(bpy.types.Menu):
         layout.separator()
 
         layout.operator("object.add_array", "Array", icon='MOD_ARRAY')
+        layout.operator("object.add_boolean", "Boolean", icon='MOD_BOOLEAN')
         layout.operator("object.add_mirror", "Mirror", icon='MOD_MIRROR')
         layout.operator("object.add_lattice", "Lattice", icon='MOD_LATTICE')
         layout.operator("object.add_screw", "Screw", icon='MOD_SCREW')

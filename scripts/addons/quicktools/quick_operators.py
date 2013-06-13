@@ -338,6 +338,66 @@ class addArray(bpy.types.Operator):
 
         return {"FINISHED"}
 
+################################################### 
+# Add an Boolean modifier with second object as target 
+###################################################      
+
+class addBoolean(bpy.types.Operator):
+    """Add a Boolean modifier with 2nd selected object as target object"""
+    bl_label = "Add Boolean Modifier"
+    bl_idname = "object.add_boolean"
+    bl_options = {'REGISTER', 'UNDO'}
+       
+    
+    # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    # Add the modifier
+    def execute(self, context):
+        scene = bpy.context.scene
+        activeObj = context.active_object
+        targetObj = context.selected_objects
+
+        addMod("BOOLEAN")
+
+        # Store the mesh object
+        selectedObj = activeObj  
+
+        useBool = False
+
+        if len(targetObj) > 1:
+            useBool = True
+
+        # Make the targetObj active
+        try:
+            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
+        except:
+            pass
+
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Swap the selected and active objects
+        selectedObj, activeObj = activeObj, selectedObj
+
+        # Deselect the target object and select the original mesh object again, making it active
+        selectedObj.select = False
+        activeObj.select = True
+        scene.objects.active = activeObj
+        
+        # Find the added modifier, set the target object
+        for mod in activeObj.modifiers:
+            if mod.type == 'BOOLEAN':
+                if useBool == True:
+                    mod.object = bpy.data.objects[selectedObj.name]
+                    self.report({'INFO'}, "Assigned second object to boolean modifier")      
+
+        return {"FINISHED"}
+
+
+            
 
 ################################################### 
 # Add a Screw modifier with an object axis set  
