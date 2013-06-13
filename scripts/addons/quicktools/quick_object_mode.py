@@ -131,42 +131,35 @@ Just commenting it out for now in case I go back on my decision.
 addon_keymaps = []
 
 def register():
-    #register the new menus
-    bpy.utils.register_class(QuickObjectTools)
-    bpy.utils.register_class(SmartModifiers)
-    bpy.utils.register_class(QuickObjectOptions)
-#    bpy.utils.register_class(QuickObjectToolbar)
-     
+    bpy.utils.register_module(__name__)  
     
     wm = bpy.context.window_manager
     
     
     # create the object mode Quick Tools menu hotkey
-    km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
+    km = wm.keyconfigs.addon.keymaps.new(name='Object Mode')
     kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
     kmi.properties.name = 'object.tools_menu' 
 
     # create the object mode Display and Scene Tools menu hotkey
-    km = wm.keyconfigs.addon.keymaps.new(name='3D View', space_type='VIEW_3D')
+    km = wm.keyconfigs.addon.keymaps.new(name='3D View')
     kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS', shift=True)
     kmi.properties.name = 'object.display_options' 
 
 
+
     addon_keymaps.append(km)
 
+
 def unregister():
-    #unregister the new menus
-    bpy.utils.unregister_class(QuickObjectTools)
-    bpy.utils.unregister_class(SmartModifiers)
-    bpy.utils.unregister_class(QuickObjectOptions)
-#    bpy.utils.unregister_class(QuickObjectToolbar)
+    bpy.utils.unregister_module(__name__)
         
-    
     # remove keymaps when add-on is deactivated
     wm = bpy.context.window_manager
     for km in addon_keymaps:
         wm.keyconfigs.addon.keymaps.remove(km)
     del addon_keymaps[:]
+
 
 
 if __name__ == "__main__":

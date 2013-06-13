@@ -92,7 +92,8 @@ def register():
     
     wm = bpy.context.window_manager   
     # create the Sculpt hotkeys
-    km = bpy.context.window_manager.keyconfigs.active.keymaps['Sculpt']
+    km = wm.keyconfigs.addon.keymaps.new(name='Sculpt')
+   # km = bpy.context.window_manager.keyconfigs.active.keymaps['Sculpt']
     
     kmi = km.keymap_items.new('sculpt.symmetry', 'X', 'PRESS', shift=True)
     kmi.properties.axis = -1

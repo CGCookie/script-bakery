@@ -124,7 +124,7 @@ def register():
     wm = bpy.context.window_manager
     
     # create the boolean menu hotkey
-    km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
+    km = wm.keyconfigs.addon.keymaps.new(name='Object Mode')
     kmi = km.keymap_items.new('wm.call_menu', 'B', 'PRESS', ctrl=True, shift=True)
     kmi.properties.name = 'object.boolean_menu'
 

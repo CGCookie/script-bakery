@@ -56,7 +56,7 @@ def register():
     wm = bpy.context.window_manager
     
     # creatue the edit mode menu hotkey
-    km = wm.keyconfigs.addon.keymaps.new(name='Mesh', space_type='EMPTY')
+    km = wm.keyconfigs.addon.keymaps.new(name='Mesh')
     kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
     kmi.properties.name = 'mesh.tools_menu'
 
