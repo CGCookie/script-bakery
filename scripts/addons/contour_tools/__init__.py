@@ -207,12 +207,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             reto_mx = self.desination_ob.matrix_world
             reto_imx = reto_mx.inverted()
             
-            #make list of bmverts...these should go smoothly into            
+            #make list of bmverts         
             bmverts = []
             for vert in self.verts:
                 bmverts.append(bm.verts.new(tuple(reto_imx * (orig_mx * vert))))
             
-            # Initialize the index values of this sequence...stupi they aren't going in there!)
+            # Initialize the index values of this sequence
             self.dest_bme.verts.index_update()
 
             #this is tricky, I'm hoping that because my vert list is
@@ -260,6 +260,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             bm.free()
             self.dest_bme.free()
             self.bme.free()
+            if self.tmp_ob:
+                context.scene.objects.unlink(self.tmp_ob)
+                me = self.tmp_ob.data
+                self.tmp_ob.user_clear()
+                bpy.data.objects.remove(self.tmp_ob)
+                bpy.data.meshes.remove(me)
             
             return{'FINISHED'}
             
@@ -325,6 +331,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 context.area.header_text_set()
                 contour_utilities.callback_cleanup(self,context)
                 self.bme.free()
+                if self.tmp_ob:
+                    context.scene.objects.unlink(self.tmp_ob)
+                    me = self.tmp_ob.data
+                    self.tmp_ob.users_clear()
+                    bpy.data.objects.remove(self.tmp_ob)
+                    bpy.data.meshes.remove(me)
                 return {'CANCELLED'}  
         
         if event.type in {'MIDDLEMOUSE'}:
@@ -333,6 +345,29 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     cut_line.head.screen_from_world(context)
                     cut_line.tail.screen_from_world(context)
             return {'PASS_THROUGH'}
+        
+        
+        #########temporary testing#############
+        if event.type in {'LEFT_ARROW','RIGHT_ARROW'}:
+            if event.type == 'LEFT_ARROW' and event.value == 'PRESS':
+                self.ring_shift -= .05
+                if self.ring_shift < 0:
+                    self.ring_shift = 0   
+                
+            if event.type == 'RIGHT_ARROW' and event.value == 'PRESS':
+                self.ring_shift += .05
+                if self.ring_shift > 1:
+                    self.ring_shift = 1
+            
+            for cut_line in self.cut_lines:
+                if not cut_line.verts:
+                    cut_line.hit_object(context, self.original_form)
+                    cut_line.cut_object(context, self.original_form, self.bme)
+                    cut_line.simplify_cross(self.segments, shift = self.ring_shift)
+                else:
+                    cut_line.simplify_cross(self.segments, shift = self.ring_shift)
+        #######################################
+        
         
         if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE','NUMPAD_PLUS','NUMPAD_MINUS'}:
             
@@ -354,8 +389,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     if not cut_line.verts:
                         cut_line.hit_object(context, self.original_form)
                         cut_line.cut_object(context, self.original_form, self.bme)
-                        cut_line.simplify_cross(self.segments)
-                    cut_line.simplify_cross(self.segments)
+                        cut_line.simplify_cross(self.segments, shift = self.ring_shift)
+                    else:
+                        cut_line.simplify_cross(self.segments, shift = self.ring_shift)
                 
                 self.push_mesh_data(context,re_order = False)
                 return {'RUNNING_MODAL'}
@@ -374,8 +410,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     if not cut_line.verts:
                         cut_line.hit_object(context, self.original_form)
                         cut_line.cut_object(context, self.original_form, self.bme)
-                        cut_line.simplify_cross(self.segments)
-                    cut_line.simplify_cross(self.segments)
+                        cut_line.simplify_cross(self.segments, shift = self.ring_shift)
+                    cut_line.simplify_cross(self.segments, shift = self.ring_shift)
             
                 self.push_mesh_data(context,re_order = False)
                 return {'RUNNING_MODAL'}
@@ -689,12 +725,32 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
         self.bme = bmesh.new()
         self.bme.from_mesh(me)
-        
+        ngons = []
+        for f in self.bme.faces:
+            if len(f.verts) > 4:
+                ngons.append(f)
+        if len(ngons):
+            print('Ngons detected, this is a real hassle just so you know')
+            print('Ngons detected, this will probably double operator initial startup time')
+            new_geom = bmesh.ops.triangulate(self.bme, faces = ngons, use_beauty = True)
+            new_faces = new_geom['faces']
+            new_me = bpy.data.meshes.new('tmp_recontour_mesh')
+            self.bme.to_mesh(new_me)
+            new_me.update()
+            self.tmp_ob = bpy.data.objects.new('ContourTMP', new_me)
+            context.scene.objects.link(self.tmp_ob)
+            self.tmp_ob.matrix_world = self.original_form.matrix_world
+            self.original_form = self.tmp_ob
+        else:
+            self.tmp_ob = None
+            
         #default segments (spans)
         self.segments = 10
         message = "Segments: %i" % self.segments
         context.area.header_text_set(text = message)
             
+        #temporary variable for testing
+        self.ring_shift = 0
             
         #here is where we will cache verts edges and faces
         #unti lthe user confirms and we output a real mesh.

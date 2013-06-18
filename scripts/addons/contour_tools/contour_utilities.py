@@ -16,7 +16,7 @@ import math
 from collections import deque
 
 from bpy_extras import view3d_utils
-from mathutils.geometry import intersect_line_plane, intersect_point_line
+from mathutils.geometry import intersect_line_plane, intersect_point_line, distance_point_to_plane
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 
 def callback_register(self, context):
@@ -499,7 +499,7 @@ def vert_cycle(vert, pt, no, prev_eds, verts, connection):
                         #return the vert to repeat the vert cycle
                         return element
 
-def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental CAD
+def space_evenly_on_path(verts, edges, segments, shift = 0):  #prev deved for Open Dental CAD
     '''
     Gives evenly spaced location along a string of verts
     Assumes that nverts > nsegments
@@ -512,7 +512,12 @@ def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental C
         verts - list of vert locations type Mathutils.Vector
         eds - list of index pairs type tuple(integer) eg (3,5).
               should look like this though [(0,1),(1,2),(2,3),(3,4),(4,0)]     
-        segments - number of segments to divide path into        
+        segments - number of segments to divide path into
+        shift - for cyclic verts chains, shifting the verts along 
+                the loop can provide better alignment with previous
+                loops.  This should be 0 to 1 representing a percentage of segment length.
+                Eg, a shift of .5 with 8 segments will shift the verts 1/16th of the loop length
+                
     return
         new_verts - list of new Vert Locations type list[Mathutils.Vector]
     '''
@@ -527,8 +532,11 @@ def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental C
         #print('cyclic vert chain...oh well doesnt matter')
     else:
         cyclic = False
-        
-        
+        #zero out the shift in case the vert chain insn't cyclic
+        if shift != 0: #not PEP but it shows that we want shift = 0
+            print('not shifting because this is not a cyclic vert chain')
+            shift = 0
+   
     #calc_length
     arch_len = 0
     cumulative_lengths = [0] #is this a stupid way to do this? If the 
@@ -553,26 +561,37 @@ def space_evenly_on_path(verts, edges, segments):  #prev deved for Open Dental C
     #initialze new vert array and seal the end points
     if cyclic:
         new_verts = [[None]]*(segments)
-        new_verts[0] = verts[0]
+        #new_verts[0] = verts[0]
             
     else:
         new_verts = [[None]]*(segments + 1)
         new_verts[0] = verts[0]
         new_verts[-1] = verts[-1]
     
+    
     n = 0 #index to save some looping through the cumulative lengths list
-    for i in range(0,segments-1):
-        desired_length = (i+1)/segments * arch_len
+          #now we are leaving it 0 becase we may end up needing the beginning of the loop last
+    for i in range(0,segments- 1 + cyclic * 1):
+        desired_length_raw = (i + 1 + cyclic * -1)/segments * arch_len + shift * arch_len / segments
+        
+        #like a mod function, but for non integers?
+        if desired_length_raw > arch_len:
+            desired_length = desired_length_raw - arch_len
+        else:
+            desired_length = desired_length_raw
         
         #find the original vert with the largets legnth
         #not greater than the desired length
         for j in range(n, len(verts)-1):
             if cumulative_lengths[j] > desired_length:
-                n = j - 1
+                
+                #this was supposed to save us some iterations so that
+                #we don't have to start at the beginning each time....
+                #n = j - 1
                 break
 
         extra = desired_length - cumulative_lengths[j-1]
-        new_verts[i+1] = verts[j-1] + extra * (verts[j]-verts[j-1]).normalized()
+        new_verts[i + 1 + cyclic * -1] = verts[j-1] + extra * (verts[j]-verts[j-1]).normalized()
     
     eds = []
     
@@ -591,6 +610,137 @@ def list_shift(seq, n):
     n = n % len(seq)
     return seq[n:] + seq[:n]
 
+
+def alignment_quality_perpendicular(verts_1, verts_2, eds_1, eds_2):
+    '''
+    Calculates a quality measure of the alignment of edge loops.
+    Ideally we want any connectors between loops to be as perpendicular
+    to the loop as possible. Assume the loops are aligned properly in
+    direction around the loop.
+    
+    args:
+        verts_1: list of Vectors
+        verts_2: list of Vectors
+        
+        eds_1: connectivity of the first loop, really just to test loop or line
+        eds_2: connectivity of 2nd loops, really just to test for loop or line
+
+    '''
+
+    if 0 in eds_1[-1]:
+        cyclic = True
+        print('cyclic vert chain')
+    else:
+        cyclic = False
+        
+    if len(verts_1) != len(verts_2):
+        print(len(verts_1))
+        print(len(verts_2))
+        print('non uniform loops, stopping until your developer gets smarter')
+        return
+    
+    
+    #since the loops in our case are guaranteed planar
+    #because they come from cross sections, we can find
+    #the plane normal very easily
+    V1_0 = verts_1[1] - verts_1[0]
+    V1_1 = verts_1[2] - verts_1[1]
+    
+    V2_0 = verts_2[1] - verts_2[0]
+    V2_1 = verts_2[2] - verts_2[1]
+    
+    no_1 = V1_0.cross(V1_1)
+    no_1.normalize()
+    no_2 = V2_0.cross(V2_1)
+    no_2.normalize()
+    
+    if no_1.dot(no_2) < 0:
+        no_2 = -1 * no_2
+    
+    #average the two directions    
+    ideal_direction = no_1.lerp(no_1,.5)
+
+
+    
+    
+def point_in_tri(P, A, B, C):
+    '''
+    
+    '''
+    #straight from http://www.blackpawn.com/texts/pointinpoly/
+    # Compute vectors        
+    v0 = C - A
+    v1 = B - A
+    v2 = P - A
+    
+    #Compute dot products
+    dot00 = v0.dot(v0)
+    dot01 = v0.dot(v1)
+    dot02 = v0.dot(v2)
+    dot11 = v1.dot(v1)
+    dot12 = v1.dot(v2)
+    
+    #Compute barycentric coordinates
+    invDenom = 1 / (dot00 * dot11 - dot01 * dot01)
+    u = (dot11 * dot02 - dot01 * dot12) * invDenom
+    v = (dot00 * dot12 - dot01 * dot02) * invDenom
+    
+    #Check if point is in triangle
+    return (u >= 0) & (v >= 0) & (u + v < 1)
+    
+def discrete_curl(verts, z): #Adapted from Open Dental CAD by Patrick Moore
+    '''
+    calculates the curl relative to the direction given.
+    It should be ~ +2pi or -2pi depending on whether the loop
+    progresses clockwise or anticlockwise when viewed in the 
+    z direction.  If the loop goes around twice it could be 4pi 6pi etc
+    This is useful for making sure loops are indexed in the same direction.
+    
+    args:
+       verts: a list of Vectors representing locations
+       z: a vector representing the direction to compare the curl to
+       
+    '''
+    if len(verts) < 3:
+        print('not posisble for this to be a loop!')
+        return
+    
+    curl = 0
+    
+    #just in case the vert chain has the last vert
+    #duplicated.  We will need to not double the 
+    #last one
+    closed = False
+    if verts[-1] == verts[0]:
+        closed = True
+        
+    for n in range(0,len(verts) - 1*closed):
+
+        a = int(math.fmod(n - 1, len(verts)))
+        b = n
+        c = int(math.fmod(n + 1, len(verts)))
+        #Vec representation of the two edges
+        V0 = (verts[b] - verts[a])
+        V1 = (verts[c] - verts[b])
+        
+        #projection into the plane perpendicular to z
+        #eg, the XY plane
+        T0 = V0 - V0.project(z)
+        T1 = V1 - V1.project(z)
+        
+        #cross product
+        cross = T0.cross(T1)        
+        sign = 1
+        if cross.dot(z) < 0:
+            sign = -1
+        
+        rot = T0.rotation_difference(T1)  
+        ang = rot.angle
+        curl = curl + ang*sign
+        print(curl)
+    
+    return curl
+    
 def align_edge_loops(verts_1, verts_2, eds_1, eds_2):
     '''
     Modifies vert order and edge indices to  provide best
@@ -624,19 +774,63 @@ def align_edge_loops(verts_1, verts_2, eds_1, eds_2):
     #lets exploit this (only true if quad is pretty much flat)
     #if we have paths reversed...our indices will give us diagonals
     #instead of perimeter
-    D1_O = verts_2[0] - verts_1[0]
-    D2_O = verts_2[-1] - verts_1[-1]
-    D1_R = verts_2[0] - verts_1[-1]
-    D2_R = verts_2[-1] - verts_1[0]
+    #D1_O = verts_2[0] - verts_1[0]
+    #D2_O = verts_2[-1] - verts_1[-1]
+    #D1_R = verts_2[0] - verts_1[-1]
+    #D2_R = verts_2[-1] - verts_1[0]
             
-    original_length = D1_O.length + D2_O.length
-    reverse_length = D1_R.length + D2_R.length
-    if reverse_length < original_length:
-        verts_2.reverse()
-        print('reversing')
+    #original_length = D1_O.length + D2_O.length
+    #reverse_length = D1_R.length + D2_R.length
+    #if reverse_length < original_length:
+        #verts_2.reverse()
+        #print('reversing')
         
+    if cyclic:
+        #another test to verify loop direction is to take
+        #something reminiscint of the curl
+        #since the loops in our case are guaranteed planar
+        #(they come from cross sections) we can find a direction
+        #from which to take the curl pretty easily.  Apologies to
+        #any real mathemeticians reading this becuase I just
+        #bastardized all these math terms.
+        V1_0 = verts_1[1] - verts_1[0]
+        V1_1 = verts_1[2] - verts_1[1]
+        
+        V2_0 = verts_2[1] - verts_2[0]
+        V2_1 = verts_2[2] - verts_2[1]
+        
+        no_1 = V1_0.cross(V1_1)
+        no_1.normalize()
+        no_2 = V2_0.cross(V2_1)
+        no_2.normalize()
+        
+        #we have no idea which way we will get
+        #so just pick the directions which are
+        #pointed in the general same direction
+        if no_1.dot(no_2) < 0:
+            no_2 = -1 * no_2
+        
+        #average the two directions    
+        ideal_direction = no_1.lerp(no_1,.5)
     
+        curl_1 = discrete_curl(verts_1, ideal_direction)
+        curl_2 = discrete_curl(verts_2, ideal_direction)
+        
+        if curl_1 * curl_2 < 0:
+            print('reversing loop 2')
+            print('curl1: %f and curl2: %f' % (curl_1,curl_2))
+            verts_2.reverse()
     
+    else:
+        #if the segement is not cyclic
+        #all we have to do is compare the endpoints
+        Vtotal_1 = verts_1[-1] - verts_1[0]
+        Vtotal_2 = verts_2[-1] - verts_2[0]
+
+        if Vtotal_1.dot(Vtotal_2) < 0:
+            print('reversing path 2')
+            verts_2.reverse()
+            
     #iterate all verts and "handshake problem" them
     #into a dictionary?  That's not very effecient!
     edge_len_dict = {}
@@ -709,9 +903,34 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     prev_eds = []
     seeds =[]
     
-    if len(bme.faces[seed_index].edges) > 4:
-        print('no NGon Support for initial seed yet! try again')
-        return None
+    print("the seeded index is %i" % seed_index)
+    print("there are this many faces in the damn bmesh: %i" % len(bme.faces))
+    if seed_index > len(bme.faces) - 1:
+        print('looks like we hit an Ngon, tentative support')
+    
+        #perhaps this should be done before we pass bme to this op?
+        #we may perhaps need to re raycast the new faces?    
+        ngons = []
+        for f in bme.faces:
+            if len(f.verts) >  4:
+                ngons.append(f)
+                
+        if len(ngons):
+            new_geom = bmesh.ops.triangulate(bme, faces = ngons, use_beauty = True)
+            new_faces = new_geom['faces']
+            
+            for f in new_faces:
+                if point_in_tri(pt, f.verts[0].co, f.verts[1].co, f.verts[2].co):
+                    print('found the point inthe tri')
+                    if distance_point_to_plane(pt, f.verts[0].co, f.normal) < .001:
+                        seed_index = f.index
+                        print('found a damn new index to start with')
+                        break
+            
+            
+    #if len(bme.faces[seed_index].edges) > 4:
+        #print('no NGon Support for initial seed yet! try again')
+        #return None
     
     for ed in bme.faces[seed_index].edges:
         seed_search += 1        
@@ -753,7 +972,7 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
             elif type(element) == bmesh.types.BMVert:
                 element = vert_cycle(element, pt, no, prev_eds, verts, edge_mapping)
                 
-        print('cpomplete %i tests in this seed search' % element_tests)
+        print('completed %i tests in this seed search' % element_tests)
         print('%i vertices found so far' % len(verts))
         
  

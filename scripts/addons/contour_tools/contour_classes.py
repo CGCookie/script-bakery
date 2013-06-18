@@ -228,9 +228,9 @@ class ContourCutLine(object):
             self.eds = []
             print('no hit! aim better')
         
-    def simplify_cross(self,segments):
+    def simplify_cross(self,segments, shift = 0):
         if self.verts !=[] and self.eds != []:
-            [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments)
+            [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments, shift)
         
           
     def active_element(self,context,x,y):
