@@ -16,6 +16,7 @@ import math
 from collections import deque
 
 from bpy_extras import view3d_utils
+from mathutils import Vector, Matrix
 from mathutils.geometry import intersect_line_plane, intersect_point_line, distance_point_to_plane
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 
@@ -212,8 +213,36 @@ def draw_polyline_from_3dpoints(context, points_3d, color, thickness, LINE_TYPE)
     return
     
     
+def get_com(verts):
+    '''
+    args:
+        verts- a list of vectors to be included in the calc
+        mx- thw world matrix of the object, if empty assumes unity
+        
+    '''
+    COM = Vector((0,0,0))
+    l = len(verts)
+    for v in verts:
+        COM += v  
+    COM =(COM/l)
+
+    return COM
 
 
+def approx_radius(verts, COM):
+    '''
+    avg distance
+    '''
+    l = len(verts)
+    app_rad = 0
+    for v in verts:
+        R = COM - v
+        app_rad += R.length
+        
+    app_rad = 1/l * app_rad
+    
+    return app_rad    
+    
 def cross_section(bme, mx, point, normal, debug = True):
     '''
     Takes a mesh and associated world matrix of the object and returns a cross secion in local
@@ -499,7 +528,7 @@ def vert_cycle(vert, pt, no, prev_eds, verts, connection):
                         #return the vert to repeat the vert cycle
                         return element
 
-def space_evenly_on_path(verts, edges, segments, shift = 0):  #prev deved for Open Dental CAD
+def space_evenly_on_path(verts, edges, segments, shift = 0, debug = False):  #prev deved for Open Dental CAD
     '''
     Gives evenly spaced location along a string of verts
     Assumes that nverts > nsegments
@@ -539,8 +568,8 @@ def space_evenly_on_path(verts, edges, segments, shift = 0):  #prev deved for Op
    
     #calc_length
     arch_len = 0
-    cumulative_lengths = [0] #is this a stupid way to do this? If the 
-    for i in range(0,len(verts)-2):
+    cumulative_lengths = [0] #is this a stupid way to do this?
+    for i in range(0,len(verts)-1): #changed from len(verts)-2...whyyyy indiexes
         v0 = verts[i]
         v1 = verts[i+1]
         V = v1-v0
@@ -548,12 +577,16 @@ def space_evenly_on_path(verts, edges, segments, shift = 0):  #prev deved for Op
         cumulative_lengths.append(arch_len)
         
     if cyclic:
-        v0 = verts[i+1]
+        #print('cyclic check?')
+        #print(len(cumulative_lengths))
+        #print(len(verts))
+        v0 = verts[-1]
         v1 = verts[0]
         V = v1-v0
         arch_len += V.length
         cumulative_lengths.append(arch_len)
-        
+        #print(cumulative_lengths)
+    
     #identify vert indicies of import
     #this will be the largest vert which lies at
     #no further than the desired fraction of the curve
@@ -573,25 +606,31 @@ def space_evenly_on_path(verts, edges, segments, shift = 0):  #prev deved for Op
           #now we are leaving it 0 becase we may end up needing the beginning of the loop last
     for i in range(0,segments- 1 + cyclic * 1):
         desired_length_raw = (i + 1 + cyclic * -1)/segments * arch_len + shift * arch_len / segments
-        
+        #print('the length we desire for the %i segment is %f compared to the total length which is %f' % (i, desired_length_raw, arch_len))
         #like a mod function, but for non integers?
-        if desired_length_raw > arch_len:
-            desired_length = desired_length_raw - arch_len
+        if desired_length_raw >= arch_len:
+            desired_length = desired_length_raw - arch_len       
+        elif desired_length_raw < 0:
+            desired_length = arch_len + desired_length_raw
         else:
             desired_length = desired_length_raw
         
         #find the original vert with the largets legnth
         #not greater than the desired length
-        for j in range(n, len(verts)-1):
+        for j in range(n, len(verts)+1):
+
             if cumulative_lengths[j] > desired_length:
-                
+                #print('found a greater length at vert %i' % j)
                 #this was supposed to save us some iterations so that
                 #we don't have to start at the beginning each time....
                 #n = j - 1
                 break
 
         extra = desired_length - cumulative_lengths[j-1]
-        new_verts[i + 1 + cyclic * -1] = verts[j-1] + extra * (verts[j]-verts[j-1]).normalized()
+        if j == len(verts):
+            new_verts[i + 1 + cyclic * -1] = verts[j-1] + extra * (verts[0]-verts[j-1]).normalized()
+        else:
+            new_verts[i + 1 + cyclic * -1] = verts[j-1] + extra * (verts[j]-verts[j-1]).normalized()
     
     eds = []
     
@@ -600,10 +639,11 @@ def space_evenly_on_path(verts, edges, segments, shift = 0):  #prev deved for Op
     if cyclic:
         #close the loop
         eds.append((i+1,0))
-
-    print(cumulative_lengths)
-    print(arch_len)
-    print(eds)    
+    if debug:
+        print(cumulative_lengths)
+        print(arch_len)
+        print(eds)
+        
     return new_verts, eds
  
 def list_shift(seq, n):
@@ -737,7 +777,6 @@ def discrete_curl(verts, z): #Adapted from Open Dental CAD by Patrick Moore
         rot = T0.rotation_difference(T1)  
         ang = rot.angle
         curl = curl + ang*sign
-        print(curl)
     
     return curl
     

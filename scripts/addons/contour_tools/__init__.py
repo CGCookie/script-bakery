@@ -114,6 +114,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
             max = 10,
             )
     
+    auto_align = BoolProperty(
+            name="Iteratively Align verts",
+            description = "Improves outcome, slows performance",
+            default=False,
+            )
+    
     def draw(self, context):
         layout = self.layout
         layout.label(text="Contour Tools Beta Preferences and Settings")
@@ -127,6 +133,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
         layout.prop(self, "raw_vert_size")
         layout.prop(self, "handle_size")
         layout.prop(self, "line_thick")
+        layout.prop(self, "auto_align")
         
 
 def retopo_draw_callback(self,context):
@@ -307,7 +314,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     return {'RUNNING_MODAL'}
                 return {'RUNNING_MODAL'}
         
-        #even right click or escape
+        #event right click or escape
         if event.type in ('RIGHTMOUSE', 'ESC'):
             
             if event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target:
@@ -334,7 +341,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 if self.tmp_ob:
                     context.scene.objects.unlink(self.tmp_ob)
                     me = self.tmp_ob.data
-                    self.tmp_ob.users_clear()
+                    self.tmp_ob.user_clear()
                     bpy.data.objects.remove(self.tmp_ob)
                     bpy.data.meshes.remove(me)
                 return {'CANCELLED'}  
@@ -349,23 +356,19 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         #########temporary testing#############
         if event.type in {'LEFT_ARROW','RIGHT_ARROW'}:
-            if event.type == 'LEFT_ARROW' and event.value == 'PRESS':
-                self.ring_shift -= .05
-                if self.ring_shift < 0:
-                    self.ring_shift = 0   
+            if self.hover_target and hasattr(self.hover_target, 'head'):
+                if event.type == 'LEFT_ARROW' and event.value == 'PRESS':
+                    self.hover_target.shift -= .05
+                    if self.hover_target.shift < -1:
+                        self.hover_target.shift = -1   
                 
-            if event.type == 'RIGHT_ARROW' and event.value == 'PRESS':
-                self.ring_shift += .05
-                if self.ring_shift > 1:
-                    self.ring_shift = 1
+                if event.type == 'RIGHT_ARROW' and event.value == 'PRESS':
+                    self.hover_target.shift += .05
+                    if self.hover_target.shift > 1:
+                        self.hover_target.shift = 1
             
-            for cut_line in self.cut_lines:
-                if not cut_line.verts:
-                    cut_line.hit_object(context, self.original_form)
-                    cut_line.cut_object(context, self.original_form, self.bme)
-                    cut_line.simplify_cross(self.segments, shift = self.ring_shift)
-                else:
-                    cut_line.simplify_cross(self.segments, shift = self.ring_shift)
+                self.hover_target.simplify_cross(self.segments)
+                self.push_mesh_data(context)
         #######################################
         
         
@@ -387,11 +390,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
                 for cut_line in self.cut_lines:
                     if not cut_line.verts:
-                        cut_line.hit_object(context, self.original_form)
-                        cut_line.cut_object(context, self.original_form, self.bme)
-                        cut_line.simplify_cross(self.segments, shift = self.ring_shift)
+                        print('recutting this line because it has no freaking verts?')
+                        hit = cut_line.hit_object(context, self.original_form)
+                        if hit:
+                            cut_line.cut_object(context, self.original_form, self.bme)
+                            cut_line.simplify_cross(self.segments)
+                        else:
+                            self.cut_lines.remove(cut_line)
+
                     else:
-                        cut_line.simplify_cross(self.segments, shift = self.ring_shift)
+                        cut_line.simplify_cross(self.segments)
                 
                 self.push_mesh_data(context,re_order = False)
                 return {'RUNNING_MODAL'}
@@ -408,10 +416,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
                 for cut_line in self.cut_lines:
                     if not cut_line.verts:
-                        cut_line.hit_object(context, self.original_form)
-                        cut_line.cut_object(context, self.original_form, self.bme)
-                        cut_line.simplify_cross(self.segments, shift = self.ring_shift)
-                    cut_line.simplify_cross(self.segments, shift = self.ring_shift)
+                        hit = cut_line.hit_object(context, self.original_form)
+                        if hit:
+                            cut_line.cut_object(context, self.original_form, self.bme)
+                            cut_line.simplify_cross(self.segments)
+                        else:
+                            self.cut_lines.remove(cut_line)
+                        
+                    else:
+                        cut_line.simplify_cross(self.segments)
             
                 self.push_mesh_data(context,re_order = False)
                 return {'RUNNING_MODAL'}
@@ -441,38 +454,57 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.drag_target.tail.screen_to_world(context)
                         self.drag_target.plane_tan.screen_to_world(context)
                         
+                        #we already know we are dragging a line
+                        #if the handle doesn't have a world position, it means it's
+                        #a newly created line and the head and tail haven't been
+                        #projected into 3d space and only exist in screen space
                         if self.drag_target.head.world_position:
-                            self.drag_target.hit_object(context, self.original_form, update_normal = False, method = 'HANDLE')
+                            hit = self.drag_target.hit_object(context, self.original_form, update_normal = False, method = 'HANDLE')
                         else:
-                            self.drag_target.hit_object(context, self.original_form, update_normal = True, method = 'VIEW')
-                            
-                        self.drag_target.cut_object(context, self.original_form, self.bme)
+                            hit = self.drag_target.hit_object(context, self.original_form, update_normal = True, method = 'VIEW')
                         
-                        #now we have a new cut, make sure our max segments aren't overwhelmed
-                        if len(self.cut_lines):
-                            max_segments =  min([len(cut.verts) for cut in self.cut_lines])
+                        #if it hit
+                        if hit:    
+                            self.drag_target.cut_object(context, self.original_form, self.bme)
+                        
+                            #now we have a new cut, make sure our max segments aren't overwhelmed
+                            if len(self.cut_lines):
+                                max_segments =  min([len(cut.verts) for cut in self.cut_lines])
+                            else:
+                                max_segments = 10
+                            
+                            if self.segments >= max_segments:
+                                self.segments = max_segments
+                        
+                            self.drag_target.simplify_cross(self.segments)
+                            self.push_mesh_data(context)
+                            
                         else:
-                            max_segments = 10
-                            
-                        if self.segments >= max_segments:
-                            self.segments = max_segments
-                        
-                        self.drag_target.simplify_cross(self.segments)
-                        self.push_mesh_data(context)
+                            self.cut_lines.remove(self.drag_target)
+                            self.drag_target = None
                     else:
                         self.drag_target.x = event.mouse_region_x
                         self.drag_target.y = event.mouse_region_y
                         if self.drag_target == self.drag_target.parent.plane_tan:
                             print('changing handle')
                             self.drag_target.screen_to_world(context)
-                            self.drag_target.parent.hit_object(context, self.original_form, update_normal = False, method = 'HANDLE')
+                            hit = self.drag_target.parent.hit_object(context, self.original_form, update_normal = False, method = 'HANDLE')
                         else:
-                            self.drag_target.parent.hit_object(context, self.original_form, update_normal = True, method = 'VIEW')
+                            print('reshooting and re_cutting')
+                            hit = self.drag_target.parent.hit_object(context, self.original_form, update_normal = True, method = 'VIEW')
+                        
+                        if hit:    
+                            self.drag_target.parent.cut_object(context, self.original_form, self.bme)
+                            self.drag_target.parent.simplify_cross(self.segments)
+                            if self.new:
+                                self.new = False
+                                
+                        else:
+                            self.cut_lines.remove(self.drag_target.parent)
+                            self.drag_target = None
+                            if self.new:
+                                self.new = False
                             
-                        self.drag_target.parent.cut_object(context, self.original_form, self.bme)
-                        self.drag_target.parent.simplify_cross(self.segments)
-                        if self.new:
-                            self.new = False
                     self.push_mesh_data(context)
                 
                 #clear the drag and hover
@@ -507,8 +539,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #print(ret_val)
         #return ret_val
     
-    def push_mesh_data(self,context, re_order = True):
-        
+    def push_mesh_data(self,context, re_order = True, debug = False):
+        a_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
         if len(self.cut_lines) < 2:
             print('waiting on other cut lines')
             return
@@ -566,8 +598,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                     
                                     if pair in valid_pairs:
                                         valid_pairs.remove(pair)
-                                    
-        print(valid_pairs)
+        print('found valid pairs')
+        if debug:                            
+            print(valid_pairs)
         
         if re_order and len(valid_pairs) > 0:
             #sort the pairs
@@ -591,8 +624,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             new_order.insert(0, list(set(pair)-beg)[0])
                             
                         break
-            print('the new order is')            
-            print(new_order)     
+            if debug:
+                print('the new order is')            
+                print(new_order)     
             cuts_copy = valid_cuts.copy()
             valid_cuts = []
             for i, n in enumerate(new_order):
@@ -610,8 +644,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             es_1 = self.valid_cuts[i].eds_simple
             es_2 = self.valid_cuts[i+1].eds_simple
             
-            self.valid_cuts[i+1].verts_simple = contour_utilities.align_edge_loops(vs_1, vs_2, es_1, es_2)
-        
+            self.valid_cuts[i+1].align_to_other(self.valid_cuts[i], auto_align = a_align)
                 
         #work out the connectivity edges
         for i, cut_line in enumerate(self.valid_cuts):
@@ -641,9 +674,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 ind2 = ind0 + 1
                 ind3 = ind0 + n_lines
                 total_faces.append((ind0,ind1,ind2,ind3))
-                print('part implemented')
-        print(len(total_verts))       
-        print(total_faces)
+                
+        #print(len(total_verts))       
+        #print(total_faces)
         self.follow_lines = []
         for i in range(0,len(self.valid_cuts[0].verts_simple)):
             tmp_line = []
@@ -763,7 +796,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #and drawing
         
         
-        #is the user moving and existing entity or a new one.
+        #is the user moving an existing entity or a new one.
         self.new = False 
         #is the mouse clicked and held down
         self.drag = False
