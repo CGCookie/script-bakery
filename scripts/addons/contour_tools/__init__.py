@@ -574,22 +574,39 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             for m in range(i,len(valid_cuts)):
                 if m != i:
                     pair = (i,m)
+                    
+                    #does this seem premature to append here?
                     valid_pairs.append(pair)
-                    A = valid_cuts[i].plane_pt
-                    B = valid_cuts[m].plane_pt
-                    C = .5 * (A + B)
-                    ray1 = A - valid_cuts[i].plane_tan.world_position
-                    ray2 = B - valid_cuts[m].plane_tan.world_position
+                    A = planes[i][0]  #the COM of the cut loop
+                    B = planes[m][0] #the COM of the other cut loop
+                    C = .5 * (A + B)  #the midpoint of the line between them?
+                    
+                    #we know the plane_pt is ON the mesh
+                    #vs the COM of the loop which is inside the mesh (potentially)
+                    #TODO: make this way beeeter
+                    ray1 = A - valid_cuts[i].plane_pt  #valid_cuts[i].plane_tan.world_position
+                    ray2 = B - valid_cuts[m].plane_pt  #plane_tan.world_position
                     ray = ray1.lerp(ray2,.5).normalized()
                     
+                    #TODO: make 100 here actually be the approx radius of the two cuts :-)
                     hit = self.original_form.ray_cast(imx * (C + 100 * ray), imx * (C - 100 * ray))
                     
+                    #what the hell is this?
+                    
+                    #iterate through all the other planes other than the two in the current pair
                     for j, plane in enumerate(planes):
                         if j != i and j != m:
                             pt = plane[0]
                             no = plane[1]
+                            
+                            #intersect the line between the two loops
+                            #with the other planes...most likely it will intersect
                             v = intersect_line_plane(A,B,pt,no)
                             if v:
+                                #if the distance between the intersection is less than
+                                #than 1/2 the distance between the current pair
+                                #than this pair is invalide because there is a loo
+                                #in between
                                 check = intersect_point_line(v,A,B)
                                 pair_length = (B - A).length/2
                                 inval_length = (v - pt).length
