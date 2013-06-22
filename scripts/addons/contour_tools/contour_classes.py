@@ -458,7 +458,7 @@ class ContourCutLine(object):
         
         self.connectivity_analysis(other)
         
-        if auto_align:
+        if auto_align and cyclic:
             alignment_quality = self.connectivity_analysis(other)
             pct_change = 1
             left_bound = -1
