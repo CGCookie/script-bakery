@@ -208,13 +208,21 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             orig_ims = orig_mx.inverted()
             
             #the world matrix of the destination (retopo) mesh
-            reto_mx = self.desination_ob.matrix_world
+            reto_mx = self.destination_ob.matrix_world
             reto_imx = reto_mx.inverted()
             
             #make list of bmverts     
             bmverts = []
-            for vert in self.verts:
-                bmverts.append(bm.verts.new(tuple(reto_imx * (orig_mx * vert))))
+            bridge = False
+            a = 0
+            if len(self.sel_verts):
+                bridge =True
+                a = len(self.sel_verts)
+            for i, vert in enumerate(self.verts):
+                new_vert = bm.verts.new(tuple(reto_imx * (orig_mx * vert)))
+                bmverts.append(new_vert)
+                if bridge and i < a:
+                    new_vert.select = True
             
             # Initialize the index values of this sequence
             self.dest_bme.verts.index_update()
@@ -242,10 +250,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 bm.to_mesh(self.dest_me)
             
                 #remember we created a new object
-                context.scene.objects.link(self.desination_ob)
+                context.scene.objects.link(self.destination_ob)
                 
                     
-            self.desination_ob.update_tag()
+            self.destination_ob.update_tag()
             context.scene.update()
             
             context.area.header_text_set()
@@ -259,7 +267,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.tmp_ob.user_clear()
                 bpy.data.objects.remove(self.tmp_ob)
                 bpy.data.meshes.remove(me)
-            
+            if back_to_edit:
+                #not sure why this is necessary?
+                #TODO:  make this bmesh data manipulation instead of bpy.ops
+                bpy.ops.object.editmode_toggle()
+                bpy.ops.object.editmode_toggle()
+                bpy.ops.mesh.bridge_edge_loops(type='SINGLE', use_merge=False, merge_factor=0.5, number_cuts=0, interpolation='PATH', smoothness=1, profile_shape_factor=0, profile_shape='SMOOTH')
             return{'FINISHED'}
             
         if event.type == 'MOUSEMOVE':
@@ -636,6 +649,25 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             for i, n in enumerate(new_order):
                 valid_cuts.append(cuts_copy[n])
             
+            #guaranteed editmode for this to happen
+            #this makes sure we bridge the correct end
+            #when we are done
+            if len(self.sel_edges) and len(self.sel_verts):
+                mx = self.destination_ob.matrix_world
+                
+                bridge_vert_vecs = [mx * v.co for v in self.sel_verts]
+                bridge_loop_location = contour_utilities.get_com(bridge_vert_vecs)
+                
+                loop_0_loc = contour_utilities.get_com(valid_cuts[0].verts_simple)
+                loop_1_loc = contour_utilities.get_com(valid_cuts[-1].verts_simple)
+                
+                dist_0 = bridge_loop_location - loop_0_loc
+                dist_1 = bridge_loop_location - loop_1_loc
+                
+                if dist_1.length < dist_0.length:
+                    valid_cuts.reverse()
+                    
+                    
             del cuts_copy
             self.valid_cuts = valid_cuts  
         #now
@@ -709,7 +741,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
             
             '''
-            self.desination_ob = context.object
+            self.destination_ob = context.object
             self.dest_me = context.object.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
             self.dest_bme = bmesh.new()
             
@@ -723,13 +755,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #### This is temporary code until bmesh.ops improves ###
             ########################################################
             
-            #the retopo object whose geometry we will be 
-            #augmenting
-            self.desination_ob = context.object
+            #the active object will be the retopo object
+            #whose geometry we will be augmenting
+            self.destination_ob = context.object
             
-            #get the destination editmesh
-            self.dest_me = self.desination_ob.data
-            
+            #get the destination mesh data
+            self.dest_me = self.destination_ob.data
             
             #we will build this bmesh using from editmesh
             self.dest_bme = bmesh.from_edit_mesh(self.dest_me)
@@ -738,11 +769,17 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.original_form = [ob for ob in context.selected_objects if ob.name != context.object.name][0]
             
             #note, we will have to use bmesh.update_edit_mesh
-            
-            self.sel_edges = [ed.index for ed in self.dest_bme.edges if ed.select ]  #we will have to bridge these :-)
-            print(sel_edges)
+            self.sel_edges = [ed for ed in self.dest_bme.edges if ed.select]  #we will have to bridge these :-)
+            if len(self.sel_edges):
+                self.sel_verts = [vert for vert in self.dest_bme.verts if vert.select]
+                self.segments = len(self.sel_edges)
+            else:
+                self.sel_verts = None
             
         else:
+            #make the irrelevant variables None
+            self.sel_edges = None
+            self.sel_verts = None
             
             #the active object will be the target
             self.original_form  = context.object
@@ -753,16 +790,21 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #new blank mesh
             self.dest_me = bpy.data.meshes.new(self.original_form.name + "_recontour")
             #new object to hold it
-            self.desination_ob = bpy.data.objects.new('ReContour_ob',self.dest_me) #this is an empty currently
+            self.destination_ob = bpy.data.objects.new(self.original_form.name + "_recontour",self.dest_me) #this is an empty currently
             #bmesh to operate on
-            self.dest_bme = self.bme = bmesh.new()
+            self.dest_bme = bmesh.new()
             self.dest_bme.from_mesh(self.dest_me)
             
+            #default segments (spans)
+            self.segments = 10
         
-        #get the info about the original form 
+        #get the info about the original form
+        #and convert it to a bmesh for fast connectivity info
         me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
         self.bme = bmesh.new()
         self.bme.from_mesh(me)
+        
+        #check for ngons, and if there are any...triangulate just the ngons
         ngons = []
         for f in self.bme.faces:
             if len(f.verts) > 4:
@@ -782,8 +824,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         else:
             self.tmp_ob = None
             
-        #default segments (spans)
-        self.segments = 10
+
         message = "Segments: %i" % self.segments
         context.area.header_text_set(text = message)
             
