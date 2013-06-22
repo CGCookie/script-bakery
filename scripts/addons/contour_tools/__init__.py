@@ -197,16 +197,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         if event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
-            back_to_edit = False
+            
             if context.mode == 'EDIT_MESH':
-                bpy.ops.object.mode_set(mode='OBJECT')
                 back_to_edit = True
-                bm = self.tmp_bme
                 
-            else:
-                bm = self.dest_bme
+            bm = self.dest_bme
                 
-            #the world_matris of the orignal form
+            #the world_matrix of the orignal form
             orig_mx = self.original_form.matrix_world
             orig_ims = orig_mx.inverted()
             
@@ -214,7 +211,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             reto_mx = self.desination_ob.matrix_world
             reto_imx = reto_mx.inverted()
             
-            #make list of bmverts         
+            #make list of bmverts     
             bmverts = []
             for vert in self.verts:
                 bmverts.append(bm.verts.new(tuple(reto_imx * (orig_mx * vert))))
@@ -232,35 +229,24 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 new_face = tuple([bmverts[i] for i in face])
                 bmfaces.append(bm.faces.new(new_face))
             
-            if not back_to_edit:
-                # Finish up, write the bmesh back to the mesh
-                bm.to_mesh(self.dest_me)
             
-                #thies means we created a new object
-                context.scene.objects.link(self.desination_ob)
+            # Finish up, write the modified bmesh back to the mesh
             
+            #if editmode...we have to do it this way
+            if context.mode == 'EDIT_MESH':
+                bmesh.update_edit_mesh(self.dest_me, tessface=False, destructive=True)
+            
+            #if object mode....we do it like this
             else:
-                #disabled unti the BMesh API supports the dest keyword argument
-                #bmesh.ops.duplicate(bm, geom = bm.verts[:] + bm.edges[:] + bm.faces[:],dest = self.dest_bme)
-                
-                # Finish up, write the bmesh back to the mesh
+                #write the data into the object
                 bm.to_mesh(self.dest_me)
-                
-                context.scene.objects.link(self.retopo_ob)
-                self.retopo_ob.update_tag()
-                
-                bpy.ops.object.select_all(action='DESELECT')
-                self.retopo_ob.select = True
-                context.scene.objects.active = self.desination_ob
-                self.desination_ob.select = True
-                bpy.ops.object.join()
-                self.original_form.select = True
+            
+                #remember we created a new object
+                context.scene.objects.link(self.desination_ob)
                 
                     
             self.desination_ob.update_tag()
             context.scene.update()
-            if back_to_edit:
-                bpy.ops.object.mode_set(mode = 'EDIT')
             
             context.area.header_text_set()
             contour_utilities.callback_cleanup(self,context)
@@ -560,13 +546,14 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 
         #####order the cuts####
         
-        #first dictionary their current indices
-        planes = [(cut.plane_pt, cut.plane_no) for cut in valid_cuts]
+        #first make a list of the cut Center of Mass and normals
+        #in the same order as valid cuts
+        planes = [(contour_utilities.get_com(cut.verts_simple), cut.plane_no) for cut in valid_cuts]
         
         valid_pairs = []
         #test validity of all pairs
-        #a pair is valid if the line segment corosses
-        #none of the other planes reasonable close to
+        #a pair is valid if the line segment crosses
+        #none of the other planes reasonably close to
         #the plane origin.  This will fail in hairpin turns
         #but that case should be relatively uncommon
         
@@ -719,7 +706,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     def invoke(self, context, event):
         #if edit mode
         if context.mode == 'EDIT_MESH':
-            bpy.ops.object.editmode_toggle()
+            
             
             '''
             self.desination_ob = context.object
@@ -736,23 +723,24 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #### This is temporary code until bmesh.ops improves ###
             ########################################################
             
-            #new object to build to then join
+            #the retopo object whose geometry we will be 
+            #augmenting
             self.desination_ob = context.object
-            #new blank mesh
-            self.dest_me = bpy.data.meshes.new("tmp_recontour")
-            self.retopo_ob = bpy.data.objects.new('tmp',self.dest_me) #this is an empty currently
-            self.retopo_ob.matrix_world = self.desination_ob.matrix_world
             
-            #we will build this bmesh then to_mesh it into
-            #self.dest_me....then join retopo ob to dest ob
-            #and be frustrated.
-            self.tmp_bme = bmesh.new()
-            self.dest_bme = bmesh.new()
-            bpy.ops.object.editmode_toggle()
+            #get the destination editmesh
+            self.dest_me = self.desination_ob.data
+            
+            
+            #we will build this bmesh using from editmesh
+            self.dest_bme = bmesh.from_edit_mesh(self.dest_me)
             
             #the selected object will be the original form
             self.original_form = [ob for ob in context.selected_objects if ob.name != context.object.name][0]
             
+            #note, we will have to use bmesh.update_edit_mesh
+            
+            self.sel_edges = [ed.index for ed in self.dest_bme.edges if ed.select ]  #we will have to bridge these :-)
+            print(sel_edges)
             
         else:
             
