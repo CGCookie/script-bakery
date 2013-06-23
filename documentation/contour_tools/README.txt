@@ -1,7 +1,8 @@
-Contour Retopology Beta READ NE
+Contour Retopology Beta READ ME
 
 0. How do I get it?
     -TBA, invitation only for the early beta (mature alpha?)
+    -Later....TBA
 
 
 I. What is it for?
@@ -85,4 +86,38 @@ II. How do I use it?
 
         -Hit enter or numpad return to confirm cuts and add new
          geomtry to the retopo mesh or create new retopo object.
+
+
+III.  Where do I report bugs?
+
+
+
+IV.  Where do I make suggestions for improvement?
+
+
+
+V.   What's the best way to get my suggestions
+     implemented of bugs fixed the fastest?
+     0.  Make sure the suggestion or bug isn't already being
+         considered or discussed by...
+
+        i. checking the existing bugs/feature requests
+       ii. browsing the BA thread here:
+
+     A.  Clear demonstration
+
+        i.  for bugs...
+            a) a .blend file
+            b) a screen shot
+            c) a copy of the error or a screenshot of the error
+
+        ii.  for feature requests or behavioral improvements
+            a) a blend file with current result and manual desired result
+            b) screenshots substitue for a)
+            C) screenshots of mockups for behavioral or visual improvements
+            d) design doc proposal
+
+     B.  $$
+
+     C.  Code review
     
