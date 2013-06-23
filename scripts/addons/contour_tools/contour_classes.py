@@ -9,7 +9,7 @@ Created on Apr 23, 2013
 import bpy
 import math
 from mathutils import Vector
-from mathutils.geometry import intersect_point_line
+from mathutils.geometry import intersect_point_line, intersect_line_plane
 import contour_utilities
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 from bpy_extras.view3d_utils import region_2d_to_vector_3d
@@ -49,9 +49,13 @@ class ContourControlPoint(object):
         
 class ContourCutLine(object): 
     
-    def __init__(self, x, y, view_dir):
-        self.head = ContourControlPoint(self,x,y, color = (1,0,0,1))
-        self.tail = ContourControlPoint(self,x,y, color = (0,1,0,1))
+    def __init__(self, x, y, view_dir, line_width = 3,
+                 line_color = (0,0,1,1), 
+                 handle_color = (1,0,0,1),
+                 geom_color = (0,1,0,1)):
+        
+        self.head = ContourControlPoint(self,x,y, color = hande_color)
+        self.tail = ContourControlPoint(self,x,y, color = hande_color)
         self.plane_tan = ContourControlPoint(self,x,y, color = (.8,.8,.8,1))
         self.view_dir = view_dir  #this is imporatnt...no reason contours cant bend
         self.target = None
@@ -65,6 +69,11 @@ class ContourCutLine(object):
         self.eds_simple = []
         self.edges = []
         self.shift = 0
+        
+        #visual stuff
+        self.line_width = line_width
+        self.line_color = line_color
+        self.geom_color = geom_color
         
     def draw(self,context, settings):
         '''
@@ -112,7 +121,7 @@ class ContourCutLine(object):
                 points.append(self.verts_simple[0])
             
             if settings.show_ring_edges:
-                contour_utilities.draw_polyline_from_3dpoints(context, points, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
+                contour_utilities.draw_polyline_from_3dpoints(context, points, self.geom_color, self.line_width,"GL_LINE_STIPPLE")
             contour_utilities.draw_3d_points(context, self.verts_simple, (0,.2,1,1), settings.vert_size)
             if debug:
                 if settings.vert_inds:
@@ -522,6 +531,28 @@ class ContourCutLine(object):
         active_tail = self.tail.mouse_over(x, y)
         active_tan = self.plane_tan.mouse_over(x, y)
         
+        
+
+        if len(self.verts_simple):
+            region = context.region  
+            rv3d = context.space_data.region_3d
+            vec = region_2d_to_vector_3d(region, rv3d, screen_coord)
+            loc = region_2d_to_location_3d(region, rv3d, screen_coord, vec)
+            
+            line_a = loc
+            line_b = loc + vec
+            #ray to plane
+            hit = intersect_line_plane(line_a, line_b, self.plane_pt, self.plane_no, no_flip=False)
+            if hit:
+                mouse_in_loop = contour_utilities.point_inside_loop3d(pt, verts, no, p_pt = None, threshold = .01, debug = False)
+                if mouse_in_loop:
+                    self.line_color = (1,0,1,0.5)
+                    self.line_width = 5
+                else:
+                    self.line_color = (1,0,1,0.5)
+                    self.line_width = 3
+                
+            
         mouse_loc = Vector((x,y,0))
         head_loc = Vector((self.head.x, self.head.y, 0))
         tail_loc = Vector((self.tail.x, self.tail.y, 0))
