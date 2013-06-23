@@ -258,8 +258,17 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 context.scene.objects.active = self.destination_ob
                 
                 if context.space_data.local_view:
+                    mx_copy = context.space_data.region_3d.view_matrix.copy()
+                    view_loc = context.space_data.region_3d.view_location.copy()
+                    view_rot = context.space_data.region_3d.view_rotation.copy()
+                    view_dist = context.space_data.region_3d.view_distance
                     bpy.ops.view3d.localview()
                     bpy.ops.view3d.localview()
+                    #context.space_data.region_3d.view_matrix = mx_copy
+                    context.space_data.region_3d.view_location = view_loc
+                    context.space_data.region_3d.view_rotation = view_rot
+                    context.space_data.region_3d.view_distance = view_dist
+                    context.space_data.region_3d.update()
                     
             self.destination_ob.update_tag()
             context.scene.update()
