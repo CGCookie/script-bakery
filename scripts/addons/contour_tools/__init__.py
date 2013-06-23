@@ -254,6 +254,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 #remember we created a new object
                 context.scene.objects.link(self.destination_ob)
                 
+                self.destination_ob.select = True
+                context.scene.objects.active = self.destination_ob
+                
+                if context.space_data.local_view:
+                    bpy.ops.view3d.localview()
+                    bpy.ops.view3d.localview()
                     
             self.destination_ob.update_tag()
             context.scene.update()
