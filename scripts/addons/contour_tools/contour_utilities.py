@@ -18,7 +18,7 @@ from collections import deque
 
 from bpy_extras import view3d_utils
 from mathutils import Vector, Matrix
-from mathutils.geometry import intersect_line_plane, intersect_point_line, distance_point_to_plane
+from mathutils.geometry import intersect_line_plane, intersect_point_line, distance_point_to_plane, intersect_line_line_2d
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 
 def callback_register(self, context):
@@ -454,7 +454,7 @@ def point_inside_loop2d(loop, point):
             loop[i] = Vector(loop[i])
         
     #find a point outside the loop and count intersections
-    out = Vector(outside_loop2d(loop))
+    out = Vector(outside_loop_2d(loop))
     intersections = 0
     for i in range(0,nverts):
         a = Vector(loop[i-1])
@@ -463,7 +463,7 @@ def point_inside_loop2d(loop, point):
             intersections += 1
     
     inside = False
-    if fmod(intersections,2):
+    if math.fmod(intersections,2):
         inside = True
     
     return inside
@@ -550,7 +550,7 @@ def point_inside_loop_almost3D(pt, verts, no, p_pt = None, threshold = .01, debu
     verts_prime = []
     
     for v in verts:
-        v_trans = V - p_pt
+        v_trans = v - p_pt
         vx = v_trans.dot(X_prime)
         vy = v_trans.dot(Y_prime)
         verts_prime.append(Vector((vx, vy)))
@@ -581,7 +581,7 @@ def face_cycle(face, pt, no, prev_eds, verts, connection):
     '''
     if len(face.edges) > 4:
         ngon = True
-        print('oh shit an ngon')
+        print('oh sh** an ngon')
     else:
         ngon = False
         

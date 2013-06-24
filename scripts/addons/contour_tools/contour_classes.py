@@ -54,8 +54,8 @@ class ContourCutLine(object):
                  handle_color = (1,0,0,1),
                  geom_color = (0,1,0,1)):
         
-        self.head = ContourControlPoint(self,x,y, color = hande_color)
-        self.tail = ContourControlPoint(self,x,y, color = hande_color)
+        self.head = ContourControlPoint(self,x,y, color = handle_color)
+        self.tail = ContourControlPoint(self,x,y, color = handle_color)
         self.plane_tan = ContourControlPoint(self,x,y, color = (.8,.8,.8,1))
         self.view_dir = view_dir  #this is imporatnt...no reason contours cant bend
         self.target = None
@@ -527,6 +527,8 @@ class ContourCutLine(object):
             print('converged or didnt in %i iterations' % iterations)
               
     def active_element(self,context,x,y):
+        settings = context.user_preferences.addons['contour_tools'].preferences
+        
         active_head = self.head.mouse_over(x, y)
         active_tail = self.tail.mouse_over(x, y)
         active_tan = self.plane_tan.mouse_over(x, y)
@@ -536,21 +538,21 @@ class ContourCutLine(object):
         if len(self.verts_simple):
             region = context.region  
             rv3d = context.space_data.region_3d
-            vec = region_2d_to_vector_3d(region, rv3d, screen_coord)
-            loc = region_2d_to_location_3d(region, rv3d, screen_coord, vec)
+            vec = region_2d_to_vector_3d(region, rv3d, (x,y))
+            loc = region_2d_to_location_3d(region, rv3d, (x,y), vec)
             
             line_a = loc
             line_b = loc + vec
             #ray to plane
-            hit = intersect_line_plane(line_a, line_b, self.plane_pt, self.plane_no, no_flip=False)
+            hit = intersect_line_plane(line_a, line_b, self.plane_pt, self.plane_no)
             if hit:
-                mouse_in_loop = contour_utilities.point_inside_loop3d(pt, verts, no, p_pt = None, threshold = .01, debug = False)
+                mouse_in_loop = contour_utilities.point_inside_loop_almost3D(hit, self.verts_simple, self.plane_no, p_pt = self.plane_pt, threshold = .01, debug = False)
                 if mouse_in_loop:
-                    self.line_color = (1,0,1,0.5)
-                    self.line_width = 5
+                    self.geom_color = (.8,0,.8,0.5)
+                    self.line_width = 2.5 * settings.line_thick
                 else:
-                    self.line_color = (1,0,1,0.5)
-                    self.line_width = 3
+                    self.geom_color = (0,1,0,0.5)
+                    self.line_width = settings.line_thick
                 
             
         mouse_loc = Vector((x,y,0))
