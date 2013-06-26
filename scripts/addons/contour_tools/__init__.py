@@ -184,7 +184,7 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
 
         col = layout.column()
 
-        col.operator("cgcookie.retop_contour", text="Draw Contours")    
+        col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')    
 
 
 
