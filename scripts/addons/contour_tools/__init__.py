@@ -116,31 +116,49 @@ class ContourToolsAddonPreferences(AddonPreferences):
     
     auto_align = BoolProperty(
             name="Iteratively Align verts",
-            description = "Improves outcome, slows performance",
+            description = "Attempt to automatically align vertices in adjoining edgeloops. Improves outcome, but slows performance",
             default=False,
             )
     
     use_x_ray = BoolProperty(
-            name="X Ray",
-            description = 'Check this to automatically enable x-ray view on retopo mesh',
+            name="X-Ray",
+            description = 'Enable X-Ray on Retopo-mesh upon creation',
             default=False,
             )
     
     def draw(self, context):
         layout = self.layout
-        layout.label(text="Contour Tools Beta Preferences and Settings")
-        layout.prop(self, "debug")
-        layout.prop(self, "show_verts")
-        layout.prop(self, "show_edges")
-        layout.prop(self, "show_ring_edges")
-        layout.prop(self, "vert_inds")
-        layout.prop(self, "simple_vert_inds")
-        layout.prop(self, "vert_size")
-        layout.prop(self, "raw_vert_size")
-        layout.prop(self, "handle_size")
-        layout.prop(self, "line_thick")
+
+        # User Settings
+        row = layout.row()        
+        row.prop(self, "show_edges", text="Show Edge Loops")
+        row.prop(self, "line_thick", text ="Edge Thickness")
+        
+        row = layout.row(align=True)
+        row.prop(self, "show_ring_edges", text="Show Edge Rings")
+        row.prop(self, "vert_size")
+
+        row = layout.row(align=True)
+        row.prop(self, "handle_size", text="Handle Size")
+        row.prop(self, "line_thick", text="Stroke Thickness")
+        
         layout.prop(self, "auto_align")
-        layout.prop(self, "use_x_ray")
+        layout.prop(self, "use_x_ray", "Enable X-Ray at Mesh Creation")
+
+        layout.separator()
+        
+        # Debug Settings
+        layout.label(text="Debug Settings")
+        
+        layout.prop(self, "debug")
+        layout.prop(self, "vert_inds", text="Show Vertex Indices")
+        layout.prop(self, "simple_vert_inds", text="Show Simple Indices")
+
+        row = layout.row()
+        row.prop(self, "show_verts", text="Show Raw Vertices") 
+        row.prop(self, "raw_vert_size")
+
+        
         
 
 def retopo_draw_callback(self,context):
