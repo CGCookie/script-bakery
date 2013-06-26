@@ -38,7 +38,7 @@ import bmesh
 import math
 from mathutils import Vector
 import contour_utilities
-from contour_classes import ContourCutLine
+from contour_classes import ContourCutLine, ExistingVertList
 from mathutils.geometry import intersect_line_plane, intersect_point_line
 from bpy.props import EnumProperty, StringProperty,BoolProperty, IntProperty
 from bpy.types import Operator, AddonPreferences
@@ -708,11 +708,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #guaranteed editmode for this to happen
             #this makes sure we bridge the correct end
             #when we are done
-            if self.sel_edges and len(self.sel_edges) and self.sel_verts and len(self.sel_verts):
+            if self.sel_edges and len(self.sel_edges) and self.sel_verts and len(self.sel_verts) and self.existing_cut:
                 mx = self.destination_ob.matrix_world
                 
-                bridge_vert_vecs = [mx * v.co for v in self.sel_verts]
-                bridge_loop_location = contour_utilities.get_com(bridge_vert_vecs)
+                #bridge_vert_vecs = [mx * v.co for v in self.sel_verts]
+                bridge_loop_location = contour_utilities.get_com(self.existing_cut.verts_simple)
                 
                 loop_0_loc = contour_utilities.get_com(valid_cuts[0].verts_simple)
                 loop_1_loc = contour_utilities.get_com(valid_cuts[-1].verts_simple)
@@ -730,6 +730,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         n_rings = len(self.valid_cuts)
         n_lines = len(self.valid_cuts[0].verts_simple)
         #align verts
+        if self.existing_cut:
+            self.valid_cuts[0].align_to_other(self.existing_cut, auto_align = a_align)
+        
         for i in range(0,n_rings-1):
             vs_1 = self.valid_cuts[i].verts_simple
             vs_2 = self.valid_cuts[i+1].verts_simple
@@ -772,6 +775,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.follow_lines = []
         for i in range(0,len(self.valid_cuts[0].verts_simple)):
             tmp_line = []
+            if self.existing_cut:
+                tmp_line.append(self.existing_cut.verts_simple[i])
             for cut_line in self.valid_cuts:
                 tmp_line.append(cut_line.verts_simple[i])
             self.follow_lines.append(tmp_line)
@@ -832,6 +837,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             if self.sel_edges and len(self.sel_edges):
                 self.sel_verts = [vert for vert in self.dest_bme.verts if vert.select]
                 self.segments = len(self.sel_edges)
+                self.existing_cut = ExistingVertList(self.sel_verts, self.sel_edges,self.destination_ob.matrix_world)
             else:
                 self.sel_verts = None
                 self.segments = 10
@@ -840,6 +846,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #make the irrelevant variables None
             self.sel_edges = None
             self.sel_verts = None
+            self.existing_cut = None
             
             #the active object will be the target
             self.original_form  = context.object

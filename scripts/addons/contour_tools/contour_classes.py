@@ -51,10 +51,47 @@ class ExistingVertList(object):
     def __init__(self, verts, edges, mx):
         
         edge_keys = [[ed.verts[0].index, ed.verts[1].index] for ed in edges]
+        remaining_keys = [i for i in range(1,len(edge_keys))]
         
+        vert_inds_unsorted = [vert.index for vert in verts]
         vert_inds_sorted = [edge_keys[0][0], edge_keys[0][1]]
         
-        self.verts = [mx * v.co for v in verts]
+        iterations = 0
+        max_iters = math.factorial(len(remaining_keys))
+        while len(remaining_keys) > 0 and iterations < max_iters:
+            print(remaining_keys)
+            iterations += 1
+            for key_index in remaining_keys:
+                l = len(vert_inds_sorted) -1
+                key_set = set(edge_keys[key_index])
+                last_v = {vert_inds_sorted[l]}
+                if  key_set & last_v:
+                    vert_inds_sorted.append(int(list(key_set - last_v)[0]))
+                    remaining_keys.remove(key_index)
+                    break
+        
+        print(edge_keys)
+        print(vert_inds_sorted)
+        
+        
+        if vert_inds_sorted[0] == vert_inds_sorted[-1]:
+            cyclic = True
+            vert_inds_sorted.pop()
+        else:
+            cyclic = False
+            
+        self.eds_simple = [[i,i+1] for i in range(0,len(vert_inds_sorted)-1)]
+        if cyclic:
+            self.eds_simple.append([len(vert_inds_sorted)-1,0])
+        
+        print(self.eds_simple)
+            
+        self.verts_simple = []
+        for i in vert_inds_sorted:
+            v = verts[vert_inds_unsorted.index(i)]
+            self.verts_simple.append(mx * v.co)
+        
+        print(self.verts_simple)
             
 class ContourCutLine(object): 
     
@@ -322,14 +359,13 @@ class ContourCutLine(object):
         
     def connectivity_analysis(self,other):
         
-        bulk_props = self.analyze_relationship(other)
-        COM_self = bulk_props[0]
         
-        delta_com_vect = bulk_props[1]
+        COM_self = contour_utilities.get_com(self.verts_simple)
+        COM_other = contour_utilities.get_com(other.verts_simple)
+        delta_com_vect = COM_self - COM_other
         delta_com_vect.normalize()
         
-        divergent = bulk_props[2]
-        divergence = bulk_props[3]
+
         
         ideal_to_com = 0
         for i, v in enumerate(self.verts_simple):
