@@ -6,15 +6,15 @@ Created on Apr 23, 2013
 
 
 bl_info = {
-    "name": "Contour Tools",
-    "description": "A series of tools for contours and retopology",
+    "name": "Contour Retopology Tool",
+    "description": "A tool to retopology forms quickly with contour strokes.",
     "author": "Patrick Moore",
     "version": (0, 0, 1),
-    "blender": (2, 6, 6),
-    "location": "None Yet :/ ",
-    "warning": '',  # used for warning icon and text in addons panel
+    "blender": (2, 6, 8),
+    "location": "View 3D > Tool Shelf",
+    "warning": 'Beta',  # used for warning icon and text in addons panel
     "wiki_url": "",
-    "tracker_url": "",
+    "tracker_url": "https://github.com/CGCookie/script-bakery/issues?labels=Contour+Retopology&milestone=1&page=1&state=open",
     "category": "3D View"}
 
 import sys, os
@@ -91,6 +91,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
             min = 1,
             max = 10,
             )
+    edge_thick = IntProperty(
+            name="Edge Thickness",
+            default=1,
+            min=1,
+            max=10,
+            )
     
     raw_vert_size = IntProperty(
             name="Raw Vertex Size",
@@ -105,8 +111,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
             min = 1,
             max = 10,
             )
-    
  
+    
     line_thick = IntProperty(
             name="Line Thickness",
             default=1,
@@ -167,7 +173,20 @@ class ContourToolsAddonPreferences(AddonPreferences):
         row.prop(self, "raw_vert_size")
 
         
-        
+class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
+    '''Retopologize Forms with Contour Strokes'''
+    bl_label = "Contour Retopolgy"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+
+    def draw(self, context):
+        layout = self.layout
+
+        col = layout.column()
+
+        col.operator("cgcookie.retop_contour", text="Draw Contours")    
+
+
 
 def retopo_draw_callback(self,context):
     
@@ -205,7 +224,7 @@ def retopo_draw_callback(self,context):
     
 #Operator
 class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
-    '''Slice an object and retopo along slices'''
+    '''Retopologize Forms with Contour Strokes'''
     bl_idname = "cgcookie.retop_contour"
     bl_label = "Contour Retopologize"    
     
@@ -965,10 +984,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 #resgistration
 def register():
     bpy.utils.register_class(ContourToolsAddonPreferences)
+    bpy.utils.register_class(CGCOOKIE_OT_retopo_contour_panel)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour)
     
 
 #unregistration
 def unregister():
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour)
+    bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour_panel)
     bpy.utils.unregister_class(ContourToolsAddonPreferences)
