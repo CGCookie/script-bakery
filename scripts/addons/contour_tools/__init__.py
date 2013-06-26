@@ -91,6 +91,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
             min = 1,
             max = 10,
             )
+    edge_thick = IntProperty(
+            name="Edge Thickness",
+            default=1,
+            min=1,
+            max=10,
+            )
     
     raw_vert_size = IntProperty(
             name="Raw Vertex Size",
@@ -105,8 +111,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
             min = 1,
             max = 10,
             )
-    
  
+    
     line_thick = IntProperty(
             name="Line Thickness",
             default=1,
