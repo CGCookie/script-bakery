@@ -114,6 +114,14 @@ class ContourToolsAddonPreferences(AddonPreferences):
             max = 10,
             )
     
+    stroke_thick = IntProperty(
+            name="Stroke",
+            description = "width lines drawn by user",
+            default=1,
+            min = 1,
+            max = 10,
+            )
+    
     auto_align = BoolProperty(
             name="Iteratively Align verts",
             description = "Attempt to automatically align vertices in adjoining edgeloops. Improves outcome, but slows performance",
@@ -140,7 +148,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
 
         row = layout.row(align=True)
         row.prop(self, "handle_size", text="Handle Size")
-        row.prop(self, "line_thick", text="Stroke Thickness")
+        row.prop(self, "stroke_thick", text="Stroke Thickness")
         
         layout.prop(self, "auto_align")
         layout.prop(self, "use_x_ray", "Enable X-Ray at Mesh Creation")

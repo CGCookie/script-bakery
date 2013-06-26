@@ -133,7 +133,7 @@ class ContourCutLine(object):
         #draw connecting line
         points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
         if settings.show_edges:
-            contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), settings.line_thick, "GL_LINE_STIPPLE")
+            contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
         
         #draw the two handles
         contour_utilities.draw_points(context, points, self.head.color, settings.handle_size)
@@ -143,7 +143,7 @@ class ContourCutLine(object):
             point1 = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_pt)
             point2 = (self.plane_tan.x, self.plane_tan.y)
             if settings.show_edges:
-                contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), settings.line_thick, "GL_LINE_STIPPLE")
+                contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
             contour_utilities.draw_points(context, [point2], self.plane_tan.color, settings.handle_size)
             contour_utilities.draw_points(context, [point1], self.head.color, settings.handle_size)
         
