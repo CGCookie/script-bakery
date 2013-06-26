@@ -6,15 +6,15 @@ Created on Apr 23, 2013
 
 
 bl_info = {
-    "name": "Contour Tools",
-    "description": "A series of tools for contours and retopology",
+    "name": "Contour Retopology Tool",
+    "description": "A tool to retopology forms quickly with contour strokes.",
     "author": "Patrick Moore",
     "version": (0, 0, 1),
-    "blender": (2, 6, 6),
-    "location": "None Yet :/ ",
-    "warning": '',  # used for warning icon and text in addons panel
+    "blender": (2, 6, 8),
+    "location": "View 3D > Tool Shelf",
+    "warning": 'Beta',  # used for warning icon and text in addons panel
     "wiki_url": "",
-    "tracker_url": "",
+    "tracker_url": "https://github.com/CGCookie/script-bakery/issues?labels=Contour+Retopology&milestone=1&page=1&state=open",
     "category": "3D View"}
 
 import sys, os
