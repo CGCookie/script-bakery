@@ -120,6 +120,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
             default=False,
             )
     
+    use_x_ray = BoolProperty(
+            name="X Ray",
+            description = 'Check this to automatically enable x-ray view on retopo mesh',
+            default=False,
+            )
+    
     def draw(self, context):
         layout = self.layout
         layout.label(text="Contour Tools Beta Preferences and Settings")
@@ -134,6 +140,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
         layout.prop(self, "handle_size")
         layout.prop(self, "line_thick")
         layout.prop(self, "auto_align")
+        layout.prop(self, "use_x_ray")
         
 
 def retopo_draw_callback(self,context):
@@ -252,6 +259,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 bm.to_mesh(self.dest_me)
             
                 #remember we created a new object
+                #moving this to the invoke?
                 context.scene.objects.link(self.destination_ob)
                 
                 self.destination_ob.select = True
@@ -294,7 +302,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     bpy.ops.mesh.select_all(action='DESELECT')
             return{'FINISHED'}
             
-        if event.type == 'MOUSEMOVE':
+        elif event.type == 'MOUSEMOVE':
             
             if self.drag and self.drag_target:
             
@@ -332,39 +340,25 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     return {'RUNNING_MODAL'}
                 return {'RUNNING_MODAL'}
         
-        #event right click or escape
-        if event.type in ('RIGHTMOUSE', 'ESC'):
+        #escape
+        elif event.type== 'ESC':
+            #TODO:  Delete the destination ob in case we dont need it
+            #need to carefully implement this so people dont delete their wok
             
-            if event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target:
-                if hasattr(self.hover_target, "head"):
-                    self.cut_lines.remove(self.hover_target)
-                    self.hover_target = None
-                    
-                else:
-                    self.cut_lines.remove(self.hover_target.parent)
-                    self.hover_target = None
-                    
-                self.push_mesh_data(context)    
-                return {'RUNNING_MODAL'}
             
-            elif event.type == 'RIGHTMOUSE' and event.value == 'RELEASE':
-                return {'RUNNING_MODAL'}        
-                
-                
-            else:
-                #clean up callbacks to prevent crash
-                context.area.header_text_set()
-                contour_utilities.callback_cleanup(self,context)
-                self.bme.free()
-                if self.tmp_ob:
-                    context.scene.objects.unlink(self.tmp_ob)
-                    me = self.tmp_ob.data
-                    self.tmp_ob.user_clear()
-                    bpy.data.objects.remove(self.tmp_ob)
-                    bpy.data.meshes.remove(me)
-                return {'CANCELLED'}  
+            #clean up callbacks to prevent crash
+            context.area.header_text_set()
+            contour_utilities.callback_cleanup(self,context)
+            self.bme.free()
+            if self.tmp_ob:
+                context.scene.objects.unlink(self.tmp_ob)
+                me = self.tmp_ob.data
+                self.tmp_ob.user_clear()
+                bpy.data.objects.remove(self.tmp_ob)
+                bpy.data.meshes.remove(me)
+            return {'CANCELLED'}  
         
-        if event.type in {'MIDDLEMOUSE'}:
+        elif event.type in {'MIDDLEMOUSE'}:
             for cut_line in self.cut_lines:
                 if cut_line.head.world_position:
                     cut_line.head.screen_from_world(context)
@@ -372,6 +366,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'PASS_THROUGH'}
         
         
+        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target:
+            if hasattr(self.hover_target, "head"):
+                self.cut_lines.remove(self.hover_target)
+                self.hover_target = None
+                    
+            else:
+                self.cut_lines.remove(self.hover_target.parent)
+                self.hover_target = None
+            
+            auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align        
+            self.push_mesh_data(context, a_align = auto_align)    
+            return {'RUNNING_MODAL'}
+            
+    
         #########temporary testing#############
         if event.type in {'LEFT_ARROW','RIGHT_ARROW'}:
             if self.hover_target and hasattr(self.hover_target, 'head'):
@@ -386,7 +394,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.hover_target.shift = 1
             
                 self.hover_target.simplify_cross(self.segments)
-                self.push_mesh_data(context)
+                self.push_mesh_data(context, a_align = False)
         #######################################
         
         
@@ -398,11 +406,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 else:
                     max_segments = 10
                     
-                if self.segments >= max_segments:
+                if self.segments >= max_segments and not self.sel_verts:
                     self.segments = max_segments
                     return {'RUNNING_MODAL'}
-                else:
+                elif not self.sel_verts:
                     self.segments += 1
+                    
+                else:
+                    self.segments = len(self.sel_edges)
+                    
                 message = "Segments: %i" % self.segments
                 context.area.header_text_set(text = message)
                 
@@ -418,16 +430,18 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 
                     else:
                         cut_line.simplify_cross(self.segments)
-                
-                self.push_mesh_data(context,re_order = False)
+                auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
+                self.push_mesh_data(context,re_order = False, a_align = auto_align)
                 return {'RUNNING_MODAL'}
             
             elif (event.type == 'WHEELDOWNMOUSE' and event.ctrl) or (event.type == 'NUMPAD_MINUS' and event.value == 'PRESS'):
             
                 if self.segments < 4:
                     self.segments = 3
-                else:
+                elif not self.sel_verts:
                     self.segments -= 1
+                else:
+                    self.segments = len(self.sel_edges)
         
                 message = "Segments: %i" % self.segments
                 context.area.header_text_set(text = message)
@@ -444,7 +458,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     else:
                         cut_line.simplify_cross(self.segments)
             
-                self.push_mesh_data(context,re_order = False)
+                auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
+                self.push_mesh_data(context,re_order = False, a_align = auto_align)
                 return {'RUNNING_MODAL'}
             
             
@@ -495,7 +510,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                 self.segments = max_segments
                         
                             self.drag_target.simplify_cross(self.segments)
-                            self.push_mesh_data(context)
+                            auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
+                            self.push_mesh_data(context, a_align = auto_align)
                             
                         else:
                             self.cut_lines.remove(self.drag_target)
@@ -522,8 +538,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.drag_target = None
                             if self.new:
                                 self.new = False
-                            
-                    self.push_mesh_data(context)
+                    auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align        
+                    self.push_mesh_data(context, a_align = auto_align)
                 
                 #clear the drag and hover
                 self.drag = False
@@ -557,17 +573,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #print(ret_val)
         #return ret_val
     
-    def push_mesh_data(self,context, re_order = True, debug = False):
-        a_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
+    def push_mesh_data(self,context, re_order = True, debug = False, a_align = False):
+        
+        total_verts = []
+        total_edges = []
+        total_faces = []
+        
+        
         if len(self.cut_lines) < 2:
             print('waiting on other cut lines')
             return
         
         imx = self.original_form.matrix_world.inverted()
         
-        total_verts = []
-        total_edges = []
-        total_faces = []
+
         
         valid_cuts = [c_line for c_line in self.cut_lines if c_line.verts != [] and c_line.verts_simple != []]
         self.cut_lines = valid_cuts
@@ -756,6 +775,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
   
     def invoke(self, context, event):
         #if edit mode
+        settings = context.user_preferences.addons['contour_tools'].preferences
+        
         if context.mode == 'EDIT_MESH':
             
             
@@ -812,6 +833,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.dest_me = bpy.data.meshes.new(self.original_form.name + "_recontour")
             #new object to hold it
             self.destination_ob = bpy.data.objects.new(self.original_form.name + "_recontour",self.dest_me) #this is an empty currently
+            self.destination_ob.matrix_world = self.original_form.matrix_world
+            self.destination_ob.update_tag()
+            
             #bmesh to operate on
             self.dest_bme = bmesh.new()
             self.dest_bme.from_mesh(self.dest_me)
@@ -825,8 +849,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.bme = bmesh.new()
         self.bme.from_mesh(me)
         
-        self.orig_x_ray = self.destination_ob.show_x_ray
-        self.destination_ob.show_x_ray = True
+        if settings.use_x_ray:
+            self.orig_x_ray = self.destination_ob.show_x_ray
+            self.destination_ob.show_x_ray = True
         
         #check for ngons, and if there are any...triangulate just the ngons
         ngons = []

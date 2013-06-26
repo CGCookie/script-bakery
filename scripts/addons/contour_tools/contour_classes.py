@@ -46,7 +46,16 @@ class ContourControlPoint(object):
         rv3d = context.space_data.region_3d
         if self.world_position:
             self.world_position = region_2d_to_location_3d(region, rv3d, (self.x, self.y),self.world_position)
+
+class ExistingVertList(object):
+    def __init__(self, verts, edges, mx):
         
+        edge_keys = [[ed.verts[0].index, ed.verts[1].index] for ed in edges]
+        
+        vert_inds_sorted = [edge_keys[0][0], edge_keys[0][1]]
+        
+        self.verts = [mx * v.co for v in verts]
+            
 class ContourCutLine(object): 
     
     def __init__(self, x, y, view_dir):
