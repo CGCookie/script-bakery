@@ -62,6 +62,7 @@ class ContourCutLine(object):
         self.depth = None #perhaps we need a depth value? 
         self.updated = False
         self.plane_pt = None
+        self.plane_com = None  #this will evenentually replace the plane pt?
         self.plane_no = None
         self.seed_face_index = None
         self.verts = []
@@ -244,7 +245,7 @@ class ContourCutLine(object):
     def simplify_cross(self,segments):
         if self.verts !=[] and self.eds != []:
             [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments, self.shift)
-        
+            self.plane_com = contour_utilities.get_com(self.verts_simple)
     def analyze_relationship(self, other,debug = False):
         '''
         runs a series of quantitative assemsents of the spatial relationship

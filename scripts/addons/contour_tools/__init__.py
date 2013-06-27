@@ -320,10 +320,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 #identify hover target for highlighting
                 if self.cut_lines:
                     new_target = False
+                    prospective_targets = []
                     for c_cut in self.cut_lines:
                         h_target = c_cut.active_element(context,event.mouse_region_x,event.mouse_region_y)
                         if h_target:
                             new_target = True
+                            prosepective_targets.append()
                             self.hover_target = h_target
                     
                     if not new_target:
