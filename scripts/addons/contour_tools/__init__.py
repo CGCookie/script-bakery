@@ -38,9 +38,9 @@ import bmesh
 import math
 from mathutils import Vector
 import contour_utilities
-from contour_classes import ContourCutLine, ExistingVertList
+from contour_classes import ContourCutLine, ExistingVertList, CutLineManipulatorWidget
 from mathutils.geometry import intersect_line_plane, intersect_point_line
-from bpy.props import EnumProperty, StringProperty,BoolProperty, IntProperty
+from bpy.props import EnumProperty, StringProperty,BoolProperty, IntProperty, FloatVectorProperty
 from bpy.types import Operator, AddonPreferences
 
 methods = (('0','WALKING','0'),('1','BRUTE','1'))
@@ -75,6 +75,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
     show_ring_edges = BoolProperty(
             name="Show Ring Edges",
             description = "Display the extracted mesh edges.  Usually only turned off for debugging",
+            default=True,
+            )
+    
+    draw_widget = BoolProperty(
+            name="Draw Widget",
+            description = "Turn off to help make mockups or clean-up visualization ",
             default=True,
             )
     
@@ -134,11 +140,55 @@ class ContourToolsAddonPreferences(AddonPreferences):
             default=False,
             )
     
+    live_update = BoolProperty(
+            name="Live Update",
+            description = "Will live update the mesh preview when transforming cut lines.  Looks good, but can get slow on large meshes",
+            default=True,
+            )
+    
     use_x_ray = BoolProperty(
             name="X-Ray",
             description = 'Enable X-Ray on Retopo-mesh upon creation',
             default=False,
             )
+    
+    
+    widget_color = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(.6,0.5,0.35), subtype="COLOR")
+    widget_color2 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0.1,.1, .3), subtype="COLOR")
+    widget_color3 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0.6,0.06,0.06), subtype="COLOR")
+    
+    
+    widget_radius = IntProperty(
+            name="Widget Radius",
+            description = "size of cutline widget radius",
+            default=50,
+            min = 20,
+            max = 100,
+            )
+    
+    widget_radius_inner = IntProperty(
+            name="Widget Inner Radius",
+            description = "size of cutline widget innerradius",
+            default=15,
+            min = 5,
+            max = 30,
+            )
+    
+    widget_thickness = IntProperty(
+            name="Widget Line Thickness",
+            description = "width lines used to draw widget",
+            default=2,
+            min = 1,
+            max = 10,
+            )
+        
+    arrow_size = IntProperty(
+            name="Arrow Size",
+            default=12,
+            min=5,
+            max=50,
+            )   
+        
     
     def draw(self, context):
         layout = self.layout
@@ -169,8 +219,22 @@ class ContourToolsAddonPreferences(AddonPreferences):
         layout.prop(self, "simple_vert_inds", text="Show Simple Indices")
 
         row = layout.row()
-        row.prop(self, "show_verts", text="Show Raw Vertices") 
+        row.prop(self, "show_verts", text="Show Raw Vertices")
+        row.prop(self,"draw_widget", text = "Widget Display")
         row.prop(self, "raw_vert_size")
+        
+        layout.separator()
+        layout.label(text="Widget Settings")
+        row = layout.row()
+        row.prop(self, "widget_radius")
+        row.prop(self,"widget_radius_inner")
+        row.prop(self, "widget_thickness")
+        row.prop(self, "arrow_size")
+        
+        row = layout.row()
+        row.prop(self, "widget_color")
+        row.prop(self, "widget_color2")
+        row.prop(self, "widget_color3")
 
         
 class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
@@ -191,7 +255,7 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
 def retopo_draw_callback(self,context):
     
     settings = context.user_preferences.addons['contour_tools'].preferences
-    if self.cut_lines:
+    if len(self.cut_lines) > 0:
         for c_cut in self.cut_lines:
             c_cut.draw(context, settings)
             
@@ -199,6 +263,10 @@ def retopo_draw_callback(self,context):
     if self.follow_lines != [] and settings.show_edges:
         for follow in self.follow_lines:
             contour_utilities.draw_polyline_from_3dpoints(context, follow, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
+            
+    if self.cut_line_widget:
+        self.cut_line_widget.draw(context)
+        
         #event value press
             #asses proximity for hovering
             #if no proximity:
@@ -246,6 +314,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     
     def modal(self, context, event):
         context.area.tag_redraw()
+        settings = context.user_preferences.addons['contour_tools'].preferences
         
         if event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
@@ -373,14 +442,28 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 #identify hover target for highlighting
                 if self.cut_lines:
                     new_target = False
+                    target_at_all = False
                     for c_cut in self.cut_lines:
                         h_target = c_cut.active_element(context,event.mouse_region_x,event.mouse_region_y)
                         if h_target:
-                            new_target = True
-                            self.hover_target = h_target
-                    
-                    if not new_target:
+                            target_at_all = True
+                            new_target = h_target != self.hover_target
+                            if new_target:
+                                self.hover_target = h_target
+                                if hasattr(self.hover_target, "head"):
+                                    #Potentially may need to del the old widget?
+                                    self.cut_line_widget = CutLineManipulatorWidget(context, settings, self.hover_target, event.mouse_region_x,event.mouse_region_y)
+                                    self.cut_line_widget.derive_screen(context)
+                                    
+                            else:
+                                if self.cut_line_widget:
+                                    self.cut_line_widget.x = event.mouse_region_x
+                                    self.cut_line_widget.y = event.mouse_region_y
+                                    self.cut_line_widget.derive_screen(context)
+                                    
+                    if not target_at_all:
                         self.hover_target = None
+                        self.cut_line_widget = None
                                 
                     return {'RUNNING_MODAL'}
                 return {'RUNNING_MODAL'}
@@ -952,6 +1035,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.drag_target = None
         #what is the mouse over top of currently
         self.hover_target = None
+        
+        self.cut_line_widget = None
         
         #at the begniinging of a drag, we want to keep track
         #of where things started out
