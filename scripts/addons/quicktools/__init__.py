@@ -41,44 +41,44 @@ from bpy.props import StringProperty
 from bpy.types import AddonPreferences
 
 class QuickToolsPreferences(AddonPreferences):
-    bl_idname = __name__
+    bl_idname = __package__
 
     scene_settings_key = StringProperty(
         name="Scene Settings Key",
         description="Set hotkey for Scene Settings menu",
-        default="`",
+        default="`"
         )
     scene_settings_modifier_key = StringProperty(
         name="Scene Settings Key",
         description="Set modifier hotkey for Scene Settings menu",
-        default="SHIFT",
+        default="SHIFT"
         )
 
     object_settings_key = StringProperty(
         name="Object Settings Key",
         description="Set hotkey for Object Settings menu",
-        default="`",
+        default="`"
         )
     object_settings_modifier_key = StringProperty(
         name="Object Settings Modifier Key",
         description="Set modifier hotkey for Object Settings menu",
-        default="SHIFT",
+        default="SHIFT"
         )
 
     object_mode_key = StringProperty(
         name="Object Mode Key",
         description="Set hotkey for Object Mode menu",
-        default="Q",
+        default="Q"
         )
     edit_mode_key = StringProperty(
         name="Edit Mode Key",
         description="Set hotkey for Edit Mode menu",
-        default="Q",
+        default="Q"
         )
     sculpt_mode_key = StringProperty(
         name="Sculpt Mode Key",
         description="Set hotkey for Sculpt Mode menu",
-        default="Q",
+        default="Q"
         )
 
 
@@ -103,9 +103,10 @@ class QuickToolsPreferences(AddonPreferences):
 
         col.label(text="Sculpt Mode")
         col.prop(self, "sculpt_mode_key")
-   
 
 def register():
+   bpy.utils.register_class(QuickToolsPreferences)
+
    quick_operators.register()
    quick_object_mode.register()
    quick_edit_mode.register()
@@ -113,20 +114,22 @@ def register():
    quick_mode_switch.register()
    quick_scene.register()
    
-   bpy.utils.register_module(__name__)
    
-   
-   
+  # bpy.utils.register_module(__name__)
+  
  
 def unregister():
+    bpy.utils.unregister_class(QuickToolsPreferences)
+
     quick_operators.unregister()
     quick_object_mode.unregister()
     quick_edit_mode.unregister()
     quick_sculpt_mode.unregister()
     quick_mode_switch.unregister()
     quick_scene.unregister()
+    
 
-    bpy.utils.unregister_module(__name__)
+    #bpy.utils.unregister_module(__name__)
     
 if __name__ == "__main__":
     register()
