@@ -72,7 +72,8 @@ class QuickObjectOptions(bpy.types.Menu):
             layout.operator("object.shade_flat", icon='MESH_UVSPHERE')
         elif mode == 'EDIT':
             layout.operator("mesh.faces_shade_smooth", icon='SOLID')
-            layout.operator("mesh.faces_shade_flat", icon='MESH_UVSPHERE') 
+            layout.operator("mesh.faces_shade_flat", icon='MESH_UVSPHERE')    
+        
         
   
 
