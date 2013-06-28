@@ -9,7 +9,7 @@ Created on Apr 23, 2013
 import bpy
 import math
 from mathutils import Vector
-from mathutils.geometry import intersect_point_line
+from mathutils.geometry import intersect_point_line, intersect_line_plane
 import contour_utilities
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 from bpy_extras.view3d_utils import region_2d_to_vector_3d
@@ -88,17 +88,22 @@ class ExistingVertList(object):
             
 class ContourCutLine(object): 
     
-    def __init__(self, x, y, view_dir):
-        ##these only exist while drawing initial line
-        self.head = ContourControlPoint(self,x,y, color = (1,0,0,1))
-        self.tail = ContourControlPoint(self,x,y, color = (0,1,0,1))
+    def __init__(self, x, y, view_dir, line_width = 3,
+                 line_color = (0,0,1,1), 
+                 handle_color = (1,0,0,1),
+                 geom_color = (0,1,0,1)):
+        
+        self.head = ContourControlPoint(self,x,y, color = handle_color)
+        self.tail = ContourControlPoint(self,x,y, color = handle_color)
         self.plane_tan = ContourControlPoint(self,x,y, color = (.8,.8,.8,1))
         self.view_dir = view_dir
         self.target = None
         self.depth = None #perhaps we need a depth value? 
         self.updated = False
         self.plane_pt = None
+        self.plane_com = None  #this will evenentually replace the plane pt?
         self.plane_no = None
+        
         self.seed_face_index = None
         
         #high res coss section
@@ -115,7 +120,12 @@ class ContourCutLine(object):
         
         #variable used to shift loop beginning on high res loop
         self.shift = 0
-    
+        
+        #visual stuff
+        self.line_width = line_width
+        self.line_color = line_color
+        self.geom_color = geom_color
+        
     def update_screen_coords(self,context):
         self.verts_screen = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in self.verts]
         self.verts_simple_screen = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in self.verts_simple]
@@ -140,18 +150,18 @@ class ContourCutLine(object):
         
         #draw connecting line
         points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
-        if settings.show_edges:
+        if settings.draw_widget:
             contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
         
-        #draw the two handles
-        contour_utilities.draw_points(context, points, self.head.color, settings.handle_size)
+            #draw the two handles
+            contour_utilities.draw_points(context, points, self.head.color, settings.handle_size)
         
         #draw the current plane point and the handle to change plane orientation
-        if self.plane_pt:
+        if self.plane_pt and settings.draw_widget:
             point1 = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_pt)
             point2 = (self.plane_tan.x, self.plane_tan.y)
-            if settings.show_edges:
-                contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
+
+            contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
             contour_utilities.draw_points(context, [point2], self.plane_tan.color, settings.handle_size)
             contour_utilities.draw_points(context, [point1], self.head.color, settings.handle_size)
         
@@ -180,7 +190,6 @@ class ContourCutLine(object):
                 else:
                     contour_utilities.draw_polyline_from_points(context, points, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
                     contour_utilities.draw_points(context,points, (0,.2,1,1), settings.vert_size)
-
             if debug:
                 if settings.vert_inds:
                     for i, point in enumerate(self.verts):
@@ -294,6 +303,7 @@ class ContourCutLine(object):
             if cross:
                 self.verts = [mx*v for v in cross[0]]
                 self.eds = cross[1]
+                
         else:
             self.verts = []
             self.eds = []
@@ -302,8 +312,7 @@ class ContourCutLine(object):
     def simplify_cross(self,segments):
         if self.verts !=[] and self.eds != []:
             [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments, self.shift)
-            
-        
+            self.plane_com = contour_utilities.get_com(self.verts_simple)
     def analyze_relationship(self, other,debug = False):
         '''
         runs a series of quantitative assemsents of the spatial relationship
@@ -585,10 +594,34 @@ class ContourCutLine(object):
             print('converged or didnt in %i iterations' % iterations)
               
     def active_element(self,context,x,y):
+        settings = context.user_preferences.addons['contour_tools'].preferences
+        
         active_head = self.head.mouse_over(x, y)
         active_tail = self.tail.mouse_over(x, y)
         active_tan = self.plane_tan.mouse_over(x, y)
         
+        
+
+        if len(self.verts_simple):
+            region = context.region  
+            rv3d = context.space_data.region_3d
+            vec = region_2d_to_vector_3d(region, rv3d, (x,y))
+            loc = region_2d_to_location_3d(region, rv3d, (x,y), vec)
+            
+            line_a = loc
+            line_b = loc + vec
+            #ray to plane
+            hit = intersect_line_plane(line_a, line_b, self.plane_pt, self.plane_no)
+            if hit:
+                mouse_in_loop = contour_utilities.point_inside_loop_almost3D(hit, self.verts_simple, self.plane_no, p_pt = self.plane_pt, threshold = .01, debug = False)
+                if mouse_in_loop:
+                    self.geom_color = (.8,0,.8,0.5)
+                    self.line_width = 2.5 * settings.line_thick
+                else:
+                    self.geom_color = (0,1,0,0.5)
+                    self.line_width = settings.line_thick
+                
+            
         mouse_loc = Vector((x,y,0))
         head_loc = Vector((self.head.x, self.head.y, 0))
         tail_loc = Vector((self.tail.x, self.tail.y, 0))
@@ -620,6 +653,120 @@ class ContourCutLine(object):
         else:
             #print('returning None')
             return None
+
+
+
+class CutLineManipulatorWidget(object):
+    def __init__(self,context, settings, cut_line,x,y):
+        
+        self.cut_line = cut_line
+        self.x = x
+        self.y = y
+        
+        
+        self.color = (settings.widget_color[0], settings.widget_color[1],settings.widget_color[2],1)
+        self.color2 = (settings.widget_color2[0], settings.widget_color2[1],settings.widget_color2[2],1)
+        self.color3 = (settings.widget_color3[0], settings.widget_color3[1],settings.widget_color3[2],1)
+        
+        self.radius = settings.widget_radius
+        self.inner_radius = settings.widget_radius_inner
+        self.line_width = settings.widget_thickness
+        self.arrow_size = settings.arrow_size
+        
+        self.arc_radius = .5 * (self.radius + self.inner_radius)
+        self.screen_no = None
+        self.angle = 0.5 * math.pi
+        
+        
+        
+        self.wedge_1 = []
+        self.wedge_2 = []
+        self.wedge_3 = []
+        self.wedge_4 = []
+        
+        self.arrow_1 = []
+        self.arrow_2 = []
+        
+        self.arc_arrow_1 = []
+        self.arc_arrow_2 = []
+        
+        
+        
+        
+
+    def derive_screen(self,context):
+        region = context.region  
+        rv3d = context.space_data.region_3d
+        view_z = rv3d.view_rotation * Vector((0,0,1))
+        if view_z.dot(self.cut_line.plane_no) > -.95 and view_z.dot(self.cut_line.plane_no) < .95:
+            point_0 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com)
+            point_1 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com + self.cut_line.plane_no.normalized())
+            self.screen_no = point_1 - point_0
+            self.screen_no.normalize()
+            
+            self.angle = math.atan2(self.screen_no[1],self.screen_no[0])
+        else:
+            self.screen_no = None
+        
+        
+        up = self.angle
+        down = self.angle + math.pi
+        left = up + .5 * math.pi
+        right =  up - .5 * math.pi
+        
+        deg_45 = .25 * math.pi
+        
+        self.wedge_1 = contour_utilities.pi_slice(self.x,self.y,self.inner_radius,self.radius,up - deg_45,up + deg_45, 10 ,t_fan = False)
+        self.wedge_2 = contour_utilities.pi_slice(self.x,self.y,self.inner_radius,self.radius,left - deg_45,left + deg_45, 10 ,t_fan = False)
+        self.wedge_3 = contour_utilities.pi_slice(self.x,self.y,self.inner_radius,self.radius,down - deg_45,down + deg_45, 10 ,t_fan = False)
+        self.wedge_4 = contour_utilities.pi_slice(self.x,self.y,self.inner_radius,self.radius,right - deg_45,right + deg_45, 10 ,t_fan = False)
+        self.wedge_1.append(self.wedge_1[0])
+        self.wedge_2.append(self.wedge_2[0])
+        self.wedge_3.append(self.wedge_3[0])
+        self.wedge_4.append(self.wedge_4[0])
+        
+        
+        self.arc_arrow_1 = contour_utilities.arc_arrow(self.x, self.y, self.arc_radius, left - deg_45+.2, left + deg_45-.2, 10, self.arrow_size, 2*deg_45, ccw = True)
+        self.arc_arrow_2 = contour_utilities.arc_arrow(self.x, self.y, self.arc_radius, right - deg_45+.2, right + deg_45-.2, 10, self.arrow_size,2*deg_45, ccw = True)
+        
+    def draw(self, context):
+        
+
+        
+        #draw wedges
+        contour_utilities.draw_polyline_from_points(context, self.wedge_1, self.color, self.line_width, "GL_LINES")
+        contour_utilities.draw_polyline_from_points(context, self.wedge_2, self.color, self.line_width, "GL_LINES")
+        contour_utilities.draw_polyline_from_points(context, self.wedge_3, self.color, self.line_width, "GL_LINES")
+        contour_utilities.draw_polyline_from_points(context, self.wedge_4, self.color, self.line_width, "GL_LINES")
+        
+        
+        #check to make sure normal isn't
+        #too paralell to view
+            #draw arrow up (no)
+        
+            #draw arrow down (no)
+            
+        #draw arc 1
+        l = len(self.arc_arrow_1)
+        contour_utilities.draw_polyline_from_points(context, self.arc_arrow_1[:l-1], self.color2, self.line_width, "GL_LINES")
+        #draw a line perpendicular to arc
+        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5 * math.pi), math.sin(self.angle + .5 * math.pi)))
+        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5 * math.pi), math.sin(self.angle + .5 * math.pi)))
+        contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color3, self.line_width, "GL_LINES")
+        
+        #drawa arc 2
+        contour_utilities.draw_polyline_from_points(context, self.arc_arrow_2[:l-1], self.color2, self.line_width, "GL_LINES")
+        
+        
+        #draw an up and down arrow
+        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
+        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
+        contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
+        
+        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
+        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
+        contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
+
 #cut line, a user interactive 2d line which represents a plane in 3d splace
     #head (type conrol point)
     #tail (type control points)

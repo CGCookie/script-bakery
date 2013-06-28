@@ -12,12 +12,13 @@ import blf
 import bmesh
 import time
 import math
+import random
 
 from collections import deque
 
 from bpy_extras import view3d_utils
 from mathutils import Vector, Matrix
-from mathutils.geometry import intersect_line_plane, intersect_point_line, distance_point_to_plane
+from mathutils.geometry import intersect_line_plane, intersect_point_line, distance_point_to_plane, intersect_line_line_2d
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 
 def callback_register(self, context):
@@ -116,7 +117,89 @@ def RPD_open_loop(verts, match_factor):
     if new_v:
         pairs = None #TODO: take care of this function
     
+def pi_slice(x,y,r1,r2,thta1,thta2,res,t_fan = False):
+    '''
+    args: 
+    x,y - center coordinate
+    r1, r2 inner and outer radius
+    thta1: beginning of the slice  0 = to the right
+    thta2:  end of the slice (ccw direction)
+    '''
+    points = [[0,0]]*(2*res + 2)  #the two arcs
+
+    for i in range(0,res+1):
+        diff = math.fmod(thta2-thta1 + 4*math.pi, 2*math.pi)
+        x1 = math.cos(thta1 + i*diff/res) 
+        y1 = math.sin(thta1 + i*diff/res)
     
+        points[i]=[r1*x1 + x,r1*y1 + y]
+        points[(2*res) - i+1] =[x1*r2 + x, y1*r2 + y]
+        
+    if t_fan: #need to shift order so GL_TRIANGLE_FAN can draw concavity
+        new_0 = math.floor(1.5*(2*res+2))
+        points = list_shift(points, new_0)
+            
+    return(points)
+
+def draw_outline_or_region(mode, points):
+        '''  
+        arg: 
+        mode - either bgl.GL_POLYGON or bgl.GL_LINE_LOOP
+        color - will need to be set beforehand using theme colors. eg
+        bgl.glColor4f(self.ri, self.gi, self.bi, self.ai)
+        '''
+            
+        bgl.glBegin(mode)
+ 
+        # start with corner right-bottom
+        for i in range(0,len(points)):
+            bgl.glVertex2f(points[i][0],points[i][1])
+ 
+        bgl.glEnd()
+
+
+def arc_arrow(x,y,r1,thta1,thta2,res, arrow_size, arrow_angle, ccw = True):
+    '''
+    args: 
+    x,y - center coordinate of cark
+    r1 = radius of arc
+    thta1: beginning of the arc  0 = to the right
+    thta2:  end of the arc (ccw direction)
+    arrow_size = length of arrow point
+    
+    ccw = True draw the arrow
+    '''
+    points = [Vector((0,0))]*res  #The arc + 2 arrow points
+
+    for i in range(0,res):
+        #able to accept negative values?
+        diff = math.fmod(thta2-thta1 + 2*math.pi, 2*math.pi)
+        x1 = math.cos(thta1 + i*diff/res) 
+        y1 = math.sin(thta1 + i*diff/res)
+    
+        points[i]=Vector((r1*x1 + x,r1*y1 + y))
+
+    if not ccw:
+        points.reverse()
+        
+    end_tan = points[-2] - points[-1]
+    end_tan.normalize()
+    
+    #perpendicular vector to tangent
+    arrow_perp_1 = Vector((-end_tan[1],end_tan[0]))
+    arrow_perp_2 = Vector((end_tan[1],-end_tan[0]))
+    
+    op_ov_adj = (math.tan(arrow_angle/2))**2
+    arrow_side_1 = end_tan + op_ov_adj * arrow_perp_1
+    arrow_side_2 = end_tan + op_ov_adj * arrow_perp_2
+    
+    arrow_side_1.normalize()
+    arrow_side_2.normalize()
+    
+    points.append(points[-1] + arrow_size * arrow_side_1)
+    points.append(points[-2] + arrow_size * arrow_side_2) 
+           
+    return(points)      
     
 def RPD_closed_loop(verts,match_factor):
     '''
@@ -408,7 +491,159 @@ def cross_edge(A,B,pt,no):
                 ret_val = ['POINT',v,None]
     
     return ret_val
+
+#adapted from opendentalcad then to pie menus now here
+def outside_loop_2d(loop):
+    '''
+    args:
+    loop: list of 
+       type-Vector or type-tuple
+    returns: 
+       outside = a location outside bound of loop 
+       type-tuple
+    '''
+       
+    xs = [v[0] for v in loop]
+    ys = [v[1] for v in loop]
     
+    maxx = max(xs)
+    maxy = max(ys)    
+    bound = (1.1*maxx, 1.1*maxy)
+    return bound
+
+#adapted from opendentalcad then to pie menus now here
+def point_inside_loop2d(loop, point):
+    '''
+    args:
+    loop: list of vertices representing loop
+        type-tuple or type-Vector
+    point: location of point to be tested
+        type-tuple or type-Vector
+    
+    return:
+        True if point is inside loop
+    '''    
+    #test arguments type
+    ptype = str(type(point))
+    ltype = str(type(loop[0]))
+    nverts = len(loop)
+           
+    if 'Vector' not in ptype:
+        point = Vector(point)
+        
+    if 'Vector' not in ltype:
+        for i in range(0,nverts):
+            loop[i] = Vector(loop[i])
+        
+    #find a point outside the loop and count intersections
+    out = Vector(outside_loop_2d(loop))
+    intersections = 0
+    for i in range(0,nverts):
+        a = Vector(loop[i-1])
+        b = Vector(loop[i])
+        if intersect_line_line_2d(point,out,a,b):
+            intersections += 1
+    
+    inside = False
+    if math.fmod(intersections,2):
+        inside = True
+    
+    return inside
+
+def point_inside_loop_almost3D(pt, verts, no, p_pt = None, threshold = .01, debug = False):
+    '''
+    http://blenderartists.org/forum/showthread.php?259085-Brainstorming-for-Virtual-Buttons&highlight=point+inside+loop
+    args:
+       pt - 3d point to test of type Mathutils.Vector
+       verts - 3d points representing the loop  
+               TODO:  verts[0] == verts[-1] or implied?
+               list with elements of type Mathutils.Vector
+       no - plane normal
+       plane_pt - a point on the plane.
+                  if None, COM of verts will be used
+       threshold - maximum distance to consider pt "coplanar"
+                   default = .01
+                   
+       debug - Bool, default False.  Will print performance if True
+                   
+    return: Bool True if point is inside the loop
+    '''
+    if debug:
+        start = time.time()
+    #sanity checks
+    if len(verts) < 3:
+        print('loop must have 3 verts to be a loop and even then its sketchy')
+        return False
+    
+    if no.length == 0:
+        print('normal vector must be non zero')
+        return False
+    
+    if not p_pt:
+        p_pt = get_com(verts)
+    
+    if distance_point_to_plane(pt, p_pt, no) > threshold:
+        return False
+    
+    #get the equation of a plane ax + by + cz = D
+    #Given point P, normal N ...any point R in plane satisfies
+    # Nx * (Rx - Px) + Ny * (Ry - Py) + Nz * (Rz - Pz) = 0
+    #now pick any xy, yz or xz and solve for the other point
+    
+    a = no[0]
+    b = no[1]
+    c = no[2]
+    
+    Px = p_pt[0]
+    Py = p_pt[1]
+    Pz = p_pt[2]
+    
+    D = a * Px + b * Py + c * Pz
+    
+    #generate a randomply perturbed R from the known p_pt
+    R = p_pt + Vector((random.random(), random.random(), random.random()))
+    
+    #z = D/c - a/c * x - b/c * y
+    if c != 0:
+       Rz =  D/c - a/c * R[0] - b/c * R[1]
+       R[2] = Rz
+       
+    #y = D/b - a/b * x - c/b * z 
+    elif b!= 0:
+        Ry = D/b - a/b * R[0] - c/b * R[2] 
+        R[1] = Ry
+    #x = D/a - b/a * y - c/a * z
+    elif a != 0:
+        Rx = D/a - b/a * R[1] - c/a * R[2]
+        R[0] = Rz
+    else:
+        print('undefined plane you wanker!')
+        return(False)
+    
+    #no R represents any other point in the plane
+    #we will use this to edefin an arbitrary local
+    #x' y' and z'
+    X_prime = R - p_pt
+    X_prime.normalize()
+    
+    Y_prime = no.cross(X_prime)
+    Y_prime.normalize()
+    
+    verts_prime = []
+    
+    for v in verts:
+        v_trans = v - p_pt
+        vx = v_trans.dot(X_prime)
+        vy = v_trans.dot(Y_prime)
+        verts_prime.append(Vector((vx, vy)))
+                           
+    #transform the test point into the new plane x,y space
+    pt_trans = pt - p_pt
+    pt_prime = Vector((pt_trans.dot(X_prime), pt_trans.dot(Y_prime)))
+                      
+    pt_in_loop = point_inside_loop2d(verts_prime, pt_prime)
+    
+    return pt_in_loop
 
 def face_cycle(face, pt, no, prev_eds, verts, connection):
     '''
@@ -428,7 +663,7 @@ def face_cycle(face, pt, no, prev_eds, verts, connection):
     '''
     if len(face.edges) > 4:
         ngon = True
-        print('oh shit an ngon')
+        print('oh sh** an ngon')
     else:
         ngon = False
         
@@ -943,7 +1178,7 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     seeds =[]
     
     print("the seeded index is %i" % seed_index)
-    print("there are this many faces in the damn bmesh: %i" % len(bme.faces))
+    print("there are this many faces in the bmesh: %i" % len(bme.faces))
     if seed_index > len(bme.faces) - 1:
         print('looks like we hit an Ngon, tentative support')
     
@@ -953,17 +1188,22 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
         for f in bme.faces:
             if len(f.verts) >  4:
                 ngons.append(f)
-                
+        
+        #we should never get to this point because we are pre
+        #triangulating the ngons before this function in the
+        #final work flow but this leaves not chance and keeps
+        #options to reuse this for later.        
         if len(ngons):
             new_geom = bmesh.ops.triangulate(bme, faces = ngons, use_beauty = True)
             new_faces = new_geom['faces']
             
+            #now we must find a new seed index since we have added new geometry
             for f in new_faces:
                 if point_in_tri(pt, f.verts[0].co, f.verts[1].co, f.verts[2].co):
                     print('found the point inthe tri')
                     if distance_point_to_plane(pt, f.verts[0].co, f.normal) < .001:
                         seed_index = f.index
-                        print('found a damn new index to start with')
+                        print('found a new index to start with')
                         break
             
             
