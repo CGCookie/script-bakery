@@ -450,7 +450,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             target_at_all = True
                             new_target = h_target != self.hover_target
                             if new_target:
-								prospective_targets.append(h_target)
+                                prospective_targets.append(h_target)
                                 self.hover_target = h_target
                                 if hasattr(self.hover_target, "head"):
                                     #Potentially may need to del the old widget?
