@@ -89,22 +89,37 @@ class ExistingVertList(object):
 class ContourCutLine(object): 
     
     def __init__(self, x, y, view_dir):
+        ##these only exist while drawing initial line
         self.head = ContourControlPoint(self,x,y, color = (1,0,0,1))
         self.tail = ContourControlPoint(self,x,y, color = (0,1,0,1))
         self.plane_tan = ContourControlPoint(self,x,y, color = (.8,.8,.8,1))
-        self.view_dir = view_dir  #this is imporatnt...no reason contours cant bend
+        self.view_dir = view_dir
         self.target = None
         self.depth = None #perhaps we need a depth value? 
         self.updated = False
         self.plane_pt = None
         self.plane_no = None
         self.seed_face_index = None
+        
+        #high res coss section
+        #@ resolution of original mesh
         self.verts = []
+        self.verts_screen = []
+        self.edges = []
+        #low res derived contour
         self.verts_simple = []
         self.eds_simple = []
-        self.edges = []
-        self.shift = 0
         
+        #screen cache for fast selection
+        self.verts_simple_screen = []
+        
+        #variable used to shift loop beginning on high res loop
+        self.shift = 0
+    
+    def update_screen_coords(self,context):
+        self.verts_screen = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in self.verts]
+        self.verts_simple_screen = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in self.verts_simple]
+            
     def draw(self,context, settings):
         '''
         setings are the addon preferences for contour tools

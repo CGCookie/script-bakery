@@ -246,7 +246,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     
     def modal(self, context, event):
         context.area.tag_redraw()
-        
+
         if event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
             
@@ -348,7 +348,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return{'FINISHED'}
             
         elif event.type == 'MOUSEMOVE':
-            
+
             if self.drag and self.drag_target:
             
                 if hasattr(self.drag_target,"head"): #then it's a  line, we need to move both?
@@ -366,7 +366,6 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     self.drag_target.x = event.mouse_region_x
                     self.drag_target.y = event.mouse_region_y
                     self.drag_target.screen_to_world(context)
-                return {'RUNNING_MODAL'}
                 
             #else detect proximity to items around
             else:
@@ -382,8 +381,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     if not new_target:
                         self.hover_target = None
                                 
-                    return {'RUNNING_MODAL'}
-                return {'RUNNING_MODAL'}
+            if self.navigating:
+                for cut in self.cut_lines:
+                    cut.update_screen_coords(context)
+                    
+            return {'RUNNING_MODAL'}
         
         #escape
         elif event.type== 'ESC':
@@ -403,11 +405,19 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 bpy.data.meshes.remove(me)
             return {'CANCELLED'}  
         
-        elif event.type in {'MIDDLEMOUSE'}:
+        elif event.type == 'MIDDLEMOUSE':
+            print(event.value)
+            if event.value == 'PRESS':
+                self.navigating = True
+                
+            else:
+                self.navigating = False
+                
             for cut_line in self.cut_lines:
                 if cut_line.head.world_position:
                     cut_line.head.screen_from_world(context)
                     cut_line.tail.screen_from_world(context)
+                    cut_line.update_screen_coords(context)
             return {'PASS_THROUGH'}
         
         
@@ -513,6 +523,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     if cut_line.head.world_position:
                         cut_line.head.screen_from_world(context)
                         cut_line.tail.screen_from_world(context)
+                        cut_line.update_screen_coords(context)
                 return{'PASS_THROUGH'}  
         
         #event click
@@ -947,6 +958,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.new = False 
         #is the mouse clicked and held down
         self.drag = False
+        self.navigating = False
         
         #what is the user dragging..a cutline, a handle etc
         self.drag_target = None
