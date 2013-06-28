@@ -70,10 +70,6 @@ class ExistingVertList(object):
                     remaining_keys.remove(key_index)
                     break
         
-        print(edge_keys)
-        print(vert_inds_sorted)
-        
-        
         if vert_inds_sorted[0] == vert_inds_sorted[-1]:
             cyclic = True
             vert_inds_sorted.pop()
@@ -83,15 +79,12 @@ class ExistingVertList(object):
         self.eds_simple = [[i,i+1] for i in range(0,len(vert_inds_sorted)-1)]
         if cyclic:
             self.eds_simple.append([len(vert_inds_sorted)-1,0])
-        
-        print(self.eds_simple)
             
         self.verts_simple = []
         for i in vert_inds_sorted:
             v = verts[vert_inds_unsorted.index(i)]
             self.verts_simple.append(mx * v.co)
         
-        print(self.verts_simple)
             
 class ContourCutLine(object): 
     
