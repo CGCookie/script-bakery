@@ -40,6 +40,7 @@ class setObjectOrigin(bpy.types.Operator):
 ################################################### 
 # Add empty at cursor, making it inactively selected   
 ################################################### 
+
 class addTarget(bpy.types.Operator):
     """Add an inactive, selected Empty Object as a modifier target"""
     bl_label = "Add an unactive Empty Object"""
@@ -137,6 +138,94 @@ def addMod(modifier):
     return {"FINISHED"}
 
 
+def checkObjects(target, type1, type2, modifier):
+
+    # Check for selected objects intended as target
+    for obj in bpy.context.selected_objects:
+        if obj.type == target:
+            useTarget = True
+    
+    # Find all selected objects
+    for obj in bpy.context.selected_objects:
+        bpy.context.scene.objects.active = obj
+        if obj.type == target:
+            targetObj = obj
+        elif obj.type == type1 or obj.type == type2:
+            # Add a mirror modifier
+            addMod(modifier)
+
+    return {"FINISHED"}
+
+############ Dev code to consolidate smart mods into a function #############
+def assignTarget(modifier):
+
+    scene = bpy.context.scene
+    activeObj = bpy.context.active_object
+    targetObj = bpy.context.selected_objects
+
+    # Store the mesh object
+    selectedObj = activeObj  
+
+    useTarget = False
+
+    if len(targetObj) > 1:
+        useTarget = True
+
+    # Make the targetObj active
+    try:
+        scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
+    except:
+        pass
+
+    # Check for active object
+    activeObj = bpy.context.active_object
+    
+    # Swap the selected and active objects
+    selectedObj, activeObj = activeObj, selectedObj
+
+    # Deselect the target object and select the original mesh object again, making it active
+    selectedObj.select = False
+    activeObj.select = True
+    scene.objects.active = activeObj
+    
+    # Find the added modifier, set the target object
+    for mod in activeObj.modifiers:
+        if mod.type == modifier:
+            if useTarget == True:
+                mod.object = bpy.data.objects[selectedObj.name]
+
+    return {"FINISHED"}
+
+################################################### 
+# Add an Boolean modifier with second object as target 
+###################################################      
+
+class addBoolean(bpy.types.Operator):
+    """Add a Boolean modifier with 2nd selected object as target object"""
+    bl_label = "Add Boolean Modifier"
+    bl_idname = "object.add_boolean"
+    bl_options = {'REGISTER', 'UNDO'}
+       
+    
+    # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    # Add the modifier
+    def execute(self, context):
+        scene = bpy.context.scene
+        activeObj = context.active_object
+        targetObj = context.selected_objects
+
+        addMod("BOOLEAN")        
+
+        assignTarget("BOOLEAN")
+        self.report({'INFO'}, "Assigned second object to modifier")  
+
+        return {"FINISHED"}
+
+
 ################################################### 
 # Add a Mirror Modifier with clipping enabled   
 ################################################### 
@@ -166,7 +255,11 @@ class addMirror(bpy.types.Operator):
         origActive = activeObj        
         
         # Set status of mirror object usage
-        useMirrorObj = False
+        useTarget = False
+
+        #### not yet functional ####
+        # checkObjects('EMPTY', 'MESH', 'CURVE', 'MIRROR')
+        
 
         # If no Empty is selected, don't use mirror object
         for obj in context.selected_objects:
@@ -182,7 +275,7 @@ class addMirror(bpy.types.Operator):
                 # Add a mirror modifier
                 addMod("MIRROR")
 
-        # Make the targetObj active
+        #Make the targetObj active
         try:
             scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
         except:
@@ -206,7 +299,7 @@ class addMirror(bpy.types.Operator):
             for mod in obj.modifiers:
                 if mod.type == 'MIRROR':
                     mod.use_clip = True
-                    if useMirrorObj:
+                    if useTarget:
                         mod.mirror_object = bpy.data.objects[targetObj.name]
                         self.report({'INFO'}, "Assigned target object to modifier")      
 
@@ -337,66 +430,6 @@ class addArray(bpy.types.Operator):
                         self.report({'INFO'}, "Assigned target object to modifier")      
 
         return {"FINISHED"}
-
-################################################### 
-# Add an Boolean modifier with second object as target 
-###################################################      
-
-class addBoolean(bpy.types.Operator):
-    """Add a Boolean modifier with 2nd selected object as target object"""
-    bl_label = "Add Boolean Modifier"
-    bl_idname = "object.add_boolean"
-    bl_options = {'REGISTER', 'UNDO'}
-       
-    
-    # Check to see if an object is selected
-    @classmethod
-    def poll(cls, context):
-        return len(context.selected_objects) > 0
-    
-    # Add the modifier
-    def execute(self, context):
-        scene = bpy.context.scene
-        activeObj = context.active_object
-        targetObj = context.selected_objects
-
-        addMod("BOOLEAN")
-
-        # Store the mesh object
-        selectedObj = activeObj  
-
-        useBool = False
-
-        if len(targetObj) > 1:
-            useBool = True
-
-        # Make the targetObj active
-        try:
-            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
-        except:
-            pass
-
-        # Check for active object
-        activeObj = context.active_object
-        
-        # Swap the selected and active objects
-        selectedObj, activeObj = activeObj, selectedObj
-
-        # Deselect the target object and select the original mesh object again, making it active
-        selectedObj.select = False
-        activeObj.select = True
-        scene.objects.active = activeObj
-        
-        # Find the added modifier, set the target object
-        for mod in activeObj.modifiers:
-            if mod.type == 'BOOLEAN':
-                if useBool == True:
-                    mod.object = bpy.data.objects[selectedObj.name]
-                    self.report({'INFO'}, "Assigned second object to boolean modifier")      
-
-        return {"FINISHED"}
-
-
             
 
 ################################################### 

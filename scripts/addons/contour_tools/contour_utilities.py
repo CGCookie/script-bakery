@@ -117,7 +117,89 @@ def RPD_open_loop(verts, match_factor):
     if new_v:
         pairs = None #TODO: take care of this function
     
+def pi_slice(x,y,r1,r2,thta1,thta2,res,t_fan = False):
+    '''
+    args: 
+    x,y - center coordinate
+    r1, r2 inner and outer radius
+    thta1: beginning of the slice  0 = to the right
+    thta2:  end of the slice (ccw direction)
+    '''
+    points = [[0,0]]*(2*res + 2)  #the two arcs
+
+    for i in range(0,res+1):
+        diff = math.fmod(thta2-thta1 + 4*math.pi, 2*math.pi)
+        x1 = math.cos(thta1 + i*diff/res) 
+        y1 = math.sin(thta1 + i*diff/res)
     
+        points[i]=[r1*x1 + x,r1*y1 + y]
+        points[(2*res) - i+1] =[x1*r2 + x, y1*r2 + y]
+        
+    if t_fan: #need to shift order so GL_TRIANGLE_FAN can draw concavity
+        new_0 = math.floor(1.5*(2*res+2))
+        points = list_shift(points, new_0)
+            
+    return(points)
+
+def draw_outline_or_region(mode, points):
+        '''  
+        arg: 
+        mode - either bgl.GL_POLYGON or bgl.GL_LINE_LOOP
+        color - will need to be set beforehand using theme colors. eg
+        bgl.glColor4f(self.ri, self.gi, self.bi, self.ai)
+        '''
+            
+        bgl.glBegin(mode)
+ 
+        # start with corner right-bottom
+        for i in range(0,len(points)):
+            bgl.glVertex2f(points[i][0],points[i][1])
+ 
+        bgl.glEnd()
+
+
+def arc_arrow(x,y,r1,thta1,thta2,res, arrow_size, arrow_angle, ccw = True):
+    '''
+    args: 
+    x,y - center coordinate of cark
+    r1 = radius of arc
+    thta1: beginning of the arc  0 = to the right
+    thta2:  end of the arc (ccw direction)
+    arrow_size = length of arrow point
+    
+    ccw = True draw the arrow
+    '''
+    points = [Vector((0,0))]*res  #The arc + 2 arrow points
+
+    for i in range(0,res):
+        #able to accept negative values?
+        diff = math.fmod(thta2-thta1 + 2*math.pi, 2*math.pi)
+        x1 = math.cos(thta1 + i*diff/res) 
+        y1 = math.sin(thta1 + i*diff/res)
+    
+        points[i]=Vector((r1*x1 + x,r1*y1 + y))
+
+    if not ccw:
+        points.reverse()
+        
+    end_tan = points[-2] - points[-1]
+    end_tan.normalize()
+    
+    #perpendicular vector to tangent
+    arrow_perp_1 = Vector((-end_tan[1],end_tan[0]))
+    arrow_perp_2 = Vector((end_tan[1],-end_tan[0]))
+    
+    op_ov_adj = (math.tan(arrow_angle/2))**2
+    arrow_side_1 = end_tan + op_ov_adj * arrow_perp_1
+    arrow_side_2 = end_tan + op_ov_adj * arrow_perp_2
+    
+    arrow_side_1.normalize()
+    arrow_side_2.normalize()
+    
+    points.append(points[-1] + arrow_size * arrow_side_1)
+    points.append(points[-2] + arrow_size * arrow_side_2) 
+           
+    return(points)      
     
 def RPD_closed_loop(verts,match_factor):
     '''

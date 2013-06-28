@@ -46,7 +46,53 @@ class ContourControlPoint(object):
         rv3d = context.space_data.region_3d
         if self.world_position:
             self.world_position = region_2d_to_location_3d(region, rv3d, (self.x, self.y),self.world_position)
+
+class ExistingVertList(object):
+    def __init__(self, verts, edges, mx):
         
+        edge_keys = [[ed.verts[0].index, ed.verts[1].index] for ed in edges]
+        remaining_keys = [i for i in range(1,len(edge_keys))]
+        
+        vert_inds_unsorted = [vert.index for vert in verts]
+        vert_inds_sorted = [edge_keys[0][0], edge_keys[0][1]]
+        
+        iterations = 0
+        max_iters = math.factorial(len(remaining_keys))
+        while len(remaining_keys) > 0 and iterations < max_iters:
+            print(remaining_keys)
+            iterations += 1
+            for key_index in remaining_keys:
+                l = len(vert_inds_sorted) -1
+                key_set = set(edge_keys[key_index])
+                last_v = {vert_inds_sorted[l]}
+                if  key_set & last_v:
+                    vert_inds_sorted.append(int(list(key_set - last_v)[0]))
+                    remaining_keys.remove(key_index)
+                    break
+        
+        print(edge_keys)
+        print(vert_inds_sorted)
+        
+        
+        if vert_inds_sorted[0] == vert_inds_sorted[-1]:
+            cyclic = True
+            vert_inds_sorted.pop()
+        else:
+            cyclic = False
+            
+        self.eds_simple = [[i,i+1] for i in range(0,len(vert_inds_sorted)-1)]
+        if cyclic:
+            self.eds_simple.append([len(vert_inds_sorted)-1,0])
+        
+        print(self.eds_simple)
+            
+        self.verts_simple = []
+        for i in vert_inds_sorted:
+            v = verts[vert_inds_unsorted.index(i)]
+            self.verts_simple.append(mx * v.co)
+        
+        print(self.verts_simple)
+            
 class ContourCutLine(object): 
     
     def __init__(self, x, y, view_dir, line_width = 3,
@@ -64,6 +110,7 @@ class ContourCutLine(object):
         self.plane_pt = None
         self.plane_com = None  #this will evenentually replace the plane pt?
         self.plane_no = None
+        
         self.seed_face_index = None
         self.verts = []
         self.verts_simple = []
@@ -96,18 +143,18 @@ class ContourCutLine(object):
         
         #draw connecting line
         points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
-        if settings.show_edges:
-            contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), settings.line_thick, "GL_LINE_STIPPLE")
+        if settings.draw_widget:
+            contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
         
-        #draw the two handles
-        contour_utilities.draw_points(context, points, self.head.color, settings.handle_size)
+            #draw the two handles
+            contour_utilities.draw_points(context, points, self.head.color, settings.handle_size)
         
         #draw the current plane point and the handle to change plane orientation
-        if self.plane_pt:
+        if self.plane_pt and settings.draw_widget:
             point1 = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_pt)
             point2 = (self.plane_tan.x, self.plane_tan.y)
-            if settings.show_edges:
-                contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), settings.line_thick, "GL_LINE_STIPPLE")
+
+            contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
             contour_utilities.draw_points(context, [point2], self.plane_tan.color, settings.handle_size)
             contour_utilities.draw_points(context, [point1], self.head.color, settings.handle_size)
         
@@ -237,6 +284,7 @@ class ContourCutLine(object):
             if cross:
                 self.verts = [mx*v for v in cross[0]]
                 self.eds = cross[1]
+                
         else:
             self.verts = []
             self.eds = []
@@ -323,14 +371,13 @@ class ContourCutLine(object):
         
     def connectivity_analysis(self,other):
         
-        bulk_props = self.analyze_relationship(other)
-        COM_self = bulk_props[0]
         
-        delta_com_vect = bulk_props[1]
+        COM_self = contour_utilities.get_com(self.verts_simple)
+        COM_other = contour_utilities.get_com(other.verts_simple)
+        delta_com_vect = COM_self - COM_other
         delta_com_vect.normalize()
         
-        divergent = bulk_props[2]
-        divergence = bulk_props[3]
+
         
         ideal_to_com = 0
         for i, v in enumerate(self.verts_simple):
@@ -587,6 +634,120 @@ class ContourCutLine(object):
         else:
             #print('returning None')
             return None
+
+
+
+class CutLineManipulatorWidget(object):
+    def __init__(self,context, settings, cut_line,x,y):
+        
+        self.cut_line = cut_line
+        self.x = x
+        self.y = y
+        
+        
+        self.color = (settings.widget_color[0], settings.widget_color[1],settings.widget_color[2],1)
+        self.color2 = (settings.widget_color2[0], settings.widget_color2[1],settings.widget_color2[2],1)
+        self.color3 = (settings.widget_color3[0], settings.widget_color3[1],settings.widget_color3[2],1)
+        
+        self.radius = settings.widget_radius
+        self.inner_radius = settings.widget_radius_inner
+        self.line_width = settings.widget_thickness
+        self.arrow_size = settings.arrow_size
+        
+        self.arc_radius = .5 * (self.radius + self.inner_radius)
+        self.screen_no = None
+        self.angle = 0.5 * math.pi
+        
+        
+        
+        self.wedge_1 = []
+        self.wedge_2 = []
+        self.wedge_3 = []
+        self.wedge_4 = []
+        
+        self.arrow_1 = []
+        self.arrow_2 = []
+        
+        self.arc_arrow_1 = []
+        self.arc_arrow_2 = []
+        
+        
+        
+        
+
+    def derive_screen(self,context):
+        region = context.region  
+        rv3d = context.space_data.region_3d
+        view_z = rv3d.view_rotation * Vector((0,0,1))
+        if view_z.dot(self.cut_line.plane_no) > -.95 and view_z.dot(self.cut_line.plane_no) < .95:
+            point_0 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com)
+            point_1 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com + self.cut_line.plane_no.normalized())
+            self.screen_no = point_1 - point_0
+            self.screen_no.normalize()
+            
+            self.angle = math.atan2(self.screen_no[1],self.screen_no[0])
+        else:
+            self.screen_no = None
+        
+        
+        up = self.angle
+        down = self.angle + math.pi
+        left = up + .5 * math.pi
+        right =  up - .5 * math.pi
+        
+        deg_45 = .25 * math.pi
+        
+        self.wedge_1 = contour_utilities.pi_slice(self.x,self.y,self.inner_radius,self.radius,up - deg_45,up + deg_45, 10 ,t_fan = False)
+        self.wedge_2 = contour_utilities.pi_slice(self.x,self.y,self.inner_radius,self.radius,left - deg_45,left + deg_45, 10 ,t_fan = False)
+        self.wedge_3 = contour_utilities.pi_slice(self.x,self.y,self.inner_radius,self.radius,down - deg_45,down + deg_45, 10 ,t_fan = False)
+        self.wedge_4 = contour_utilities.pi_slice(self.x,self.y,self.inner_radius,self.radius,right - deg_45,right + deg_45, 10 ,t_fan = False)
+        self.wedge_1.append(self.wedge_1[0])
+        self.wedge_2.append(self.wedge_2[0])
+        self.wedge_3.append(self.wedge_3[0])
+        self.wedge_4.append(self.wedge_4[0])
+        
+        
+        self.arc_arrow_1 = contour_utilities.arc_arrow(self.x, self.y, self.arc_radius, left - deg_45+.2, left + deg_45-.2, 10, self.arrow_size, 2*deg_45, ccw = True)
+        self.arc_arrow_2 = contour_utilities.arc_arrow(self.x, self.y, self.arc_radius, right - deg_45+.2, right + deg_45-.2, 10, self.arrow_size,2*deg_45, ccw = True)
+        
+    def draw(self, context):
+        
+
+        
+        #draw wedges
+        contour_utilities.draw_polyline_from_points(context, self.wedge_1, self.color, self.line_width, "GL_LINES")
+        contour_utilities.draw_polyline_from_points(context, self.wedge_2, self.color, self.line_width, "GL_LINES")
+        contour_utilities.draw_polyline_from_points(context, self.wedge_3, self.color, self.line_width, "GL_LINES")
+        contour_utilities.draw_polyline_from_points(context, self.wedge_4, self.color, self.line_width, "GL_LINES")
+        
+        
+        #check to make sure normal isn't
+        #too paralell to view
+            #draw arrow up (no)
+        
+            #draw arrow down (no)
+            
+        #draw arc 1
+        l = len(self.arc_arrow_1)
+        contour_utilities.draw_polyline_from_points(context, self.arc_arrow_1[:l-1], self.color2, self.line_width, "GL_LINES")
+        #draw a line perpendicular to arc
+        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5 * math.pi), math.sin(self.angle + .5 * math.pi)))
+        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5 * math.pi), math.sin(self.angle + .5 * math.pi)))
+        contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color3, self.line_width, "GL_LINES")
+        
+        #drawa arc 2
+        contour_utilities.draw_polyline_from_points(context, self.arc_arrow_2[:l-1], self.color2, self.line_width, "GL_LINES")
+        
+        
+        #draw an up and down arrow
+        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
+        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
+        contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
+        
+        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
+        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
+        contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
+
 #cut line, a user interactive 2d line which represents a plane in 3d splace
     #head (type conrol point)
     #tail (type control points)

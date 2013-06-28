@@ -2,7 +2,6 @@ import bpy
 import os
 from bpy import context
 
-
 # adds an object mode menu 
 class QuickObjectTools(bpy.types.Menu):
     bl_label = "Quick Object Tools"
@@ -10,7 +9,6 @@ class QuickObjectTools(bpy.types.Menu):
        
     def draw(self, context):
         layout = self.layout
-        
         
         layout.operator("object.add_subsurf", 'Add Subsurf', icon='MOD_SUBSURF')
         layout.operator("object.apply_subsurf", 'Apply Subsurf')
@@ -51,6 +49,7 @@ class SmartModifiers(bpy.types.Menu):
         layout.operator("object.add_lattice", "Lattice", icon='MOD_LATTICE')
         layout.operator("object.add_screw", "Screw", icon='MOD_SCREW')
 
+
 class QuickObjectOptions(bpy.types.Menu):
     bl_idname = "object.display_options"
     bl_label = "Quick Object Options"
@@ -72,70 +71,20 @@ class QuickObjectOptions(bpy.types.Menu):
             layout.operator("object.shade_flat", icon='MESH_UVSPHERE')
         elif mode == 'EDIT':
             layout.operator("mesh.faces_shade_smooth", icon='SOLID')
-            layout.operator("mesh.faces_shade_flat", icon='MESH_UVSPHERE')
-        
+            layout.operator("mesh.faces_shade_flat", icon='MESH_UVSPHERE')            
 
-
-##################################   
-''' 
-I plan to retire the toolbar since it goes away from the "Quick" mentality that is the goal of these tools. 
-Just commenting it out for now in case I go back on my decision. 
-'''
-################################## 
-
-# # Create the Tool Bar section 
-# class QuickObjectToolbar(bpy.types.Panel):
-#     bl_label = "Quick Tools"
-#     bl_idname = "object.quick_object_toolbar"
-#     bl_space_type = 'VIEW_3D'
-#     bl_region_type = 'TOOLS'
-#     bl_context = 'objectmode'
-    
-#     def draw(self, context):
-#         layout = self.layout
-        
-#         col = layout.column(align=True)
-        
-#         col.label(text="Modifiers")
-        
-#         row = col.row()
-#         row.operator("object.add_subsurf", "Subsurf", icon="MOD_SUBSURF")
-#         row.operator("object.add_mirror", "Mirror", icon="MOD_MIRROR")
-        
-#         row = col.row()
-#         row.operator("object.apply_subsurf", "Apply Subsurf")
-#         row.operator("object.empty_add_unactive", "Add Target")
-        
-#         row = col.row()
-#         row.operator("object.apply_modifiers", "Apply Modifiers")
-        
-#         col.operator_menu_enum("object.modifier_add", "type")
-        
-#         col = layout.column(align=True)
-#         col.label(text="Origin")
-        
-#         row = col.row()
-#         row.operator_menu_enum("object.origin_set", "type", "Set Origin")
-        
-#         col = layout.column(align=True)
-#         col.label(text="Shading")
-
-#         row = col.row()
-#         row.operator("object.shade_smooth", "Smooth", icon='SOLID')
-#         row.operator("object.shade_flat", "Flat", icon='MESH_UVSPHERE')        
-        
-        
-  
 
 ### ------------ New hotkeys and registration ------------ ###
 
 addon_keymaps = []
 
+user_prefs = context.user_preferences
+addon_prefs = user_prefs.addons['quicktools'].preferences
+
 def register():
     bpy.utils.register_module(__name__)  
-    
-    wm = bpy.context.window_manager
-    
+
+    wm = bpy.context.window_manager    
     
     # create the object mode Quick Tools menu hotkey
     km = wm.keyconfigs.addon.keymaps.new(name='Object Mode')
@@ -146,8 +95,6 @@ def register():
     km = wm.keyconfigs.addon.keymaps.new(name='3D View')
     kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS', shift=True)
     kmi.properties.name = 'object.display_options' 
-
-
 
     addon_keymaps.append(km)
 
@@ -162,9 +109,5 @@ def unregister():
     del addon_keymaps[:]
 
 
-
 if __name__ == "__main__":
-    register()
-    
-    
-       
+    register()   

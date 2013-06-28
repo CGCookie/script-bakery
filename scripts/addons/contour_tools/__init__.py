@@ -6,15 +6,15 @@ Created on Apr 23, 2013
 
 
 bl_info = {
-    "name": "Contour Tools",
-    "description": "A series of tools for contours and retopology",
+    "name": "Contour Retopology Tool",
+    "description": "A tool to retopology forms quickly with contour strokes.",
     "author": "Patrick Moore",
     "version": (0, 0, 1),
-    "blender": (2, 6, 6),
-    "location": "None Yet :/ ",
-    "warning": '',  # used for warning icon and text in addons panel
+    "blender": (2, 6, 8),
+    "location": "View 3D > Tool Shelf",
+    "warning": 'Beta',  # used for warning icon and text in addons panel
     "wiki_url": "",
-    "tracker_url": "",
+    "tracker_url": "https://github.com/CGCookie/script-bakery/issues?labels=Contour+Retopology&milestone=1&page=1&state=open",
     "category": "3D View"}
 
 import sys, os
@@ -38,9 +38,9 @@ import bmesh
 import math
 from mathutils import Vector
 import contour_utilities
-from contour_classes import ContourCutLine
+from contour_classes import ContourCutLine, ExistingVertList, CutLineManipulatorWidget
 from mathutils.geometry import intersect_line_plane, intersect_point_line
-from bpy.props import EnumProperty, StringProperty,BoolProperty, IntProperty
+from bpy.props import EnumProperty, StringProperty,BoolProperty, IntProperty, FloatVectorProperty
 from bpy.types import Operator, AddonPreferences
 
 methods = (('0','WALKING','0'),('1','BRUTE','1'))
@@ -78,6 +78,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
             default=True,
             )
     
+    draw_widget = BoolProperty(
+            name="Draw Widget",
+            description = "Turn off to help make mockups or clean-up visualization ",
+            default=True,
+            )
+    
     debug = IntProperty(
             name="Debug Level",
             default=1,
@@ -90,6 +96,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
             default=3,
             min = 1,
             max = 10,
+            )
+    edge_thick = IntProperty(
+            name="Edge Thickness",
+            default=1,
+            min=1,
+            max=10,
             )
     
     raw_vert_size = IntProperty(
@@ -105,8 +117,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
             min = 1,
             max = 10,
             )
-    
  
+    
     line_thick = IntProperty(
             name="Line Thickness",
             default=1,
@@ -114,32 +126,136 @@ class ContourToolsAddonPreferences(AddonPreferences):
             max = 10,
             )
     
+    stroke_thick = IntProperty(
+            name="Stroke",
+            description = "width lines drawn by user",
+            default=1,
+            min = 1,
+            max = 10,
+            )
+    
     auto_align = BoolProperty(
             name="Iteratively Align verts",
-            description = "Improves outcome, slows performance",
+            description = "Attempt to automatically align vertices in adjoining edgeloops. Improves outcome, but slows performance",
             default=False,
             )
     
+    live_update = BoolProperty(
+            name="Live Update",
+            description = "Will live update the mesh preview when transforming cut lines.  Looks good, but can get slow on large meshes",
+            default=True,
+            )
+    
+    use_x_ray = BoolProperty(
+            name="X-Ray",
+            description = 'Enable X-Ray on Retopo-mesh upon creation',
+            default=False,
+            )
+    
+    
+    widget_color = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(.6,0.5,0.35), subtype="COLOR")
+    widget_color2 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0.1,.1, .3), subtype="COLOR")
+    widget_color3 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0.6,0.06,0.06), subtype="COLOR")
+    
+    
+    widget_radius = IntProperty(
+            name="Widget Radius",
+            description = "size of cutline widget radius",
+            default=50,
+            min = 20,
+            max = 100,
+            )
+    
+    widget_radius_inner = IntProperty(
+            name="Widget Inner Radius",
+            description = "size of cutline widget innerradius",
+            default=15,
+            min = 5,
+            max = 30,
+            )
+    
+    widget_thickness = IntProperty(
+            name="Widget Line Thickness",
+            description = "width lines used to draw widget",
+            default=2,
+            min = 1,
+            max = 10,
+            )
+        
+    arrow_size = IntProperty(
+            name="Arrow Size",
+            default=12,
+            min=5,
+            max=50,
+            )   
+        
+    
     def draw(self, context):
         layout = self.layout
-        layout.label(text="Contour Tools Beta Preferences and Settings")
-        layout.prop(self, "debug")
-        layout.prop(self, "show_verts")
-        layout.prop(self, "show_edges")
-        layout.prop(self, "show_ring_edges")
-        layout.prop(self, "vert_inds")
-        layout.prop(self, "simple_vert_inds")
-        layout.prop(self, "vert_size")
-        layout.prop(self, "raw_vert_size")
-        layout.prop(self, "handle_size")
-        layout.prop(self, "line_thick")
-        layout.prop(self, "auto_align")
+
+        # User Settings
+        row = layout.row()        
+        row.prop(self, "show_edges", text="Show Edge Loops")
+        row.prop(self, "line_thick", text ="Edge Thickness")
         
+        row = layout.row(align=True)
+        row.prop(self, "show_ring_edges", text="Show Edge Rings")
+        row.prop(self, "vert_size")
+
+        row = layout.row(align=True)
+        row.prop(self, "handle_size", text="Handle Size")
+        row.prop(self, "stroke_thick", text="Stroke Thickness")
+        
+        layout.prop(self, "auto_align")
+        layout.prop(self, "use_x_ray", "Enable X-Ray at Mesh Creation")
+
+        layout.separator()
+        
+        # Debug Settings
+        layout.label(text="Debug Settings")
+        
+        layout.prop(self, "debug")
+        layout.prop(self, "vert_inds", text="Show Vertex Indices")
+        layout.prop(self, "simple_vert_inds", text="Show Simple Indices")
+
+        row = layout.row()
+        row.prop(self, "show_verts", text="Show Raw Vertices")
+        row.prop(self,"draw_widget", text = "Widget Display")
+        row.prop(self, "raw_vert_size")
+        
+        layout.separator()
+        layout.label(text="Widget Settings")
+        row = layout.row()
+        row.prop(self, "widget_radius")
+        row.prop(self,"widget_radius_inner")
+        row.prop(self, "widget_thickness")
+        row.prop(self, "arrow_size")
+        
+        row = layout.row()
+        row.prop(self, "widget_color")
+        row.prop(self, "widget_color2")
+        row.prop(self, "widget_color3")
+
+        
+class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
+    '''Retopologize Forms with Contour Strokes'''
+    bl_label = "Contour Retopolgy"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+
+    def draw(self, context):
+        layout = self.layout
+
+        col = layout.column()
+
+        col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')    
+
+
 
 def retopo_draw_callback(self,context):
     
     settings = context.user_preferences.addons['contour_tools'].preferences
-    if self.cut_lines:
+    if len(self.cut_lines) > 0:
         for c_cut in self.cut_lines:
             c_cut.draw(context, settings)
             
@@ -147,6 +263,10 @@ def retopo_draw_callback(self,context):
     if self.follow_lines != [] and settings.show_edges:
         for follow in self.follow_lines:
             contour_utilities.draw_polyline_from_3dpoints(context, follow, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
+            
+    if self.cut_line_widget:
+        self.cut_line_widget.draw(context)
+        
         #event value press
             #asses proximity for hovering
             #if no proximity:
@@ -172,7 +292,7 @@ def retopo_draw_callback(self,context):
     
 #Operator
 class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
-    '''Slice an object and retopo along slices'''
+    '''Retopologize Forms with Contour Strokes'''
     bl_idname = "cgcookie.retop_contour"
     bl_label = "Contour Retopologize"    
     
@@ -194,6 +314,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     
     def modal(self, context, event):
         context.area.tag_redraw()
+        settings = context.user_preferences.addons['contour_tools'].preferences
         
         if event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
@@ -252,6 +373,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 bm.to_mesh(self.dest_me)
             
                 #remember we created a new object
+                #moving this to the invoke?
                 context.scene.objects.link(self.destination_ob)
                 
                 self.destination_ob.select = True
@@ -294,7 +416,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     bpy.ops.mesh.select_all(action='DESELECT')
             return{'FINISHED'}
             
-        if event.type == 'MOUSEMOVE':
+        elif event.type == 'MOUSEMOVE':
             
             if self.drag and self.drag_target:
             
@@ -320,54 +442,53 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 #identify hover target for highlighting
                 if self.cut_lines:
                     new_target = False
+                    target_at_all = False
                     prospective_targets = []
                     for c_cut in self.cut_lines:
                         h_target = c_cut.active_element(context,event.mouse_region_x,event.mouse_region_y)
                         if h_target:
-                            new_target = True
-                            prospective_targets.append(h_target)
-                            
-                            self.hover_target = prospective_targets[-1]
-                    
-                    if not new_target:
+                            target_at_all = True
+                            new_target = h_target != self.hover_target
+                            if new_target:
+								prospective_targets.append(h_target)
+                                self.hover_target = h_target
+                                if hasattr(self.hover_target, "head"):
+                                    #Potentially may need to del the old widget?
+                                    self.cut_line_widget = CutLineManipulatorWidget(context, settings, self.hover_target, event.mouse_region_x,event.mouse_region_y)
+                                    self.cut_line_widget.derive_screen(context)
+                                    
+                            else:
+                                if self.cut_line_widget:
+                                    self.cut_line_widget.x = event.mouse_region_x
+                                    self.cut_line_widget.y = event.mouse_region_y
+                                    self.cut_line_widget.derive_screen(context)
+                                    
+                    if not target_at_all:
                         self.hover_target = None
+                        self.cut_line_widget = None
                                 
                     return {'RUNNING_MODAL'}
                 return {'RUNNING_MODAL'}
         
-        #event right click or escape
-        if event.type in ('RIGHTMOUSE', 'ESC'):
+        #escape
+        elif event.type== 'ESC':
+            #TODO:  Delete the destination ob in case we dont need it
+            #need to carefully implement this so people dont delete their wok
             
-            if event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target:
-                if hasattr(self.hover_target, "head"):
-                    self.cut_lines.remove(self.hover_target)
-                    self.hover_target = None
-                    
-                else:
-                    self.cut_lines.remove(self.hover_target.parent)
-                    self.hover_target = None
-                    
-                self.push_mesh_data(context)    
-                return {'RUNNING_MODAL'}
             
-            elif event.type == 'RIGHTMOUSE' and event.value == 'RELEASE':
-                return {'RUNNING_MODAL'}        
-                
-                
-            else:
-                #clean up callbacks to prevent crash
-                context.area.header_text_set()
-                contour_utilities.callback_cleanup(self,context)
-                self.bme.free()
-                if self.tmp_ob:
-                    context.scene.objects.unlink(self.tmp_ob)
-                    me = self.tmp_ob.data
-                    self.tmp_ob.user_clear()
-                    bpy.data.objects.remove(self.tmp_ob)
-                    bpy.data.meshes.remove(me)
-                return {'CANCELLED'}  
+            #clean up callbacks to prevent crash
+            context.area.header_text_set()
+            contour_utilities.callback_cleanup(self,context)
+            self.bme.free()
+            if self.tmp_ob:
+                context.scene.objects.unlink(self.tmp_ob)
+                me = self.tmp_ob.data
+                self.tmp_ob.user_clear()
+                bpy.data.objects.remove(self.tmp_ob)
+                bpy.data.meshes.remove(me)
+            return {'CANCELLED'}  
         
-        if event.type in {'MIDDLEMOUSE'}:
+        elif event.type in {'MIDDLEMOUSE'}:
             for cut_line in self.cut_lines:
                 if cut_line.head.world_position:
                     cut_line.head.screen_from_world(context)
@@ -375,6 +496,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'PASS_THROUGH'}
         
         
+        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target:
+            if hasattr(self.hover_target, "head"):
+                self.cut_lines.remove(self.hover_target)
+                self.hover_target = None
+                    
+            else:
+                self.cut_lines.remove(self.hover_target.parent)
+                self.hover_target = None
+            
+            auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align        
+            self.push_mesh_data(context, a_align = auto_align)    
+            return {'RUNNING_MODAL'}
+            
+    
         #########temporary testing#############
         if event.type in {'LEFT_ARROW','RIGHT_ARROW'}:
             if self.hover_target and hasattr(self.hover_target, 'head'):
@@ -389,7 +524,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.hover_target.shift = 1
             
                 self.hover_target.simplify_cross(self.segments)
-                self.push_mesh_data(context)
+                self.push_mesh_data(context, a_align = False)
         #######################################
         
         
@@ -401,11 +536,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 else:
                     max_segments = 10
                     
-                if self.segments >= max_segments:
+                if self.segments >= max_segments and not self.sel_verts:
                     self.segments = max_segments
                     return {'RUNNING_MODAL'}
-                else:
+                elif not self.sel_verts:
                     self.segments += 1
+                    
+                else:
+                    self.segments = len(self.sel_edges)
+                    
                 message = "Segments: %i" % self.segments
                 context.area.header_text_set(text = message)
                 
@@ -421,16 +560,18 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 
                     else:
                         cut_line.simplify_cross(self.segments)
-                
-                self.push_mesh_data(context,re_order = False)
+                auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
+                self.push_mesh_data(context,re_order = False, a_align = auto_align)
                 return {'RUNNING_MODAL'}
             
             elif (event.type == 'WHEELDOWNMOUSE' and event.ctrl) or (event.type == 'NUMPAD_MINUS' and event.value == 'PRESS'):
             
                 if self.segments < 4:
                     self.segments = 3
-                else:
+                elif not self.sel_verts:
                     self.segments -= 1
+                else:
+                    self.segments = len(self.sel_edges)
         
                 message = "Segments: %i" % self.segments
                 context.area.header_text_set(text = message)
@@ -447,7 +588,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     else:
                         cut_line.simplify_cross(self.segments)
             
-                self.push_mesh_data(context,re_order = False)
+                auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
+                self.push_mesh_data(context,re_order = False, a_align = auto_align)
                 return {'RUNNING_MODAL'}
             
             
@@ -498,7 +640,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                 self.segments = max_segments
                         
                             self.drag_target.simplify_cross(self.segments)
-                            self.push_mesh_data(context)
+                            auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
+                            self.push_mesh_data(context, a_align = auto_align)
                             
                         else:
                             self.cut_lines.remove(self.drag_target)
@@ -525,8 +668,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.drag_target = None
                             if self.new:
                                 self.new = False
-                            
-                    self.push_mesh_data(context)
+                    auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align        
+                    self.push_mesh_data(context, a_align = auto_align)
                 
                 #clear the drag and hover
                 self.drag = False
@@ -560,17 +703,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #print(ret_val)
         #return ret_val
     
-    def push_mesh_data(self,context, re_order = True, debug = False):
-        a_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
+    def push_mesh_data(self,context, re_order = True, debug = False, a_align = False):
+        
+        total_verts = []
+        total_edges = []
+        total_faces = []
+        
+        
         if len(self.cut_lines) < 2:
             print('waiting on other cut lines')
             return
         
         imx = self.original_form.matrix_world.inverted()
         
-        total_verts = []
-        total_edges = []
-        total_faces = []
+
         
         valid_cuts = [c_line for c_line in self.cut_lines if c_line.verts != [] and c_line.verts_simple != []]
         self.cut_lines = valid_cuts
@@ -674,11 +820,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #guaranteed editmode for this to happen
             #this makes sure we bridge the correct end
             #when we are done
-            if self.sel_edges and len(self.sel_edges) and self.sel_verts and len(self.sel_verts):
+            if self.sel_edges and len(self.sel_edges) and self.sel_verts and len(self.sel_verts) and self.existing_cut:
                 mx = self.destination_ob.matrix_world
                 
-                bridge_vert_vecs = [mx * v.co for v in self.sel_verts]
-                bridge_loop_location = contour_utilities.get_com(bridge_vert_vecs)
+                #bridge_vert_vecs = [mx * v.co for v in self.sel_verts]
+                bridge_loop_location = contour_utilities.get_com(self.existing_cut.verts_simple)
                 
                 loop_0_loc = contour_utilities.get_com(valid_cuts[0].verts_simple)
                 loop_1_loc = contour_utilities.get_com(valid_cuts[-1].verts_simple)
@@ -696,6 +842,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         n_rings = len(self.valid_cuts)
         n_lines = len(self.valid_cuts[0].verts_simple)
         #align verts
+        if self.existing_cut:
+            self.valid_cuts[0].align_to_other(self.existing_cut, auto_align = a_align)
+        
         for i in range(0,n_rings-1):
             vs_1 = self.valid_cuts[i].verts_simple
             vs_2 = self.valid_cuts[i+1].verts_simple
@@ -738,6 +887,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.follow_lines = []
         for i in range(0,len(self.valid_cuts[0].verts_simple)):
             tmp_line = []
+            if self.existing_cut:
+                tmp_line.append(self.existing_cut.verts_simple[i])
             for cut_line in self.valid_cuts:
                 tmp_line.append(cut_line.verts_simple[i])
             self.follow_lines.append(tmp_line)
@@ -759,6 +910,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
   
     def invoke(self, context, event):
         #if edit mode
+        settings = context.user_preferences.addons['contour_tools'].preferences
+        
         if context.mode == 'EDIT_MESH':
             
             
@@ -796,6 +949,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             if self.sel_edges and len(self.sel_edges):
                 self.sel_verts = [vert for vert in self.dest_bme.verts if vert.select]
                 self.segments = len(self.sel_edges)
+                self.existing_cut = ExistingVertList(self.sel_verts, self.sel_edges,self.destination_ob.matrix_world)
             else:
                 self.sel_verts = None
                 self.segments = 10
@@ -804,6 +958,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #make the irrelevant variables None
             self.sel_edges = None
             self.sel_verts = None
+            self.existing_cut = None
             
             #the active object will be the target
             self.original_form  = context.object
@@ -815,6 +970,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.dest_me = bpy.data.meshes.new(self.original_form.name + "_recontour")
             #new object to hold it
             self.destination_ob = bpy.data.objects.new(self.original_form.name + "_recontour",self.dest_me) #this is an empty currently
+            self.destination_ob.matrix_world = self.original_form.matrix_world
+            self.destination_ob.update_tag()
+            
             #bmesh to operate on
             self.dest_bme = bmesh.new()
             self.dest_bme.from_mesh(self.dest_me)
@@ -828,8 +986,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.bme = bmesh.new()
         self.bme.from_mesh(me)
         
-        self.orig_x_ray = self.destination_ob.show_x_ray
-        self.destination_ob.show_x_ray = True
+        if settings.use_x_ray:
+            self.orig_x_ray = self.destination_ob.show_x_ray
+            self.destination_ob.show_x_ray = True
         
         #check for ngons, and if there are any...triangulate just the ngons
         ngons = []
@@ -879,6 +1038,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #what is the mouse over top of currently
         self.hover_target = None
         
+        self.cut_line_widget = None
+        
         #at the begniinging of a drag, we want to keep track
         #of where things started out
         self.initial_location_head = None
@@ -910,10 +1071,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 #resgistration
 def register():
     bpy.utils.register_class(ContourToolsAddonPreferences)
+    bpy.utils.register_class(CGCOOKIE_OT_retopo_contour_panel)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour)
     
 
 #unregistration
 def unregister():
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour)
+    bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour_panel)
     bpy.utils.unregister_class(ContourToolsAddonPreferences)
