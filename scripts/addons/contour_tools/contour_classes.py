@@ -120,7 +120,7 @@ class ContourCutLine(object):
         self.verts_screen = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in self.verts]
         self.verts_simple_screen = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in self.verts_simple]
             
-    def draw(self,context, settings):
+    def draw(self,context, settings, three_dimensional = True):
         '''
         setings are the addon preferences for contour tools
         '''
@@ -157,17 +157,30 @@ class ContourCutLine(object):
         
         #draw the raw contour vertices
         if (self.verts and self.verts_simple == []) or (debug > 0 and settings.show_verts):
-            contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), settings.raw_vert_size)
+            if three_dimensional:
+                contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), settings.raw_vert_size)
+            else:    
+                contour_utilities.draw_points(context, self.verts_screen, (0,1,.2,1), settings.raw_vert_size)
         
         #draw the simplified contour vertices and edges (rings)    
         if self.verts_simple:
-            points = self.verts_simple.copy()
+            if three_dimensional:
+                points = self.verts_simple.copy()
+            else:
+                points = self.verts_simple_screen.copy()
+               
             if 0 in self.eds[-1]:
-                points.append(self.verts_simple[0])
-            
+                points.append(points[0])
+            #draw the ring
+            #draw the points over it
             if settings.show_ring_edges:
-                contour_utilities.draw_polyline_from_3dpoints(context, points, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
-            contour_utilities.draw_3d_points(context, self.verts_simple, (0,.2,1,1), settings.vert_size)
+                if three_dimensional:
+                    contour_utilities.draw_polyline_from_3dpoints(context, points, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
+                    contour_utilities.draw_3d_points(context, points, (0,.2,1,1), settings.vert_size)
+                else:
+                    contour_utilities.draw_polyline_from_points(context, points, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
+                    contour_utilities.draw_points(context,points, (0,.2,1,1), settings.vert_size)
+
             if debug:
                 if settings.vert_inds:
                     for i, point in enumerate(self.verts):
@@ -289,6 +302,7 @@ class ContourCutLine(object):
     def simplify_cross(self,segments):
         if self.verts !=[] and self.eds != []:
             [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments, self.shift)
+            
         
     def analyze_relationship(self, other,debug = False):
         '''

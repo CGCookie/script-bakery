@@ -193,7 +193,7 @@ def retopo_draw_callback(self,context):
     settings = context.user_preferences.addons['contour_tools'].preferences
     if self.cut_lines:
         for c_cut in self.cut_lines:
-            c_cut.draw(context, settings)
+            c_cut.draw(context, settings,three_dimensional = self.navigating)
             
     
     if self.follow_lines != [] and settings.show_edges:
@@ -449,6 +449,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.hover_target.shift = 1
             
                 self.hover_target.simplify_cross(self.segments)
+                self.hover_target.update_screen_coords(context)
                 self.push_mesh_data(context, a_align = False)
         #######################################
         
@@ -480,11 +481,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         if hit:
                             cut_line.cut_object(context, self.original_form, self.bme)
                             cut_line.simplify_cross(self.segments)
+                            cut_line.update_screen_coords(context)
                         else:
                             self.cut_lines.remove(cut_line)
 
                     else:
                         cut_line.simplify_cross(self.segments)
+                        cut_line.update_screen_coords(context)
                 auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
                 self.push_mesh_data(context,re_order = False, a_align = auto_align)
                 return {'RUNNING_MODAL'}
@@ -507,11 +510,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         if hit:
                             cut_line.cut_object(context, self.original_form, self.bme)
                             cut_line.simplify_cross(self.segments)
+                            cut_line.update_screen_coords(context)
                         else:
                             self.cut_lines.remove(cut_line)
                         
                     else:
                         cut_line.simplify_cross(self.segments)
+                        cut_line.update_screen_coords(context)
             
                 auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
                 self.push_mesh_data(context,re_order = False, a_align = auto_align)
@@ -566,6 +571,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                 self.segments = max_segments
                         
                             self.drag_target.simplify_cross(self.segments)
+                            self.drag_target.update_screen_coords(context)
+                            
                             auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align
                             self.push_mesh_data(context, a_align = auto_align)
                             
@@ -586,6 +593,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         if hit:    
                             self.drag_target.parent.cut_object(context, self.original_form, self.bme)
                             self.drag_target.parent.simplify_cross(self.segments)
+                            self.drag_target.parent.update_screen_coords(context)
                             if self.new:
                                 self.new = False
                                 
