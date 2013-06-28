@@ -325,8 +325,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         h_target = c_cut.active_element(context,event.mouse_region_x,event.mouse_region_y)
                         if h_target:
                             new_target = True
-                            prosepective_targets.append()
-                            self.hover_target = h_target
+                            prospective_targets.append(h_target)
+                            
+                            self.hover_target = prospective_targets[-1]
                     
                     if not new_target:
                         self.hover_target = None
