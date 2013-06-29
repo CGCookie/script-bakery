@@ -49,24 +49,27 @@ class TestPreferences(AddonPreferences):
 
         col.prop(self, "test_print_key")
 
-user_prefs = context.user_preferences
-addon_prefs = user_prefs.addons[__package__].preferences
+addon_prefs = context.user_preferences.addons[__package__].preferences
 
 addon_keymaps = []
 
 def register():
-    bpy.utils.register_module(__name__)  
+
+    print("Preferences:" + str(addon_prefs['test_print_key']))
+
+    bpy.utils.register_module(__name__)
     pref_test.register()
 
-    wm = bpy.context.window_manager    
-    
+    wm = bpy.context.window_manager
+
     # create the object mode Quick Tools menu hotkey
     km = wm.keyconfigs.addon.keymaps.new(name='Object Mode')
     kmi = km.keymap_items.new('view3d.print_test', 'Y', 'PRESS')
-    #kmi.properties.name = 'object.tools_menu' 
+    #kmi.properties.name = 'object.tools_menu'
 
     addon_keymaps.append(km)
 
+#addon_prefs['test_print_key']
 
 def unregister():
     bpy.utils.unregister_module(__name__)

@@ -10,8 +10,8 @@
                           axis_z="#0000dc">
         <wcol_regular>
           <ThemeWidgetColors outline="#191919"
-                             inner="#a6a6a6ff"
-                             inner_sel="#646464ff"
+                             inner="#333333ff"
+                             inner_sel="#808080ff"
                              item="#191919ff"
                              text="#b8b8b8"
                              text_sel="#ffffff"
