@@ -76,37 +76,37 @@ class QuickObjectOptions(bpy.types.Menu):
 
 ### ------------ New hotkeys and registration ------------ ###
 
-addon_keymaps = []
+# addon_keymaps = []
 
-user_prefs = context.user_preferences
-addon_prefs = user_prefs.addons['quicktools'].preferences
+# user_prefs = context.user_preferences
+# addon_prefs = user_prefs.addons['quicktools'].preferences
 
 def register():
     bpy.utils.register_module(__name__)  
 
-    wm = bpy.context.window_manager    
+    # wm = bpy.context.window_manager    
     
-    # create the object mode Quick Tools menu hotkey
-    km = wm.keyconfigs.addon.keymaps.new(name='Object Mode')
-    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
-    kmi.properties.name = 'object.tools_menu' 
+    # # create the object mode Quick Tools menu hotkey
+    # km = wm.keyconfigs.addon.keymaps.new(name='Object Mode')
+    # kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
+    # kmi.properties.name = 'object.tools_menu' 
 
-    # create the object mode Display and Scene Tools menu hotkey
-    km = wm.keyconfigs.addon.keymaps.new(name='3D View')
-    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS', shift=True)
-    kmi.properties.name = 'object.display_options' 
+    # # create the object mode Display and Scene Tools menu hotkey
+    # km = wm.keyconfigs.addon.keymaps.new(name='3D View')
+    # kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS', shift=True)
+    # kmi.properties.name = 'object.display_options' 
 
-    addon_keymaps.append(km)
+    # addon_keymaps.append(km)
 
 
 def unregister():
     bpy.utils.unregister_module(__name__)
         
     # remove keymaps when add-on is deactivated
-    wm = bpy.context.window_manager
-    for km in addon_keymaps:
-        wm.keyconfigs.addon.keymaps.remove(km)
-    del addon_keymaps[:]
+    # wm = bpy.context.window_manager
+    # for km in addon_keymaps:
+    #     wm.keyconfigs.addon.keymaps.remove(km)
+    # del addon_keymaps[:]
 
 
 if __name__ == "__main__":

@@ -85,28 +85,28 @@ class QuickSculptTools(bpy.types.Menu):
 
 ### ------------ New Hotkeys and registration ------------ ###   
 
-addon_keymaps = []
+# addon_keymaps = []
 
 def register():
     bpy.utils.register_class(QuickSculptTools)
     
-    wm = bpy.context.window_manager   
-    # create the Sculpt hotkeys
-    km = wm.keyconfigs.addon.keymaps.new(name='Sculpt')
-   # km = bpy.context.window_manager.keyconfigs.active.keymaps['Sculpt']
+   #  wm = bpy.context.window_manager   
+   #  # create the Sculpt hotkeys
+   #  km = wm.keyconfigs.addon.keymaps.new(name='Sculpt')
+   # # km = bpy.context.window_manager.keyconfigs.active.keymaps['Sculpt']
     
-    kmi = km.keymap_items.new('sculpt.symmetry', 'X', 'PRESS', shift=True)
-    kmi.properties.axis = -1
-    kmi = km.keymap_items.new('sculpt.symmetry', 'Y', 'PRESS', shift=True)
-    kmi.properties.axis = 0
-    kmi = km.keymap_items.new('sculpt.symmetry', 'Z', 'PRESS', shift=True)
-    kmi.properties.axis = 1
+   #  kmi = km.keymap_items.new('sculpt.symmetry', 'X', 'PRESS', shift=True)
+   #  kmi.properties.axis = -1
+   #  kmi = km.keymap_items.new('sculpt.symmetry', 'Y', 'PRESS', shift=True)
+   #  kmi.properties.axis = 0
+   #  kmi = km.keymap_items.new('sculpt.symmetry', 'Z', 'PRESS', shift=True)
+   #  kmi.properties.axis = 1
 
-    # create sculpt menu hotkey
-    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
-    kmi.properties.name = 'sculpt.tools_menu' 
+   #  # create sculpt menu hotkey
+   #  kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
+   #  kmi.properties.name = 'sculpt.tools_menu' 
     
-    addon_keymaps.append(km)
+   #  addon_keymaps.append(km)
 
     
 def unregister():
@@ -114,11 +114,11 @@ def unregister():
     #unregister the new operators 
     bpy.utils.unregister_class(QuickSculptTools)
     
-    # remove keymaps when add-on is deactivated
-    wm = bpy.context.window_manager
-    for km in addon_keymaps:
-        wm.keyconfigs.addon.keymaps.remove(km)
-    del addon_keymaps[:]
+    # # remove keymaps when add-on is deactivated
+    # wm = bpy.context.window_manager
+    # for km in addon_keymaps:
+    #     wm.keyconfigs.addon.keymaps.remove(km)
+    # del addon_keymaps[:]
     
 
 if __name__ == "__main__":

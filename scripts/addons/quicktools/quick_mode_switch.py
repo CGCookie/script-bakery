@@ -56,30 +56,30 @@ class ModeSwitch(bpy.types.Menu):
         return {"FINISHED"}
 
 
-addon_keymaps = []
+# addon_keymaps = []
 
 def register():
     bpy.utils.register_class(ModeSwitch)
     bpy.utils.register_class(SetMode)
     
-    wm = bpy.context.window_manager
+    # wm = bpy.context.window_manager
     
-    # create the mode switcher menu hotkey
-    km = wm.keyconfigs.addon.keymaps.new(name='3D View', space_type='VIEW_3D')
-    kmi = km.keymap_items.new('wm.call_menu', 'TAB', 'PRESS', alt=True)
-    kmi.properties.name = 'mode.switch_menu'
+    # # create the mode switcher menu hotkey
+    # km = wm.keyconfigs.addon.keymaps.new(name='3D View', space_type='VIEW_3D')
+    # kmi = km.keymap_items.new('wm.call_menu', 'TAB', 'PRESS', alt=True)
+    # kmi.properties.name = 'mode.switch_menu'
         
-    addon_keymaps.append(km)
+    # addon_keymaps.append(km)
     
 def unregister():
     bpy.utils.unregister_class(ModeSwitch)
     bpy.utils.unregister_class(SetMode)
 
-    # remove keymaps when add-on is deactivated
-    wm = bpy.context.window_manager
-    for km in addon_keymaps:
-        wm.keyconfigs.addon.keymaps.remove(km)
-    del addon_keymaps[:]
+    # # remove keymaps when add-on is deactivated
+    # wm = bpy.context.window_manager
+    # for km in addon_keymaps:
+    #     wm.keyconfigs.addon.keymaps.remove(km)
+    # del addon_keymaps[:]
     
 if __name__ == "__main__":
     register()
