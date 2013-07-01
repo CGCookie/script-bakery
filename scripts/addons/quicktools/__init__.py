@@ -75,15 +75,15 @@ def register():
    kc = bpy.context.window_manager.keyconfigs.addon
    
    # create the mode switch menu hotkey
-   km = kc.keymaps.new(name='3D View')
+   km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
    kmi = km.keymap_items.new('wm.call_menu', 'TAB', 'PRESS', alt=True)
    kmi.properties.name = 'mode.switch_menu' 
    kmi.active = True
    addon_keymaps.append((km, kmi))
 
    # create the secene options menu hotkey
-   km = kc.keymaps.new(name='3D View')
-   kmi = km.keymap_items.new('wm.call_menu', 'ACCENT_GRAVE', 'PRESS')
+   km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
+   kmi = km.keymap_items.new('wm.call_menu', 'ACCENT_GRAVE', 'PRESS', shift=True)
    kmi.properties.name = 'scene.quick_options' 
    kmi.active = True
    addon_keymaps.append((km, kmi))
@@ -96,7 +96,7 @@ def register():
    addon_keymaps.append((km, kmi))
 
    # create the object mode Display menu hotkey
-   km = kc.keymaps.new(name='3D View')
+   km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS', shift=True)
    kmi.properties.name = 'object.display_options'
    kmi.active = True
