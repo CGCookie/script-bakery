@@ -22,6 +22,12 @@ class ModeSwitch(bpy.types.Menu):
     bl_label = "Quick Mode Switch Menu"
     bl_idname = "mode.switch_menu"
     
+    @classmethod
+    def poll(cls, context):
+        if len(context.selected_objects) > 0:
+            return True
+        return False
+
     def draw(self, context):
         layout = self.layout  
 
@@ -53,7 +59,7 @@ class ModeSwitch(bpy.types.Menu):
             sculptMode = layout.operator("object.working_mode", "Texture Paint", icon="TPAINT_HLT"    )
             sculptMode.setMode = 'TEXTURE_PAINT'
 
-        return {"FINISHED"}
+        #return {"FINISHED"}
 
 
 # addon_keymaps = []
