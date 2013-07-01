@@ -131,8 +131,6 @@ def unregister():
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
     addon_keymaps.clear()
-
-    #bpy.utils.unregister_module(__name__)
     
 if __name__ == "__main__":
     register()
