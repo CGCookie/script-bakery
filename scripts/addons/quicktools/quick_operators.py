@@ -164,25 +164,6 @@ def addMod(modifier):
     return {"FINISHED"}
 
 
-def checkObjects(target, type1, type2, modifier):
-
-    # Check for selected objects intended as target
-    for obj in bpy.context.selected_objects:
-        if obj.type == target:
-            useTarget = True
-    
-    # Find all selected objects
-    for obj in bpy.context.selected_objects:
-        bpy.context.scene.objects.active = obj
-        if obj.type == target:
-            targetObj = obj
-        elif obj.type == type1 or obj.type == type2:
-            # Add a mirror modifier
-            addMod(modifier)
-
-    return {"FINISHED"}
-
-
 ################################################### 
 # Add an Boolean modifier with second object as target 
 ###################################################      
@@ -243,10 +224,6 @@ class addMirror(bpy.types.Operator):
         
         # Set status of mirror object usage
         useTarget = False
-
-        #### not yet functional ####
-        # checkObjects('EMPTY', 'MESH', 'CURVE', 'MIRROR')
-        
 
         # If no Empty is selected, don't use mirror object
         for obj in context.selected_objects:
