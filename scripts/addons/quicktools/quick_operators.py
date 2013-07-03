@@ -37,8 +37,52 @@ class setObjectOrigin(bpy.types.Operator):
         return {"FINISHED"}
 
 
+############ Dev code to consolidate smart mods into a function #############
+def assignTarget(modifier):
+
+    scene = bpy.context.scene
+    activeObj = bpy.context.active_object
+    selected = bpy.context.selected_objects
+    
+    for obj in selected:
+        if obj.type == 'EMPTY':
+            target = obj
+
+    for obj in selected:
+        if modifier == 'ARRAY':
+            for mod in obj.modifiers:
+                if mod.type == 'ARRAY':
+                    mod.use_relative_offset = False
+                    mod.use_object_offset = True
+                    mod.offset_object == bpy.data.objects[target.name]
+                    return True
+        elif modifier == 'MIRROR':
+            for mod in obj.modifiers:
+                if mod.type == 'MIRROR':
+                    mod.mirror_object = bpy.data.objects[target.name]
+                    return True
+        elif modifier == 'SCREW':
+            for mod in obj.modifiers:
+                if mod.type == 'SCREW':
+                    mod.object = bpy.data.objects[target.name]
+                    return True
+        elif modifier == 'CAST':
+            for mod in obj.modifiers:
+                if mod.type == 'CAST':
+                    mod.object = bpy.data.objects[target.name]
+                    return True
+        elif modifier == 'SIMPLE_DEFORM':
+            for mod in obj.modifiers:
+                if mod.type == 'SIMPLE_DEFORM':
+                    mod.origin = bpy.data.objects[target.name]
+                    return True
+        else:
+            return False
+
+    return {"FINISHED"}
+
 ################################################### 
-# Add empty at cursor, making it inactively selected   
+# Add empty at cursor, making it inactively selected. Also assign empty to modifiers if necessary.   
 ################################################### 
 
 class addTarget(bpy.types.Operator):
@@ -55,46 +99,28 @@ class addTarget(bpy.types.Operator):
 
     def execute(self, context):
         scene = context.scene
-
         activeObj = context.active_object
-        
         currentObj = activeObj
+        selected = context.selected_objects
+
         
-        # Check to see if a target exists, if it does not then create one
-        selectedObj = context.selected_objects
-        for obj in selectedObj:
+        for obj in selected:
             if obj.type == 'EMPTY':
                 break
             elif obj.type != 'EMPTY':
                 ops.object.empty_add(type='PLAIN_AXES')
-                selectedObj = context.selected_objects
-            
-        # Check if a smart modifier exists and assign the empty if necessary
-
-        ### ---- dev note: this should all be combined into a reusable function. --- ###
-        for mod in currentObj.modifiers:
-            if mod.type == 'MIRROR':
-                for obj in selectedObj:
-                    if obj.type == 'EMPTY':
-                        mod.mirror_object = bpy.data.objects[obj.name]
-                        obj.select = False
-                        self.report({'INFO'}, "Assigned target object to existing modifier")
-            elif mod.type == 'ARRAY':
-                for obj in selectedObj:
-                    if obj.type =='EMPTY':
-                        mod.use_relative_offset = False
-                        mod.use_object_offset = True
-                        mod.offset_object = bpy.data.objects[obj.name]
-                        self.report({'INFO'}, "Assigned target object to existing modifier")
-            elif mod.type == 'SCREW':
-                for obj in selectedObj:
-                    if obj.type =='EMPTY':
-                        mod.object = bpy.data.objects[obj.name]
-                        self.report({'INFO'}, "Assigned target object to existing modifier")       
-
-        # Select the previously stored current object and make it active                    
-        scene.objects.active = currentObj
-        currentObj.select = True
+                for obj in selected:
+                    obj.select = True
+                scene.objects.active = activeObj
+                selected = context.selected_objects
+           
+        for obj in selected:
+            for mod in obj.modifiers:
+                modifier = mod.type
+                assignTarget(modifier)
+                if assignTarget(modifier) is True:
+                    self.report({'INFO'}, "Assigned target to " + modifier.lower() + " modifier")
+    
         return {"FINISHED"}
 
         
@@ -156,45 +182,6 @@ def checkObjects(target, type1, type2, modifier):
 
     return {"FINISHED"}
 
-############ Dev code to consolidate smart mods into a function #############
-def assignTarget(modifier):
-
-    scene = bpy.context.scene
-    activeObj = bpy.context.active_object
-    targetObj = bpy.context.selected_objects
-
-    # Store the mesh object
-    selectedObj = activeObj  
-
-    useTarget = False
-
-    if len(targetObj) > 1:
-        useTarget = True
-
-    # Make the targetObj active
-    try:
-        scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
-    except:
-        pass
-
-    # Check for active object
-    activeObj = bpy.context.active_object
-    
-    # Swap the selected and active objects
-    selectedObj, activeObj = activeObj, selectedObj
-
-    # Deselect the target object and select the original mesh object again, making it active
-    selectedObj.select = False
-    activeObj.select = True
-    scene.objects.active = activeObj
-    
-    # Find the added modifier, set the target object
-    for mod in activeObj.modifiers:
-        if mod.type == modifier:
-            if useTarget == True:
-                mod.object = bpy.data.objects[selectedObj.name]
-
-    return {"FINISHED"}
 
 ################################################### 
 # Add an Boolean modifier with second object as target 
@@ -264,7 +251,7 @@ class addMirror(bpy.types.Operator):
         # If no Empty is selected, don't use mirror object
         for obj in context.selected_objects:
             if obj.type == 'EMPTY':
-                useMirrorObj = True
+                useTarget = True
         
         # Find all selected objects
         for obj in context.selected_objects:
@@ -431,6 +418,69 @@ class addArray(bpy.types.Operator):
 
         return {"FINISHED"}
             
+
+################################################### 
+# Add an Cast modifier with target object assigned if selected 
+###################################################      
+
+class addCast(bpy.types.Operator):
+    """Add a Cast modifier with, use selected empty as target object"""
+    bl_label = "Add Cast Modifier"
+    bl_idname = "object.add_cast"
+    bl_options = {'REGISTER', 'UNDO'}
+       
+    
+    # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    # Add the modifier
+    def execute(self, context):
+        scene = bpy.context.scene
+        activeObj = context.active_object
+        targetObj = context.selected_objects
+        
+        # Add a array modifier
+        addMod("CAST")
+                
+        # Store the mesh object
+        selectedObj = activeObj        
+        
+        # Set status of array object usage
+        useCastObj = False
+        
+        # If a second object is not selected, don't use mirror object
+        if len(targetObj) > 1:
+            useCastObj = True
+
+        # Make the targetObj active
+        try:
+            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
+        except:
+            pass
+                
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Swap the selected and active objects
+        selectedObj, activeObj = activeObj, selectedObj
+        
+        # Deselect the empty object and select the mesh object again, making it active
+        selectedObj.select = False
+        activeObj.select = True
+        scene.objects.active = activeObj
+        
+        # Find the added modifier, and check for status of useCastObj
+        if useCastObj == True:
+            for mod in activeObj.modifiers:
+                if mod.type == 'CAST':
+                    if useCastObj:
+                        mod.object = bpy.data.objects[selectedObj.name]
+                        self.report({'INFO'}, "Assigned target object to cast modifier")      
+
+        return {"FINISHED"}
+
 
 ################################################### 
 # Add a Screw modifier with an object axis set  
