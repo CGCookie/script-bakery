@@ -178,18 +178,25 @@ class addBoolean(bpy.types.Operator):
     # Check to see if an object is selected
     @classmethod
     def poll(cls, context):
-        return len(context.selected_objects) > 0
+        if len(context.selected_objects) in range(1,3):
+            return True
     
     # Add the modifier
     def execute(self, context):
         scene = bpy.context.scene
         activeObj = context.active_object
-        targetObj = context.selected_objects
+        selected = context.selected_objects
 
-        addMod("BOOLEAN")        
+        addMod("BOOLEAN")
+        for obj in selected:
+            if obj != activeObj:
+                target = obj
+            for mod in activeObj.modifiers:
+                if mod.type == 'BOOLEAN':        
+                    mod.object = bpy.data.objects[target.name]
+            
 
-        assignTarget("BOOLEAN")
-        self.report({'INFO'}, "Assigned second object to modifier")  
+        self.report({'INFO'}, "Assigned second object to boolean modifier")  
 
         return {"FINISHED"}
 
