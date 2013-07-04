@@ -1,43 +1,62 @@
 import bpy
 from bpy import ops
 
-################################################### 
-# Convienence variables
-################################################### 
+
+### ----------------------- Convienence variables ----------------------- ###
 
 applyModifier = ops.object.modifier_apply
 
 
-### ------------ New Operators ------------ ###
+### ----------------------- Object Operators ----------------------- ###
 
 
 ################################################### 
-# Set object origin to center of current mesh selection in edit mdoe   
+# Add empty at cursor, making it inactively selected. Also assign empty to modifiers if necessary.   
 ################################################### 
 
-class setObjectOrigin(bpy.types.Operator):
-    """Set Object Origin To Center Of Current Mesh Selection"""
-    bl_idname = "mesh.set_object_origin"
-    bl_label = "Set origin to the selection center"
-    bl_options = {'REGISTER', 'UNDO'}    
+class addTarget(bpy.types.Operator):
+    """Add an inactive, selected Empty Object as a modifier target"""
+    bl_label = "Add an unactive Empty Object"""
+    bl_idname = "object.empty_add_unactive"
+    bl_options = {'REGISTER', 'UNDO'}
     
+    @classmethod
+    def poll(cls, context):
+        if len(context.selected_objects) > 0:
+            return True
+        return False
+
     def execute(self, context):
-        mode = bpy.context.object.mode
-        if mode != 'EDIT':
-            # If user is not in object mode, don't run the operator and report reason to the Info header
-            self.report({'INFO'}, "Must be run in Edit Mode")
-        else:
-            # Set the 3D Cursor to the selected mesh and then center the origin
-            # in object mode followed by returning to edit mode.
-            ops.view3d.snap_cursor_to_selected()
-            ops.object.mode_set(mode='OBJECT')
-            ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
-            ops.object.mode_set(mode='EDIT')
-            
+        scene = context.scene
+        activeObj = context.active_object
+        currentObj = activeObj
+        selected = context.selected_objects
+
+        
+        for obj in selected:
+            if obj.type == 'EMPTY':
+                break
+            elif obj.type != 'EMPTY':
+                ops.object.empty_add(type='PLAIN_AXES')
+                for obj in selected:
+                    obj.select = True
+                scene.objects.active = activeObj
+                selected = context.selected_objects
+           
+        for obj in selected:
+            for mod in obj.modifiers:
+                modifier = mod.type
+                assignTarget(modifier)
+                if assignTarget(modifier) is True:
+                    self.report({'INFO'}, "Assigned target to " + modifier.lower() + " modifier")
+    
         return {"FINISHED"}
+        
 
+################################################### 
+# Assign target empty object to specified modifier   
+###################################################
 
-############ Dev code to consolidate smart mods into a function #############
 def assignTarget(modifier):
 
     scene = bpy.context.scene
@@ -81,80 +100,7 @@ def assignTarget(modifier):
 
     return {"FINISHED"}
 
-################################################### 
-# Add empty at cursor, making it inactively selected. Also assign empty to modifiers if necessary.   
-################################################### 
 
-class addTarget(bpy.types.Operator):
-    """Add an inactive, selected Empty Object as a modifier target"""
-    bl_label = "Add an unactive Empty Object"""
-    bl_idname = "object.empty_add_unactive"
-    bl_options = {'REGISTER', 'UNDO'}
-    
-    @classmethod
-    def poll(cls, context):
-        if len(context.selected_objects) > 0:
-            return True
-        return False
-
-    def execute(self, context):
-        scene = context.scene
-        activeObj = context.active_object
-        currentObj = activeObj
-        selected = context.selected_objects
-
-        
-        for obj in selected:
-            if obj.type == 'EMPTY':
-                break
-            elif obj.type != 'EMPTY':
-                ops.object.empty_add(type='PLAIN_AXES')
-                for obj in selected:
-                    obj.select = True
-                scene.objects.active = activeObj
-                selected = context.selected_objects
-           
-        for obj in selected:
-            for mod in obj.modifiers:
-                modifier = mod.type
-                assignTarget(modifier)
-                if assignTarget(modifier) is True:
-                    self.report({'INFO'}, "Assigned target to " + modifier.lower() + " modifier")
-    
-        return {"FINISHED"}
-
-        
-################################################### 
-# Add a Subsurf Modifier at level 2 and optimal display enabled   
-################################################### 
-
-class addSubsurf(bpy.types.Operator):
-    """Add a Subsurf modifier at level 2 with Optimal Display"""
-    bl_label = "Add a Subsurf Modifier"
-    bl_idname = "object.add_subsurf"
-    bl_options = {'REGISTER', 'UNDO'}
-    
-    @classmethod
-    def poll(cls, context):
-        return len(context.selected_objects) > 0
-
-    def execute(self, context):       
-        scene = context.scene
-        sel = context.selected_objects
-        
-        for obj in sel:
-            scene.objects.active = obj
-            ops.object.modifier_add(type='SUBSURF')
-            print("Added Subsurf Modifier")
-        
-            for mod in obj.modifiers:
-                if mod.type == 'SUBSURF':
-                    mod.show_only_control_edges = True
-                    mod.levels = 2
-                
-        return {"FINISHED"}
-        
-       
 ################################################### 
 # Add Modifier function, for use with smart mod classes.  
 ################################################### 
@@ -163,6 +109,71 @@ def addMod(modifier):
     ops.object.modifier_add(type=modifier)
     return {"FINISHED"}
 
+
+################################################### 
+# Add an Array modifier with object offset enabled 
+###################################################      
+
+class addArray(bpy.types.Operator):
+    """Add a Array modifier with object offset, use 2nd selected object as offset object"""
+    bl_label = "Add Array Modifier"
+    bl_idname = "object.add_array"
+    bl_options = {'REGISTER', 'UNDO'}
+       
+    
+    # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    # Add the modifier
+    def execute(self, context):
+        scene = bpy.context.scene
+        activeObj = context.active_object
+        targetObj = context.selected_objects
+        
+        # Add a array modifier
+        addMod("ARRAY")
+                
+        # Store the mesh object
+        selectedObj = activeObj        
+        
+        # Set status of array object usage
+        useArrayObj = False
+        
+        # If a second object is not selected, don't use mirror object
+        if len(targetObj) > 1:
+            useArrayObj = True
+
+        # Make the targetObj active
+        try:
+            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
+        except:
+            pass
+                
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Swap the selected and active objects
+        selectedObj, activeObj = activeObj, selectedObj
+        
+        # Deselect the empty object and select the mesh object again, making it active
+        selectedObj.select = False
+        activeObj.select = True
+        scene.objects.active = activeObj
+        
+        # Find the added modifier, and check for status of useArrayObj
+        if useArrayObj == True:
+            for mod in activeObj.modifiers:
+                if mod.type == 'ARRAY':
+                    mod.use_relative_offset = False
+                    mod.use_object_offset = True
+                    if useArrayObj:
+                        mod.offset_object = bpy.data.objects[selectedObj.name]
+                        self.report({'INFO'}, "Assigned target object to modifier")      
+
+        return {"FINISHED"}
+            
 
 ################################################### 
 # Add an Boolean modifier with second object as target 
@@ -197,6 +208,69 @@ class addBoolean(bpy.types.Operator):
             
 
         self.report({'INFO'}, "Assigned second object to boolean modifier")  
+
+        return {"FINISHED"}
+
+
+################################################### 
+# Add an Cast modifier with target object assigned if selected 
+###################################################      
+
+class addCast(bpy.types.Operator):
+    """Add a Cast modifier with, use selected empty as target object"""
+    bl_label = "Add Cast Modifier"
+    bl_idname = "object.add_cast"
+    bl_options = {'REGISTER', 'UNDO'}
+       
+    
+    # Check to see if an object is selected
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+    
+    # Add the modifier
+    def execute(self, context):
+        scene = bpy.context.scene
+        activeObj = context.active_object
+        targetObj = context.selected_objects
+        
+        # Add a array modifier
+        addMod("CAST")
+                
+        # Store the mesh object
+        selectedObj = activeObj        
+        
+        # Set status of array object usage
+        useCastObj = False
+        
+        # If a second object is not selected, don't use mirror object
+        if len(targetObj) > 1:
+            useCastObj = True
+
+        # Make the targetObj active
+        try:
+            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
+        except:
+            pass
+                
+        # Check for active object
+        activeObj = context.active_object
+        
+        # Swap the selected and active objects
+        selectedObj, activeObj = activeObj, selectedObj
+        
+        # Deselect the empty object and select the mesh object again, making it active
+        selectedObj.select = False
+        activeObj.select = True
+        scene.objects.active = activeObj
+        
+        # Find the added modifier, and check for status of useCastObj
+        if useCastObj == True:
+            for mod in activeObj.modifiers:
+                if mod.type == 'CAST':
+                    if useCastObj:
+                        mod.object = bpy.data.objects[selectedObj.name]
+                        self.report({'INFO'}, "Assigned target object to cast modifier")      
 
         return {"FINISHED"}
 
@@ -338,133 +412,6 @@ class addLattice(bpy.types.Operator):
 
         return {"FINISHED"}
 
-################################################### 
-# Add an Array modifier with object offset enabled 
-###################################################      
-
-class addArray(bpy.types.Operator):
-    """Add a Array modifier with object offset, use 2nd selected object as offset object"""
-    bl_label = "Add Array Modifier"
-    bl_idname = "object.add_array"
-    bl_options = {'REGISTER', 'UNDO'}
-       
-    
-    # Check to see if an object is selected
-    @classmethod
-    def poll(cls, context):
-        return len(context.selected_objects) > 0
-    
-    # Add the modifier
-    def execute(self, context):
-        scene = bpy.context.scene
-        activeObj = context.active_object
-        targetObj = context.selected_objects
-        
-        # Add a array modifier
-        addMod("ARRAY")
-                
-        # Store the mesh object
-        selectedObj = activeObj        
-        
-        # Set status of array object usage
-        useArrayObj = False
-        
-        # If a second object is not selected, don't use mirror object
-        if len(targetObj) > 1:
-            useArrayObj = True
-
-        # Make the targetObj active
-        try:
-            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
-        except:
-            pass
-                
-        # Check for active object
-        activeObj = context.active_object
-        
-        # Swap the selected and active objects
-        selectedObj, activeObj = activeObj, selectedObj
-        
-        # Deselect the empty object and select the mesh object again, making it active
-        selectedObj.select = False
-        activeObj.select = True
-        scene.objects.active = activeObj
-        
-        # Find the added modifier, and check for status of useArrayObj
-        if useArrayObj == True:
-            for mod in activeObj.modifiers:
-                if mod.type == 'ARRAY':
-                    mod.use_relative_offset = False
-                    mod.use_object_offset = True
-                    if useArrayObj:
-                        mod.offset_object = bpy.data.objects[selectedObj.name]
-                        self.report({'INFO'}, "Assigned target object to modifier")      
-
-        return {"FINISHED"}
-            
-
-################################################### 
-# Add an Cast modifier with target object assigned if selected 
-###################################################      
-
-class addCast(bpy.types.Operator):
-    """Add a Cast modifier with, use selected empty as target object"""
-    bl_label = "Add Cast Modifier"
-    bl_idname = "object.add_cast"
-    bl_options = {'REGISTER', 'UNDO'}
-       
-    
-    # Check to see if an object is selected
-    @classmethod
-    def poll(cls, context):
-        return len(context.selected_objects) > 0
-    
-    # Add the modifier
-    def execute(self, context):
-        scene = bpy.context.scene
-        activeObj = context.active_object
-        targetObj = context.selected_objects
-        
-        # Add a array modifier
-        addMod("CAST")
-                
-        # Store the mesh object
-        selectedObj = activeObj        
-        
-        # Set status of array object usage
-        useCastObj = False
-        
-        # If a second object is not selected, don't use mirror object
-        if len(targetObj) > 1:
-            useCastObj = True
-
-        # Make the targetObj active
-        try:
-            scene.objects.active = [obj for obj in targetObj if obj != activeObj][0]
-        except:
-            pass
-                
-        # Check for active object
-        activeObj = context.active_object
-        
-        # Swap the selected and active objects
-        selectedObj, activeObj = activeObj, selectedObj
-        
-        # Deselect the empty object and select the mesh object again, making it active
-        selectedObj.select = False
-        activeObj.select = True
-        scene.objects.active = activeObj
-        
-        # Find the added modifier, and check for status of useCastObj
-        if useCastObj == True:
-            for mod in activeObj.modifiers:
-                if mod.type == 'CAST':
-                    if useCastObj:
-                        mod.object = bpy.data.objects[selectedObj.name]
-                        self.report({'INFO'}, "Assigned target object to cast modifier")      
-
-        return {"FINISHED"}
-
 
 ################################################### 
 # Add a Screw modifier with an object axis set  
@@ -531,6 +478,195 @@ class addScrew(bpy.types.Operator):
                     self.report({'INFO'}, "Assigned target axis object to modifier")      
 
         return {"FINISHED"}
+
+
+################################################### 
+# Add a Remesh Modifier with Smooth set as the type   
+################################################### 
+
+class addRemesh(bpy.types.Operator):
+    """Add a Smooth Remesh Modifier"""
+    bl_label = "Smooth Remesh"
+    bl_idname = "object.smooth_remesh"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        # 
+        return not context.sculpt_object.use_dynamic_topology_sculpting
+
+    def execute(self, context):
+        ops.object.modifier_add(type='REMESH')
+        context.object.modifiers['Remesh'].mode = 'SMOOTH'
+        return {"FINISHED"}
+
+
+################################################### 
+# Apply any remesh modifiers   
+################################################### 
+
+class applyRemesh(bpy.types.Operator):
+    """Apply only Remesh Modifiers"""
+    bl_label = "Apply Only Remesh Modifiers"
+    bl_idname = "object.apply_remesh"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    # test if it is possible to apply a remesh modifier
+    @classmethod    
+    def poll(cls, context):
+
+        # get the active object
+        obj = context.active_object
+
+        # test if there's an active object
+        if obj:
+            # find modifiers with "REMESH" type
+            for mod in obj.modifiers:
+                if mod.type == 'REMESH':
+                    return True
+        return False
+
+    def execute(self, context):
+
+        #check for active object
+        obj = context.active_object
+
+        # If any remesh modifiers exist on object, apply them.
+        for mod in obj.modifiers:
+            if mod.type == 'REMESH':
+                applyModifier(apply_as='DATA', modifier=mod.name)
+                self.report({'INFO'}, "Applied remesh modifier(s)")   
+
+        return {"FINISHED"}
+
+
+################################################### 
+# Add a Subsurf Modifier at level 2 and optimal display enabled   
+################################################### 
+
+class addSubsurf(bpy.types.Operator):
+    """Add a Subsurf modifier at level 2 with Optimal Display"""
+    bl_label = "Add a Subsurf Modifier"
+    bl_idname = "object.add_subsurf"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+
+    def execute(self, context):       
+        scene = context.scene
+        sel = context.selected_objects
+        
+        for obj in sel:
+            scene.objects.active = obj
+            ops.object.modifier_add(type='SUBSURF')
+            print("Added Subsurf Modifier")
+        
+            for mod in obj.modifiers:
+                if mod.type == 'SUBSURF':
+                    mod.show_only_control_edges = True
+                    mod.levels = 2
+                
+        return {"FINISHED"}
+      
+        
+################################################### 
+# Apply only subsurf modifiers   
+################################################### 
+
+class applySubsurf(bpy.types.Operator):
+    """Apply only Subsurf Modifiers"""
+    bl_label = "Apply Only Subsurf Modifiers"
+    bl_idname = "object.apply_subsurf"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    # Test if it is possible to apply a subsurf modifier, thanks to Richard Van Der Oost
+    @classmethod    
+    def poll(cls, context):
+        # Get the active object
+        obj = context.active_object
+
+        # Test if there's an active object
+        if obj:
+
+           # Find modifiers with "SUBSURF" type
+           for mod in obj.modifiers:
+               if mod.type == 'SUBSURF':
+                   return True
+        return False
+    
+    def execute(self, context):
+
+        #check for active object
+        obj = context.active_object    
+
+        # If any subsurf modifiers exist on object, apply them.
+        for mod in obj.modifiers:
+            if mod.type == 'SUBSURF':
+                applyModifier(apply_as='DATA', modifier=mod.name)
+                self.report({'INFO'}, "Applied Subsurf modifier(s)")   
+        
+        return {"FINISHED"}
+
+
+################################################### 
+# Apply all modifiers on the active object
+################################################### 
+
+class applyModifiers(bpy.types.Operator):
+    """Apply all modifiers on selected objects"""
+    bl_label = "Apply All Modifiers"
+    bl_idname = "object.apply_modifiers"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        # Make sure there's a selected object and that that object has modifiers to apply
+        return len(context.selected_objects) > 0 and len(context.active_object.modifiers) > 0
+   
+    def execute(self, context):
+
+        sel = context.selected_objects
+        for obj in sel:
+            # set the current object in the loop to active
+            context.scene.objects.active = obj
+            
+            # If any modifiers exist on current object object, apply them.
+            for mod in obj.modifiers:
+                applyModifier(apply_as='DATA', modifier=mod.name)
+
+            # maybe for debug you might do an 'applied to obj.name' in before
+            # iterating to the next
+            
+        self.report({'INFO'}, "Applied all modifiers on selected objects")   
+        return {"FINISHED"} 
+
+
+################################################### 
+# Remove all modifiers on selected objects
+###################################################
+
+class removeModifiers(bpy.types.Operator):
+    """Remove Modifiers From Selected Objects"""
+    bl_idname = "object.modifier_remove_all"
+    bl_label = "Remove modifiers on all selected objects"
+    bl_options = {'REGISTER', 'UNDO'}    
+    
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+
+    def execute(self, context):
+        selected = context.selected_objects
+        
+        for obj in selected:
+            context.scene.objects.active = obj
+            for mod in obj.modifiers:
+                ops.object.modifier_remove(modifier=mod.name)
+        self.report({'INFO'}, "Removed all modifiers on selected objects")
+        return {'FINISHED'}
+
 
 ################################################### 
 # Halve the mesh and add a Mirror modifier   
@@ -603,163 +739,35 @@ class halveMesh(bpy.types.Operator):
             self.report({'INFO'}, "Mesh half removed")
 
         return {'FINISHED'}
-    
-    
-################################################### 
-# Apply only subsurf modifiers   
-################################################### 
-
-class applySubsurf(bpy.types.Operator):
-    """Apply only Subsurf Modifiers"""
-    bl_label = "Apply Only Subsurf Modifiers"
-    bl_idname = "object.apply_subsurf"
-    bl_options = {'REGISTER', 'UNDO'}
-    
-    # Test if it is possible to apply a subsurf modifier, thanks to Richard Van Der Oost
-    @classmethod    
-    def poll(cls, context):
-        # Get the active object
-        obj = context.active_object
-
-        # Test if there's an active object
-        if obj:
-
-           # Find modifiers with "SUBSURF" type
-           for mod in obj.modifiers:
-               if mod.type == 'SUBSURF':
-                   return True
-        return False
-    
-    def execute(self, context):
-
-        #check for active object
-        obj = context.active_object    
-
-        # If any subsurf modifiers exist on object, apply them.
-        for mod in obj.modifiers:
-            if mod.type == 'SUBSURF':
-                applyModifier(apply_as='DATA', modifier=mod.name)
-                self.report({'INFO'}, "Applied Subsurf modifier(s)")   
-        
-        return {"FINISHED"}
-    
-    
-################################################### 
-# Add a Remesh Modifier with Smooth set as the type   
-################################################### 
-
-class addRemesh(bpy.types.Operator):
-    """Add a Smooth Remesh Modifier"""
-    bl_label = "Smooth Remesh"
-    bl_idname = "object.smooth_remesh"
-    bl_options = {'REGISTER', 'UNDO'}
-    
-    @classmethod
-    def poll(cls, context):
-        # 
-        return not context.sculpt_object.use_dynamic_topology_sculpting
-
-    def execute(self, context):
-        ops.object.modifier_add(type='REMESH')
-        context.object.modifiers['Remesh'].mode = 'SMOOTH'
-        return {"FINISHED"}
-
 
 
 ################################################### 
-# Apply any remesh modifiers   
+# Set object origin to center of current mesh selection in edit mdoe   
 ################################################### 
 
-class applyRemesh(bpy.types.Operator):
-    """Apply only Remesh Modifiers"""
-    bl_label = "Apply Only Remesh Modifiers"
-    bl_idname = "object.apply_remesh"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    # test if it is possible to apply a remesh modifier
-    @classmethod    
-    def poll(cls, context):
-
-        # get the active object
-        obj = context.active_object
-
-        # test if there's an active object
-        if obj:
-            # find modifiers with "REMESH" type
-            for mod in obj.modifiers:
-                if mod.type == 'REMESH':
-                    return True
-        return False
-
-    def execute(self, context):
-
-        #check for active object
-        obj = context.active_object
-
-        # If any remesh modifiers exist on object, apply them.
-        for mod in obj.modifiers:
-            if mod.type == 'REMESH':
-                applyModifier(apply_as='DATA', modifier=mod.name)
-                self.report({'INFO'}, "Applied remesh modifier(s)")   
-
-        return {"FINISHED"}
-
-
-################################################### 
-# Apply all modifiers on the active object
-################################################### 
-
-class applyModifiers(bpy.types.Operator):
-    """Apply all modifiers on selected objects"""
-    bl_label = "Apply All Modifiers"
-    bl_idname = "object.apply_modifiers"
-    bl_options = {'REGISTER', 'UNDO'}
-    
-    @classmethod
-    def poll(cls, context):
-        # Make sure there's a selected object and that that object has modifiers to apply
-        return len(context.selected_objects) > 0 and len(context.active_object.modifiers) > 0
-   
-    def execute(self, context):
-
-        sel = context.selected_objects
-        for obj in sel:
-            # set the current object in the loop to active
-            context.scene.objects.active = obj
-            
-            # If any modifiers exist on current object object, apply them.
-            for mod in obj.modifiers:
-                applyModifier(apply_as='DATA', modifier=mod.name)
-
-            # maybe for debug you might do an 'applied to obj.name' in before
-            # iterating to the next
-            
-        self.report({'INFO'}, "Applied all modifiers on selected objects")   
-        return {"FINISHED"}    
-
-################################################### 
-# Remove all modifiers on selected objects
-###################################################
-
-class removeModifiers(bpy.types.Operator):
-    """Remove Modifiers From Selected Objects"""
-    bl_idname = "object.modifier_remove_all"
-    bl_label = "Remove modifiers on all selected objects"
+class setObjectOrigin(bpy.types.Operator):
+    """Set Object Origin To Center Of Current Mesh Selection"""
+    bl_idname = "mesh.set_object_origin"
+    bl_label = "Set origin to the selection center"
     bl_options = {'REGISTER', 'UNDO'}    
     
-    @classmethod
-    def poll(cls, context):
-        return len(context.selected_objects) > 0
-
     def execute(self, context):
-        selected = context.selected_objects
-        
-        for obj in selected:
-            context.scene.objects.active = obj
-            for mod in obj.modifiers:
-                ops.object.modifier_remove(modifier=mod.name)
-        self.report({'INFO'}, "Removed all modifiers on selected objects")
-        return {'FINISHED'}
+        mode = bpy.context.object.mode
+        if mode != 'EDIT':
+            # If user is not in object mode, don't run the operator and report reason to the Info header
+            self.report({'INFO'}, "Must be run in Edit Mode")
+        else:
+            # Set the 3D Cursor to the selected mesh and then center the origin
+            # in object mode followed by returning to edit mode.
+            ops.view3d.snap_cursor_to_selected()
+            ops.object.mode_set(mode='OBJECT')
+            ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
+            ops.object.mode_set(mode='EDIT')
+            
+        return {"FINISHED"}
+
+
+### ----------------------- Sculpt Operators ----------------------- ###
 
 
 ################################################### 
@@ -815,6 +823,7 @@ class sculptAxisLock(bpy.types.Operator):
             context.tool_settings.sculpt.lock_z = not lock_z
         return {"FINISHED"}
 
+
 ################################################### 
 # Creating operator for toggling collapse short edges
 ################################################### 
@@ -836,8 +845,11 @@ class sculptCollapseShortEdges(bpy.types.Operator):
         context.scene.tool_settings.sculpt.use_edge_collapse = not shortEdges
         return {"FINISHED"}
 
+
+### ----------------------- Display Operators ----------------------- ###
+
 ################################################### 
-# Creating operator for toggling double sided
+# Operator for toggling double sided on selected objects
 ################################################### 
 
 class objectDoubleSided(bpy.types.Operator):
@@ -861,7 +873,7 @@ class objectDoubleSided(bpy.types.Operator):
         return {"FINISHED"}
 
 ################################################### 
-# Creating operator for toggling all edges wire
+# Operator for toggling all edges wire on selected objects
 ################################################### 
 
 class allEdgesWire(bpy.types.Operator):
