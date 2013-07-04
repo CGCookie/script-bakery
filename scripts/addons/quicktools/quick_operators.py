@@ -536,7 +536,7 @@ class addScrew(bpy.types.Operator):
 # Halve the mesh and add a Mirror modifier   
 ################################################### 
 
-def halve_mesh(self, context):
+def select_off_center(self, context):
 
     obj = context.active_object.data
 
@@ -575,13 +575,8 @@ class halveMesh(bpy.types.Operator):
                     ops.object.mode_set(mode='OBJECT')
                     
                     # Find verts left of center and select them
-                    halve_mesh(self, context)
+                    select_off_center(self, context)
 
-                    # for verts in obj.vertices:
-                    #     if verts.co.x < -0.001:    
-                    #         verts.select = True
-                            
-                    # Toggle edit mode and delete the selection
                     ops.object.mode_set(mode='EDIT')
                     ops.mesh.delete(type='VERT')
                     
@@ -599,7 +594,7 @@ class halveMesh(bpy.types.Operator):
             ops.object.mode_set(mode='OBJECT')
             
             # Find verts left of center and select them
-            halve_mesh(self, context)
+            select_off_center(self, context)
                     
             # Toggle edit mode and delete the selection
             ops.object.mode_set(mode='EDIT')
