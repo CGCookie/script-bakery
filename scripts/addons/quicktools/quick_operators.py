@@ -872,6 +872,18 @@ class objectDoubleSided(bpy.types.Operator):
         scene.objects.active = origActive
         return {"FINISHED"}
 
+class renderOnly(bpy.types.Operator):
+    """Set Display Mode To Show Only Render Results"""
+    bl_label = "Toggle Only Render"
+    bl_idname = "scene.show_only_render"
+    bl_description = "Set viewport display mode to render only"
+
+    def execute(self, context):
+        only_render = context.space_data.show_only_render
+        context.space_data.show_only_render = not only_render
+
+        return {"FINISHED"}
+
 ################################################### 
 # Operator for toggling all edges wire on selected objects
 ################################################### 

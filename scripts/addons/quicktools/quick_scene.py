@@ -9,6 +9,12 @@ class QuickSceneOptions(bpy.types.Menu):
 
 	    layout.operator("gpencil.active_frame_delete", "Delete Grease", icon='GREASEPENCIL')
 
+	    only_render = context.space_data.show_only_render
+	    if only_render:
+		    layout.operator("scene.show_only_render", "Disable Only Render")
+	    else:
+	    	layout.operator("scene.show_only_render", "Show Only Render")
+	    	
 def register():
 	bpy.utils.register_class(QuickSceneOptions)
 
