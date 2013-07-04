@@ -8,7 +8,7 @@ Created on Apr 23, 2013
 
 import bpy
 import math
-from mathutils import Vector
+from mathutils import Vector, Quaternion
 from mathutils.geometry import intersect_point_line, intersect_line_plane
 import contour_utilities
 from bpy_extras.view3d_utils import location_3d_to_region_2d
@@ -20,6 +20,7 @@ import blf
 class ContourControlPoint(object):
     
     def __init__(self, parent, x, y, color = (1,0,0,1), size = 2, mouse_radius=10):
+        self.desc = 'CONTROL_POINT'
         self.x = x
         self.y = y
         self.world_position = None #to be updated later
@@ -49,6 +50,7 @@ class ContourControlPoint(object):
 
 class ExistingVertList(object):
     def __init__(self, verts, edges, mx):
+        self.desc = 'EXISTING_VERT_LIST'
         
         edge_keys = [[ed.verts[0].index, ed.verts[1].index] for ed in edges]
         remaining_keys = [i for i in range(1,len(edge_keys))]
@@ -91,8 +93,10 @@ class ContourCutLine(object):
     def __init__(self, x, y, view_dir, line_width = 3,
                  line_color = (0,0,1,1), 
                  handle_color = (1,0,0,1),
-                 geom_color = (0,1,0,1)):
+                 geom_color = (0,1,0,1),
+                 vert_color = (0,.2,1,1)):
         
+        self.desc = "CUT_LINE"
         self.head = ContourControlPoint(self,x,y, color = handle_color)
         self.tail = ContourControlPoint(self,x,y, color = handle_color)
         self.plane_tan = ContourControlPoint(self,x,y, color = (.8,.8,.8,1))
@@ -100,9 +104,16 @@ class ContourCutLine(object):
         self.target = None
         self.depth = None #perhaps we need a depth value? 
         self.updated = False
-        self.plane_pt = None
-        self.plane_com = None  #this will evenentually replace the plane pt?
+        self.plane_pt = None  #this will be a point on an object surface...calced after ray_casting
+        self.plane_com = None  #this will be a point in the object interior, calced after cutting a contour
         self.plane_no = None
+        
+        #these points will definte two orthogonal vectors
+        #which lie tangent to the plane...which we can use
+        #to draw a little widget on the COM
+        self.plane_x = None
+        self.plane_y = None
+        self.plane_z = None
         
         self.seed_face_index = None
         
@@ -125,11 +136,13 @@ class ContourCutLine(object):
         self.line_width = line_width
         self.line_color = line_color
         self.geom_color = geom_color
+        self.vert_color = vert_color
         
     def update_screen_coords(self,context):
         self.verts_screen = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in self.verts]
         self.verts_simple_screen = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in self.verts_simple]
-            
+        
+          
     def draw(self,context, settings, three_dimensional = True):
         '''
         setings are the addon preferences for contour tools
@@ -147,6 +160,15 @@ class ContourCutLine(object):
         if self.plane_tan.world_position:
             self.plane_tan.screen_from_world(context)
             
+        if debug > 1:
+            if self.plane_com:
+                contour_utilities.draw_3d_points(context, [self.plane_com], (0,1,0,1), 4)
+            if self.plane_x:
+                contour_utilities.draw_3d_points(context, [self.plane_x], (1,1,0,1), 6)
+            if self.plane_y:
+                contour_utilities.draw_3d_points(context, [self.plane_y], (0,1,1,1), 6)
+            if self.plane_z:
+                contour_utilities.draw_3d_points(context, [self.plane_z], (1,0,1,1), 6)  
         
         #draw connecting line
         points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
@@ -167,13 +189,15 @@ class ContourCutLine(object):
         
         #draw the raw contour vertices
         if (self.verts and self.verts_simple == []) or (debug > 0 and settings.show_verts):
+            
             if three_dimensional:
-                contour_utilities.draw_3d_points(context, self.verts, (0,1,.2,1), settings.raw_vert_size)
+                
+                contour_utilities.draw_3d_points(context, self.verts, self.vert_color, settings.raw_vert_size)
             else:    
-                contour_utilities.draw_points(context, self.verts_screen, (0,1,.2,1), settings.raw_vert_size)
+                contour_utilities.draw_points(context, self.verts_screen, self.vert_color, settings.raw_vert_size)
         
         #draw the simplified contour vertices and edges (rings)    
-        if self.verts_simple:
+        if self.verts !=[] and self.eds != []:
             if three_dimensional:
                 points = self.verts_simple.copy()
             else:
@@ -185,11 +209,11 @@ class ContourCutLine(object):
             #draw the points over it
             if settings.show_ring_edges:
                 if three_dimensional:
-                    contour_utilities.draw_polyline_from_3dpoints(context, points, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
-                    contour_utilities.draw_3d_points(context, points, (0,.2,1,1), settings.vert_size)
+                    contour_utilities.draw_polyline_from_3dpoints(context, points, self.geom_color, settings.line_thick,"GL_LINE_STIPPLE")
+                    contour_utilities.draw_3d_points(context, points, self.vert_color, settings.vert_size)
                 else:
-                    contour_utilities.draw_polyline_from_points(context, points, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
-                    contour_utilities.draw_points(context,points, (0,.2,1,1), settings.vert_size)
+                    contour_utilities.draw_polyline_from_points(context, points, self.geom_color, settings.line_thick,"GL_LINE_STIPPLE")
+                    contour_utilities.draw_points(context,points, self.vert_color, settings.vert_size)
             if debug:
                 if settings.vert_inds:
                     for i, point in enumerate(self.verts):
@@ -255,24 +279,38 @@ class ContourCutLine(object):
                 return self.plane_pt
             
         elif method == 'HANDLE':
-            
-            #the midpoint between the two vectors
-            b = .5 * (self.head.world_position + self.tail.world_position)
-            a = self.plane_tan.world_position
-            
-            z = a - b
-            x = self.head.world_position - self.tail.world_position
-            self.plane_no = z.cross(x).normalized()
-            
             mx = ob.matrix_world
-            imx = mx.inverted() 
-            hit = ob.ray_cast(imx * (a + 5 * z), imx * (b - 5 * z))
+            imx = mx.inverted()
+            print('HANDLE HANDLE HANLDE HANLDE HNDAL')
+            if not self.plane_com:
+                print('using the handles and line')
+                #the midpoint between the two vectors
+                b = .5 * (self.head.world_position + self.tail.world_position)
+                a = self.plane_tan.world_position
+                
+                z = a - b
+                x = self.head.world_position - self.tail.world_position
+                self.plane_no = z.cross(x).normalized()
+                
+
+                hit = ob.ray_cast(imx * (a + 5 * z), imx * (b - 5 * z))
+                
+            else:
+                print('using center of mass and plane tan')
+                b = self.plane_com
+                a = self.plane_tan.world_position
+                z = a - b
+                hit = ob.ray_cast(imx * b, imx * (b + 30 * z))
+                if hit[2] == -1:
+                    hit = ob.ray_cast(imx * b, imx * (b - 30 * z))
+            
             if hit[2] != -1:
                 self.plane_pt = mx * hit[0]
                 self.seed_face_index = hit[2]
                 
-                self.head.world_position = self.plane_pt + .5*x
-                self.tail.world_position = self.plane_pt - .5*x
+                #TODO...fix this ish
+                #self.head.world_position = self.plane_pt + .5*x
+                #self.tail.world_position = self.plane_pt - .5*x
                 
             else:
                 self.plane_pt = None
@@ -309,10 +347,44 @@ class ContourCutLine(object):
             self.eds = []
             print('no hit! aim better')
         
-    def simplify_cross(self,segments):
+    def simplify_cross(self,segments, update_com = True, update_tan = True):
         if self.verts !=[] and self.eds != []:
             [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments, self.shift)
+            
+            if update_com:
+                self.plane_com = contour_utilities.get_com(self.verts_simple)
+            if update_tan:
+                self.plane_tan.world_position = self.verts_simple[0]
+                
+    def derive_3_axis_control(self, n = 0):
+        
+        if len(self.verts_simple) and self.plane_com:
+            #put the com as the contorl point?
             self.plane_com = contour_utilities.get_com(self.verts_simple)
+            
+            #y vector
+            y_vector = self.verts_simple[n] - self.plane_com
+            y_vector.normalize()
+            
+            #x vector
+            x_vector = y_vector.cross(self.plane_no)
+            x_vector.normalize()
+            
+            
+            #now the 4 points are in world space
+            #we could use a vector...but transforming
+            #to screen can be tricky with vectors as
+            #opposed to locations.
+            self.plane_x = self.plane_com + x_vector
+            self.plane_y = self.plane_com + y_vector
+            self.plane_z = self.plane_com + z_vector
+            
+            
+            
+            
+        
+        
+        
     def analyze_relationship(self, other,debug = False):
         '''
         runs a series of quantitative assemsents of the spatial relationship
@@ -603,6 +675,21 @@ class ContourCutLine(object):
         
 
         if len(self.verts_simple):
+            mouse_loc = Vector((x,y))
+            #Check by testing distance to all edges
+            active_self = False
+            for ed in self.eds_simple:
+                
+                a = self.verts_simple_screen[ed[0]]
+                b = self.verts_simple_screen[ed[1]]
+                intersect = intersect_point_line(mouse_loc, a, b)
+        
+                dist = (intersect[0] - mouse_loc).length_squared
+                bound = intersect[1]
+                if (dist < 100) and (bound < 1) and (bound > 0):
+                    active_self = True
+                    break
+            '''
             region = context.region  
             rv3d = context.space_data.region_3d
             vec = region_2d_to_vector_3d(region, rv3d, (x,y))
@@ -630,7 +717,7 @@ class ContourCutLine(object):
         dist = (intersect[0] - mouse_loc).length_squared
         bound = intersect[1]
         active_self = (dist < 100) and (bound < 1) and (bound > 0) #TODO:  make this a sensitivity setting
-        
+        '''
         if active_head and active_tail and active_self: #they are all clustered together
             #print('returning head but tail too')
             return self.head
@@ -659,9 +746,14 @@ class ContourCutLine(object):
 class CutLineManipulatorWidget(object):
     def __init__(self,context, settings, cut_line,x,y):
         
+        self.desc = 'WIDGET'
         self.cut_line = cut_line
         self.x = x
         self.y = y
+        
+        #this will get set later by interaction
+        self.transform = False
+        self.transform_mode = None
         
         
         self.color = (settings.widget_color[0], settings.widget_color[1],settings.widget_color[2],1)
@@ -675,9 +767,12 @@ class CutLineManipulatorWidget(object):
         
         self.arc_radius = .5 * (self.radius + self.inner_radius)
         self.screen_no = None
-        self.angle = 0.5 * math.pi
+        self.angle = 0
         
-        
+        #intitial conditions for "undo" kinda
+        self.initial_com = self.cut_line.plane_com.copy()
+        self.initial_tan = self.cut_line.plane_tan.world_position.copy()
+        self.initial_plane_no = self.cut_line.plane_no.copy()
         
         self.wedge_1 = []
         self.wedge_2 = []
@@ -690,29 +785,192 @@ class CutLineManipulatorWidget(object):
         self.arc_arrow_1 = []
         self.arc_arrow_2 = []
         
+
+        
+    def user_interaction(self, context, mouse_x,mouse_y):
+        '''
+        analyse mouse coords x,y
+        return [type, transform]
+        '''
+        
+        mouse_vec = Vector((mouse_x,mouse_y))
+        self_vec = Vector((self.x,self.y))
+        loc_vec = mouse_vec - self_vec
         
         
+        region = context.region  
+        rv3d = context.space_data.region_3d
+        world_mouse = region_2d_to_location_3d(region, rv3d, (mouse_x, mouse_y),self.cut_line.plane_com)
+        world_widget = region_2d_to_location_3d(region, rv3d, (self.x, self.y),self.cut_line.plane_com)
+        
+        if not self.transform:
+            
+            #this represents a switch...since by definition we were not transforming to begin with
+            if loc_vec.length > self.inner_radius:
+                self.transform = True
+                
+                #identify which quadrant we are in
+                screen_angle = math.atan2(loc_vec[1], loc_vec[0])
+                loc_angle = screen_angle - self.angle
+                loc_angle = math.fmod(loc_angle + 4 * math.pi, 2 * math.pi)  #correct for any negatives
+                
+                if loc_angle >= 1/4 * math.pi and loc_angle < 3/4 * math.pi:
+                    #we are in the  left quadrant...which is perpendicular
+                    self.transform_mode = 'NORMAL_TRANSLATE'
+                    
+                elif loc_angle >= 3/4 * math.pi and loc_angle < 5/4 * math.pi:
+                    self.transform_mode = 'EDGE_PARALLEL'
+                
+                elif loc_angle >= 5/4 * math.pi and loc_angle < 7/4 * math.pi:
+                    self.transform_mode = 'NORMAL_TRANSLATE'
+                
+                else:
+                    self.transform_mode = 'EDGE_PERPENDICULAR'
+                    
+                    
+                
+
+                print(loc_angle)
+                print(self.transform_mode)
+                
+            return None  #this tells it whether to recalc things
+            
+        else:
+            #we were transforming but went back in the circle
+            if loc_vec.length < self.inner_radius:
+                self.transform = False
+                self.transform_mode = None
+                
+                #reset our initial values
+                new_tan= self.initial_tan
+                new_com = self.initial_com
+                new_no = self.initial_plane_no
+                
+                return [new_com, new_no, new_tan, 'RESET']
+                
+            
+            else:
+                
+                if self.transform_mode == 'NORMAL_TRANSLATE':
+                    print('translating')
+                    #the pixel distance used to scale the translation
+                    screen_dist = loc_vec.length - self.inner_radius
+                    
+                    world_vec = world_mouse - world_widget
+                    translate = screen_dist/loc_vec.length * world_vec.dot(self.initial_plane_no) * self.initial_plane_no
+                    
+                    new_com = self.initial_com + translate
+                    new_tan = self.initial_tan + translate
+                    new_no = self.initial_plane_no
+                    
+                    return [new_com, new_no, new_tan, self.transform_mode]
+                
+                elif self.transform_mode in {'EDGE_PERPENDICULAR', 'EDGE_PARALLEL'}:
+                    
+                    #establish the transform axes
+                    screen_com = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com)
+                    vertical_screen_vec = Vector((math.cos(self.angle + .5 * math.pi), math.sin(self.angle + .5 * math.pi)))  #MYSTERY why isnt this pi/2
+                    screen_y = screen_com + vertical_screen_vec
+                    world_pre_y = region_2d_to_location_3d(region, rv3d, (screen_y[0], screen_y[1]),self.cut_line.plane_com)
+                    world_y = world_pre_y - self.cut_line.plane_com
+                    world_y_correct = world_y.dot(self.initial_plane_no)
+                    world_y = world_y - world_y_correct * self.initial_plane_no
+                    world_y.normalize()
+                    
+                    world_x = self.initial_plane_no.cross(world_y)
+                    world_x.normalize()
+                    self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
+                    self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
+                    self.cut_line.plane_z = self.cut_line.plane_com + 2 * self.initial_plane_no
+                    
+                    #identify which quadrant we are in
+                    screen_angle = math.atan2(loc_vec[1], loc_vec[0])
+                    
+                    if self.transform_mode == 'EDGE_PARALLEL':
+
+                    
+
+                        rot_angle = screen_angle - self.angle #+ .5 * math.pi  #Mystery
+                        rot_angle = math.fmod(rot_angle + 4 * math.pi, 2 * math.pi)  #correct for any negatives
+                        print('rotating by %f' % rot_angle)
+                        sin = math.sin(rot_angle/2)
+                        cos = math.cos(rot_angle/2)
+                        quat = Quaternion((cos, sin*world_x[0], sin*world_x[1], sin*world_x[2]))
+                        
+                        new_no = self.initial_plane_no.copy() #its not rotated yet
+                        new_no.rotate(quat)
+    
+                        #rotate around x axis...update y
+                        world_y = new_no.cross(world_x)
+                        new_com = self.initial_com
+                        new_tan = new_com + world_x
+                        
+                        
+                        self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
+                        self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
+                        self.cut_line.plane_z = self.cut_line.plane_com + 2 * new_no
+                    #self.cut_line.plane_no = new_normal
+                    
+                    else:
+                        rot_angle = screen_angle - self.angle + math.pi #+ .5 * math.pi  #Mystery
+                        rot_angle = math.fmod(rot_angle + 4 * math.pi, 2 * math.pi)  #correct for any negatives
+                        print('rotating by %f' % rot_angle)
+                        sin = math.sin(rot_angle/2)
+                        cos = math.cos(rot_angle/2)
+                        quat = Quaternion((cos, sin*world_y[0], sin*world_y[1], sin*world_y[2]))
+                        
+                        new_no = self.initial_plane_no.copy() #its not rotated yet
+                        new_no.rotate(quat)
+    
+                        #rotate around x axis...update y
+                        world_x = world_y.cross(new_no)
+                        new_com = self.initial_com
+                        new_tan = new_com + world_x
+                        
+                        
+                        self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
+                        self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
+                        self.cut_line.plane_z = self.cut_line.plane_com + 2 * new_no
+                    #return [new_com, new_no, new_tan]
+                    return[new_com, new_no, new_tan, self.transform_mode]
+        
+        #
+        #Tranfsorm mode = NORMAL_TANSLATE
+            #get the distance from mouse to self.x,y - inner radius
+            
+            #get the world distance by projecting both the original x,y- inner radius
+            #and the mouse_x,mouse_y to the depth of the COPM
+            
+            #if "precision divide by 1/10?
+            
+            #add the translation vector to the
+        
+        #Transform mode = EDGE_PARALLEL
+        
+        #Transfrom mode = EDGE_PEREPENDICULAR
         
 
     def derive_screen(self,context):
         region = context.region  
         rv3d = context.space_data.region_3d
         view_z = rv3d.view_rotation * Vector((0,0,1))
-        if view_z.dot(self.cut_line.plane_no) > -.95 and view_z.dot(self.cut_line.plane_no) < .95:
+        if view_z.dot(self.initial_plane_no) > -.95 and view_z.dot(self.initial_plane_no) < .95:
             point_0 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com)
-            point_1 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com + self.cut_line.plane_no.normalized())
+            point_1 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com + self.initial_plane_no.normalized())
             self.screen_no = point_1 - point_0
+            if self.screen_no.dot(Vector((0,1))) < 0:
+                self.screen_no = point_0 - point_1
             self.screen_no.normalize()
             
-            self.angle = math.atan2(self.screen_no[1],self.screen_no[0])
+            self.angle = math.atan2(self.screen_no[1],self.screen_no[0]) - 1/2 * math.pi
         else:
             self.screen_no = None
         
         
-        up = self.angle
-        down = self.angle + math.pi
-        left = up + .5 * math.pi
-        right =  up - .5 * math.pi
+        up = self.angle + 1/2 * math.pi
+        down = self.angle + 3/2 * math.pi
+        left = self.angle + math.pi
+        right =  self.angle
         
         deg_45 = .25 * math.pi
         
@@ -750,8 +1008,8 @@ class CutLineManipulatorWidget(object):
         l = len(self.arc_arrow_1)
         contour_utilities.draw_polyline_from_points(context, self.arc_arrow_1[:l-1], self.color2, self.line_width, "GL_LINES")
         #draw a line perpendicular to arc
-        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5 * math.pi), math.sin(self.angle + .5 * math.pi)))
-        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5 * math.pi), math.sin(self.angle + .5 * math.pi)))
+        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
+        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
         contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color3, self.line_width, "GL_LINES")
         
         #drawa arc 2
@@ -759,12 +1017,12 @@ class CutLineManipulatorWidget(object):
         
         
         #draw an up and down arrow
-        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
-        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
+        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))
+        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))
         contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
         
-        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
-        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
+        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
+        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
         contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
 
 #cut line, a user interactive 2d line which represents a plane in 3d splace

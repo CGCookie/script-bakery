@@ -249,14 +249,17 @@ def draw_polyline_from_points(context, points, color, thickness, LINE_TYPE):
         bgl.glLineStipple(4, 0x5555)  #play with this later
         bgl.glEnable(bgl.GL_LINE_STIPPLE)  
     
+    
+    current_width = bgl.GL_LINE_WIDTH
     bgl.glColor4f(*color)
     bgl.glLineWidth(thickness)
     bgl.glBegin(bgl.GL_LINE_STRIP)
+    
     for coord in points:  
         bgl.glVertex2f(*coord)  
     
     bgl.glEnd()  
-      
+    bgl.glLineWidth(1)  
     if LINE_TYPE == "GL_LINE_STIPPLE":  
         bgl.glDisable(bgl.GL_LINE_STIPPLE)  
         bgl.glEnable(bgl.GL_BLEND)  # back to uninterupted lines  

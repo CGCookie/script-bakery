@@ -36,6 +36,7 @@ else:
 import bpy
 import bmesh
 import math
+import time
 from mathutils import Vector
 import contour_utilities
 from contour_classes import ContourCutLine, ExistingVertList, CutLineManipulatorWidget
@@ -103,6 +104,10 @@ class ContourToolsAddonPreferences(AddonPreferences):
             min=1,
             max=10,
             )
+    
+    vert_rgb = FloatVectorProperty(name="Widget Color", description="Color of Verts", min=0, max=1, default=(0,0.2,1), subtype="COLOR")
+    geom_rgb = FloatVectorProperty(name="Geometry Color", description="Color For Edges", min=0, max=1, default=(0,1, .2), subtype="COLOR")
+    actv_rgb = FloatVectorProperty(name="Widget Color", description="Active Cut Line", min=0, max=1, default=(0.6,.2,.8), subtype="COLOR")
     
     raw_vert_size = IntProperty(
             name="Raw Vertex Size",
@@ -201,13 +206,22 @@ class ContourToolsAddonPreferences(AddonPreferences):
         row = layout.row(align=True)
         row.prop(self, "show_ring_edges", text="Show Edge Rings")
         row.prop(self, "vert_size")
+        
+        row = layout.row()
+        row.prop(self, "vert_rgb")
+        row.prop(self, "geom_rgb")
+        row.prop(self, "actv_rgb")
 
         row = layout.row(align=True)
         row.prop(self, "handle_size", text="Handle Size")
         row.prop(self, "stroke_thick", text="Stroke Thickness")
         
-        layout.prop(self, "auto_align")
-        layout.prop(self, "use_x_ray", "Enable X-Ray at Mesh Creation")
+        row = layout.row(align=True)
+        row.prop(self, "auto_align")
+        row.prop(self, "live_update")
+        
+        row = layout.row()
+        row.prop(self, "use_x_ray", "Enable X-Ray at Mesh Creation")
 
         layout.separator()
         
@@ -420,7 +434,34 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 
             if self.drag and self.drag_target:
             
-                if hasattr(self.drag_target,"head"): #then it's a  line, we need to move both?
+                if hasattr(self.drag_target,"head") and self.widget_interaction:
+                    
+                    #[new_com, new_no, new_tan]
+                    recalc_vals = self.cut_line_widget.user_interaction(context, event.mouse_region_x,event.mouse_region_y)
+                    print(recalc_vals)
+                    if recalc_vals:
+                        
+                        if recalc_vals[3] in {'RESET', 'NORMAL_TRANSLATE'}:
+                            upd_com = True
+                            self.drag_target.plane_com = recalc_vals[0]
+                            self.drag_target.plane_no = recalc_vals[1]
+                            self.drag_target.plane_tan.world_position = recalc_vals[2]
+                            
+                        else:
+                            upd_com = False
+                            self.drag_target.plane_no = recalc_vals[1]
+                            self.drag_target.plane_tan.world_position = recalc_vals[2]
+                        
+                        if settings.live_update:
+                            
+                            self.drag_target.hit_object(context, self.original_form, update_normal = False, method = 'HANDLE')
+                            self.drag_target.cut_object(context, self.original_form, self.bme)
+                            self.hover_target.simplify_cross(self.segments, update_com = upd_com)
+                            self.hover_target.update_screen_coords(context)
+                            #auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align  
+                            #self.push_mesh_data(context, a_align = auto_align)
+                    
+                if hasattr(self.drag_target,"head") and not self.widget_interaction: #then it's a  line, we need to move both?
                     delta = Vector((event.mouse_region_x,event.mouse_region_y)) - Vector((self.initial_location_mouse))
                     self.drag_target.head.x = self.initial_location_head[0] + delta[0]
                     self.drag_target.head.y = self.initial_location_head[1] + delta[1]
@@ -431,7 +472,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     self.drag_target.head.screen_to_world(context)
                     self.drag_target.tail.screen_to_world(context)
                     self.drag_target.plane_tan.screen_to_world(context)
-                else:
+                elif not  hasattr(self.drag_target,"head"):
                     self.drag_target.x = event.mouse_region_x
                     self.drag_target.y = event.mouse_region_y
                     self.drag_target.screen_to_world(context)
@@ -444,6 +485,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     target_at_all = False
                     prospective_targets = []
                     for c_cut in self.cut_lines:
+                        c_cut.geom_color = (settings.actv_rgb[0],settings.actv_rgb[1],settings.actv_rgb[2],1) 
                         h_target = c_cut.active_element(context,event.mouse_region_x,event.mouse_region_y)
                         if h_target:
                             target_at_all = True
@@ -461,7 +503,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                     self.cut_line_widget.x = event.mouse_region_x
                                     self.cut_line_widget.y = event.mouse_region_y
                                     self.cut_line_widget.derive_screen(context)
-                                    
+                        else:
+                            c_cut.geom_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)            
                     if not target_at_all:
                         self.hover_target = None
                         self.cut_line_widget = None
@@ -491,7 +534,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'CANCELLED'}  
         
         elif event.type == 'MIDDLEMOUSE':
-            print(event.value)
+
             if event.value == 'PRESS':
                 self.navigating = True
                 
@@ -620,7 +663,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         elif event.type == 'LEFTMOUSE':
             if event.value == 'RELEASE':
                 if self.drag and self.drag_target:
-                    if hasattr(self.drag_target,"head"): #then it's a  line
+                    if hasattr(self.drag_target,"head") and not self.widget_interaction: #then it's a  line
                         delta =Vector((event.mouse_region_x,event.mouse_region_y)) -  Vector((self.initial_location_mouse)) 
                         self.drag_target.head.x = self.initial_location_head[0] + delta[0]
                         self.drag_target.head.y = self.initial_location_head[1] + delta[1]
@@ -664,7 +707,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         else:
                             self.cut_lines.remove(self.drag_target)
                             self.drag_target = None
-                    else:
+                    elif self.drag_target.desc != 'CUT_LINE' and not self.widget_interaction:
                         self.drag_target.x = event.mouse_region_x
                         self.drag_target.y = event.mouse_region_y
                         if self.drag_target == self.drag_target.parent.plane_tan:
@@ -687,29 +730,48 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.drag_target = None
                             if self.new:
                                 self.new = False
+                    
                     auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align        
                     self.push_mesh_data(context, a_align = auto_align)
                 
                 #clear the drag and hover
                 self.drag = False
                 self.hover_target = None
+                if self.widget_interaction:
+                    self.widget_interaction = False
     
                 return {'RUNNING_MODAL'}
         
             if event.value == 'PRESS':
-                self.drag = True
-                self.drag_target = self.hover_target #presume them ose cant move w/o making it through modal?
-                if hasattr(self.drag_target,"head"):
-                    self.initial_location_head = (self.drag_target.head.x, self.drag_target.head.y)
-                    self.initial_location_tail = (self.drag_target.tail.x, self.drag_target.tail.y)
-                    self.initial_location_tan = (self.drag_target.plane_tan.x, self.drag_target.plane_tan.y)
-                    self.initial_location_mouse = (event.mouse_region_x,event.mouse_region_y)
                 
-                if not self.drag_target:
+                #we drag until we release
+                self.drag = True
+                self.drag_target = self.hover_target
+                
+                #this code will go away I think
+                if self.hover_target:
+                    if hasattr(self.drag_target,"head"):
+                        self.initial_location_head = (self.drag_target.head.x, self.drag_target.head.y)
+                        self.initial_location_tail = (self.drag_target.tail.x, self.drag_target.tail.y)
+                        self.initial_location_tan = (self.drag_target.plane_tan.x, self.drag_target.plane_tan.y)
+                        self.initial_location_mouse = (event.mouse_region_x,event.mouse_region_y)
+                        
+                    
+                    if self.hover_target.desc == 'CUT_LINE':
+                        self.widget_interaction = True
+
+                #No active cutline under mouse -> make a new one
+                else:
                     v3d = context.space_data
                     region = v3d.region_3d 
                     view = region.view_rotation * Vector((0,0,1))
-                    self.cut_lines.append(ContourCutLine(event.mouse_region_x, event.mouse_region_y, view))
+                    
+                    g_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
+                    v_color = (settings.vert_rgb[0],settings.vert_rgb[1],settings.vert_rgb[2],1)
+                    g_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
+                    self.cut_lines.append(ContourCutLine(event.mouse_region_x, event.mouse_region_y, view,
+                                                         geom_color = g_color,
+                                                         vert_color = v_color))
                     self.drag_target = self.cut_lines[-1].tail
                     self.new = True
             
@@ -1058,7 +1120,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #what is the mouse over top of currently
         self.hover_target = None
         
+        #Keep reference to a cutline widget
+        #an keep track of whether or not we are
+        #interacting with a widget.
         self.cut_line_widget = None
+        self.widget_interaction = False
         
         #at the begniinging of a drag, we want to keep track
         #of where things started out
