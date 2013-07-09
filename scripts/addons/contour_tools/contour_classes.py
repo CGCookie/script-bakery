@@ -655,8 +655,8 @@ class ContourCutLine(object):
             left_bound = -1
             right_bound = 1
             iterations = 0
-            while pct_change > 0.001 and iterations < 50:
-                print('###########################################')
+            while iterations < 20:
+                
                 iterations += 1
                 width = right_bound - left_bound
                 
@@ -673,39 +673,37 @@ class ContourCutLine(object):
                 alignment_quality_right = self.connectivity_analysis(other)
                 
                 if alignment_quality_left < alignment_quality and alignment_quality_right < alignment_quality:
-                    print('midde')
+                    
                     left_bound += width*1/4
                     right_bound -= width*1/4
-                    pct_change = (right_bound - left_bound)/2
+                    
                     
                 elif alignment_quality_left > alignment_quality and alignment_quality_right > alignment_quality:
-                    print('edges')
+                    
                     if alignment_quality_right > alignment_quality_left:
                         left_bound = right_bound - 0.5 * width
                     else:
                         right_bound = left_bound + 0.5 * width
                     
-                    pct_change = (right_bound - left_bound)/2
-                    
                 elif alignment_quality_left < alignment_quality and alignment_quality_right > alignment_quality:
-                    print('move to the right')
+                    #print('move to the right')
                     #right becomes the new middle
                     right_bound += width * 1/4
                     left_bound += width * 3/4
-                    pct_change = pct_change = (right_bound - left_bound)/2
+                    
                     alignment_quality = alignment_quality_right
             
                 elif alignment_quality_left > alignment_quality and alignment_quality_right < alignment_quality:
-                    print('move to the left')
+                    #print('move to the left')
                     #right becomes the new middle
                     right_bound -= width * 3/4
                     left_bound -= width * 1/4
-                    pct_change = pct_change = (right_bound - left_bound)/2
                     
-                print('pct change iteration %i was %f' % (iterations, pct_change))
-                print(alignment_quality)
-                print(alignment_quality_left)
-                print(alignment_quality_right)
+                    
+                #print('pct change iteration %i was %f' % (iterations, pct_change))
+                #print(alignment_quality)
+                #print(alignment_quality_left)
+                #print(alignment_quality_right)
             print('converged or didnt in %i iterations' % iterations)
               
     def active_element(self,context,x,y):

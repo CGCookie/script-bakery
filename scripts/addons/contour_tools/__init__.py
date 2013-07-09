@@ -950,11 +950,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.valid_cuts[0].align_to_other(self.existing_cut, auto_align = a_align)
         
         for i in range(0,n_rings-1):
-            vs_1 = self.valid_cuts[i].verts_simple
-            vs_2 = self.valid_cuts[i+1].verts_simple
-            es_1 = self.valid_cuts[i].eds_simple
-            es_2 = self.valid_cuts[i+1].eds_simple
-            
+            print('#################')
+            print('alignment')
+            print('##################')
             self.valid_cuts[i+1].align_to_other(self.valid_cuts[i], auto_align = a_align)
                 
         #work out the connectivity edges
