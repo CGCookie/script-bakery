@@ -90,7 +90,7 @@ class ExistingVertList(object):
             
 class ContourCutLine(object): 
     
-    def __init__(self, x, y, view_dir, line_width = 3,
+    def __init__(self, x, y, line_width = 3,
                  line_color = (0,0,1,1), 
                  handle_color = (1,0,0,1),
                  geom_color = (0,1,0,1),
@@ -99,21 +99,25 @@ class ContourCutLine(object):
         self.desc = "CUT_LINE"
         self.head = ContourControlPoint(self,x,y, color = handle_color)
         self.tail = ContourControlPoint(self,x,y, color = handle_color)
-        self.plane_tan = ContourControlPoint(self,x,y, color = (.8,.8,.8,1))
-        self.view_dir = view_dir
+        #self.plane_tan = ContourControlPoint(self,x,y, color = (.8,.8,.8,1))
+        #self.view_dir = view_dir
         self.target = None
-        self.depth = None #perhaps we need a depth value? 
+ 
         self.updated = False
         self.plane_pt = None  #this will be a point on an object surface...calced after ray_casting
         self.plane_com = None  #this will be a point in the object interior, calced after cutting a contour
         self.plane_no = None
         
-        #these points will definte two orthogonal vectors
+        #these points will define two orthogonal vectors
         #which lie tangent to the plane...which we can use
         #to draw a little widget on the COM
         self.plane_x = None
         self.plane_y = None
         self.plane_z = None
+        
+        self.vec_x = None
+        self.vec_y = None
+        #self.vec_z is the plane normal
         
         self.seed_face_index = None
         
@@ -153,39 +157,54 @@ class ContourCutLine(object):
         
         #this should be moved to only happen if the view changes :-/  I'ts only
         #a few hundred calcs even with a lot of lines. Waste not want not.
-        if self.head.world_position:
+        if self.head and self.head.world_position:
             self.head.screen_from_world(context)
-        if self.tail.world_position:
+        if self.tail and self.tail.world_position:
             self.tail.screen_from_world(context)
-        if self.plane_tan.world_position:
-            self.plane_tan.screen_from_world(context)
+        #if self.plane_tan.world_position:
+            #self.plane_tan.screen_from_world(context)
             
         if debug > 1:
             if self.plane_com:
+                com_2d = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_com)
+                
                 contour_utilities.draw_3d_points(context, [self.plane_com], (0,1,0,1), 4)
-            if self.plane_x:
-                contour_utilities.draw_3d_points(context, [self.plane_x], (1,1,0,1), 6)
-            if self.plane_y:
-                contour_utilities.draw_3d_points(context, [self.plane_y], (0,1,1,1), 6)
-            if self.plane_z:
-                contour_utilities.draw_3d_points(context, [self.plane_z], (1,0,1,1), 6)  
+                if self.vec_x:
+                    pt_x = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_com + self.vec_x)
+                    screen_vec_x = pt_x - com_2d
+                    screen_pt_x = com_2d + 40 * screen_vec_x.normalized()
+                    contour_utilities.draw_points(context, [pt_x], (1,1,0,1), 6)
+                    
+                if self.vec_y:
+                    pt_y = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_com + self.vec_y)
+                    screen_vec_y = pt_y - com_2d
+                    screen_pt_y = com_2d + 40 * screen_vec_y.normalized()
+                    contour_utilities.draw_points(context, [pt_y], (0,1,1,1), 6)
+
+                if self.plane_no:
+                    pt_z = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_com + self.plane_no)
+                    screen_vec_z = pt_z - com_2d
+                    screen_pt_z = com_2d + 40 * screen_vec_z.normalized()
+                    contour_utilities.draw_points(context, [pt_z], (1,0,1,1), 6)
+                    
         
         #draw connecting line
-        points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
-        if settings.draw_widget:
+        if self.head:
+            points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
+            
             contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
         
             #draw the two handles
             contour_utilities.draw_points(context, points, self.head.color, settings.handle_size)
         
         #draw the current plane point and the handle to change plane orientation
-        if self.plane_pt and settings.draw_widget:
-            point1 = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_pt)
-            point2 = (self.plane_tan.x, self.plane_tan.y)
+        #if self.plane_pt and settings.draw_widget:
+            #point1 = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.plane_pt)
+            #point2 = (self.plane_tan.x, self.plane_tan.y)
 
-            contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
-            contour_utilities.draw_points(context, [point2], self.plane_tan.color, settings.handle_size)
-            contour_utilities.draw_points(context, [point1], self.head.color, settings.handle_size)
+            #contour_utilities.draw_polyline_from_points(context, [point1,point2], (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
+            #contour_utilities.draw_points(context, [point2], self.plane_tan.color, settings.handle_size)
+            #contour_utilities.draw_points(context, [point1], self.head.color, settings.handle_size)
         
         #draw the raw contour vertices
         if (self.verts and self.verts_simple == []) or (debug > 0 and settings.show_verts):
@@ -228,89 +247,109 @@ class ContourCutLine(object):
                         blf.draw(0, str(i))
         #draw contour points? later
     
-    def hit_object(self,context, ob, update_normal = True, method = 'VIEW'):
+    def hit_object(self, context, ob, method = 'VIEW'):
         region = context.region  
         rv3d = context.space_data.region_3d
         
         pers_mx = rv3d.perspective_matrix  #we need the perspective matrix
-        inv_persx_mx = pers_mx.inverted() #and we need to invert it...for some reason    
-        pos = rv3d.view_location
         
-        #midpoint of the  cutline and world direction of cutline
-        screen_coord = (self.head.x + self.tail.x)/2, (self.head.y + self.tail.y)/2
-        
+        #the world direction vectors associated with
+        #the view rotations
         view_x = rv3d.view_rotation * Vector((1,0,0))
         view_y = rv3d.view_rotation * Vector((0,1,0))
         view_z = rv3d.view_rotation * Vector((0,0,1))
-        cut_vec = (self.tail.x - self.head.x)*view_x + (self.tail.y - self.head.y)*view_y
-        cut_vec.normalize()
-        
-        if update_normal:
-            if method == 'VIEW':
-                self.plane_no = cut_vec.cross(view_z).normalized()
         
         
-                vec = region_2d_to_vector_3d(region, rv3d, screen_coord)
-                loc = region_2d_to_location_3d(region, rv3d, screen_coord, vec)
-        
-                #raycast what I think is the ray onto the object
-                #raycast needs to be in ob coordinates.
-                a = loc + 3000*vec
-                b = loc - 3000*vec
-    
-                mx = ob.matrix_world
-                imx = mx.inverted()
-                hit = ob.ray_cast(imx*a, imx*b)    
-        
-                if hit[2] != -1:
-                    self.plane_pt = mx * hit[0]
-                    self.seed_face_index = hit[2]
-                    print(hit[2])
-                    self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y), mx * hit[0])
-                    self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y), mx * hit[0])
-                    self.plane_tan.world_position = self.plane_pt + (self.head.world_position - self.tail.world_position).length/4 * view_z
-                    
-                else:
-                    self.plane_pt = None
-                    self.seed_face_index = None
-                    self.verts = []
-                    self.verts_simple = []
-                
-                return self.plane_pt
+        #this only happens on the first time.
+        #after which everything is handled by
+        #the widget
+        if method == 'VIEW':
+            #midpoint of the  cutline and world direction of cutline
+            screen_coord = (self.head.x + self.tail.x)/2, (self.head.y + self.tail.y)/2
+            cut_vec = (self.tail.x - self.head.x)*view_x + (self.tail.y - self.head.y)*view_y
+            cut_vec.normalize()
+            self.plane_no = cut_vec.cross(view_z).normalized()
             
-        elif method == 'HANDLE':
+            #we need to populate the 3 axis vectors
+            self.vec_x = -1 * cut_vec.normalized()
+            self.vec_y = self.plane_no.cross(self.vec_x)
+            
+
+    
+            vec = region_2d_to_vector_3d(region, rv3d, screen_coord)
+            loc = region_2d_to_location_3d(region, rv3d, screen_coord, vec)
+    
+            #raycast what I think is the ray onto the object
+            #raycast needs to be in ob coordinates.
+            a = loc + 3000*vec
+            b = loc - 3000*vec
+
             mx = ob.matrix_world
             imx = mx.inverted()
-            print('HANDLE HANDLE HANLDE HANLDE HNDAL')
-            if not self.plane_com:
-                print('using the handles and line')
-                #the midpoint between the two vectors
-                b = .5 * (self.head.world_position + self.tail.world_position)
-                a = self.plane_tan.world_position
-                
-                z = a - b
-                x = self.head.world_position - self.tail.world_position
-                self.plane_no = z.cross(x).normalized()
-                
-
-                hit = ob.ray_cast(imx * (a + 5 * z), imx * (b - 5 * z))
-                
-            else:
-                print('using center of mass and plane tan')
-                b = self.plane_com
-                a = self.plane_tan.world_position
-                z = a - b
-                hit = ob.ray_cast(imx * b, imx * (b + 30 * z))
-                if hit[2] == -1:
-                    hit = ob.ray_cast(imx * b, imx * (b - 30 * z))
-            
+            hit = ob.ray_cast(imx*a, imx*b)    
+    
             if hit[2] != -1:
                 self.plane_pt = mx * hit[0]
                 self.seed_face_index = hit[2]
+
+                self.plane_x = self.plane_pt + self.vec_x
+                self.plane_y = self.plane_pt + self.vec_y
+                self.plane_z = self.plane_pt + self.plane_no
+            
+                self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y), mx * hit[0])
+                self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y), mx * hit[0])
+                #self.plane_tan.world_position = self.plane_pt + self.vec_y
                 
-                #TODO...fix this ish
-                #self.head.world_position = self.plane_pt + .5*x
-                #self.tail.world_position = self.plane_pt - .5*x
+            else:
+                self.plane_pt = None
+                self.seed_face_index = None
+                self.verts = []
+                self.verts_simple = []
+            
+            return self.plane_pt
+        
+        elif method in {'3_AXIS_COM','3_AXIS_POINT'}:
+            mx = ob.matrix_world
+            imx = mx.inverted()
+            y = self.vec_y
+            x = self.vec_x
+                  
+            if method == '3_AXIS_COM':
+                
+                if not self.plane_com:
+                    print('failed no COM')
+                    return
+                pt = self.plane_com
+
+
+                
+            else:
+                if not self.plane_pt:
+                    print('failed no COM')
+                    return
+                pt = self.plane_pt
+                
+            hits = [ob.ray_cast(imx * pt, imx * (pt + 5 * y)),
+                    ob.ray_cast(imx * pt, imx * (pt + 5 * x)),
+                    ob.ray_cast(imx * pt, imx * (pt - 5 * y)),
+                    ob.ray_cast(imx * pt, imx * (pt - 5 * x))]
+            
+
+            dists = []
+            inds = []
+            for i, hit in enumerate(hits):
+                if hit[2] != -1:
+                    R = pt - hit[0]
+                    dists.append(R.length)
+                    inds.append(i)
+            
+            #make sure we had some hits!
+            if any(dists):
+                #pick the best one as the closest one to the pt       
+                best_hit = hits[inds[dists.index(min(dists))]]       
+                self.plane_pt = mx * best_hit[0]
+                self.seed_face_index = best_hit[2]
+                
                 
             else:
                 self.plane_pt = None
@@ -336,8 +375,9 @@ class ContourCutLine(object):
         mx = ob.matrix_world
         pt = self.plane_pt
         pno = self.plane_no
+        indx = self.seed_face_index
         if pt and pno:
-            cross = contour_utilities.cross_section_seed(bme, mx, pt, pno, self.seed_face_index, debug = True)   
+            cross = contour_utilities.cross_section_seed(bme, mx, pt, pno, indx, debug = True)   
             if cross:
                 self.verts = [mx*v for v in cross[0]]
                 self.eds = cross[1]
@@ -345,30 +385,36 @@ class ContourCutLine(object):
         else:
             self.verts = []
             self.eds = []
-            print('no hit! aim better')
         
-    def simplify_cross(self,segments, update_com = True, update_tan = True):
+    def simplify_cross(self,segments):
         if self.verts !=[] and self.eds != []:
             [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments, self.shift)
             
-            if update_com:
-                self.plane_com = contour_utilities.get_com(self.verts_simple)
-            if update_tan:
-                self.plane_tan.world_position = self.verts_simple[0]
+    def update_com(self):
+        if self.verts_simple != []:
+            self.plane_com = contour_utilities.get_com(self.verts_simple)
+        else:
+            self.plane_com = None
                 
-    def derive_3_axis_control(self, n = 0):
+    def derive_3_axis_control(self, method = 'FROM_VECS', n=0):
+        '''
+        args
+        
+        method: text enum in {'VIEW','FROM_VECS','FROM_VERT'}
+        '''
         
         if len(self.verts_simple) and self.plane_com:
-            #put the com as the contorl point?
-            self.plane_com = contour_utilities.get_com(self.verts_simple)
+
             
             #y vector
             y_vector = self.verts_simple[n] - self.plane_com
             y_vector.normalize()
+            self.vec_y = y_vector
             
             #x vector
             x_vector = y_vector.cross(self.plane_no)
             x_vector.normalize()
+            self.vec_x = x_vector
             
             
             #now the 4 points are in world space
@@ -377,13 +423,10 @@ class ContourCutLine(object):
             #opposed to locations.
             self.plane_x = self.plane_com + x_vector
             self.plane_y = self.plane_com + y_vector
-            self.plane_z = self.plane_com + z_vector
+            self.plane_z = self.plane_com + self.plane_no
             
             
             
-            
-        
-        
         
     def analyze_relationship(self, other,debug = False):
         '''
@@ -668,9 +711,13 @@ class ContourCutLine(object):
     def active_element(self,context,x,y):
         settings = context.user_preferences.addons['contour_tools'].preferences
         
-        active_head = self.head.mouse_over(x, y)
-        active_tail = self.tail.mouse_over(x, y)
-        active_tan = self.plane_tan.mouse_over(x, y)
+        if self.head:
+            active_head = self.head.mouse_over(x, y)
+            active_tail = self.tail.mouse_over(x, y)
+        else:
+            active_head = False
+            active_tail = False
+        #active_tan = self.plane_tan.mouse_over(x, y)
         
         
 
@@ -730,8 +777,8 @@ class ContourCutLine(object):
             #print('returning head')
             return self.head
         
-        elif active_tan:
-            return self.plane_tan
+        #elif active_tan:
+            #return self.plane_tan
         
         elif active_self:
             #print('returning line')
@@ -769,10 +816,21 @@ class CutLineManipulatorWidget(object):
         self.screen_no = None
         self.angle = 0
         
-        #intitial conditions for "undo" kinda
-        self.initial_com = self.cut_line.plane_com.copy()
-        self.initial_tan = self.cut_line.plane_tan.world_position.copy()
+        #intitial conditions for "undo"
+        if self.cut_line.plane_com:
+            self.initial_com = self.cut_line.plane_com.copy()
+        else:
+            self.initial_com = None
+            
+        if self.cut_line.plane_pt:
+            self.initial_plane_pt = self.cut_line.plane_pt.copy()
+        else:
+            self.initial_plane_pt = None
+        
+        self.vec_x = self.cut_line.vec_x.copy()
+        self.vec_y = self.cut_line.vec_y.copy()
         self.initial_plane_no = self.cut_line.plane_no.copy()
+        self.initial_seed = self.cut_line.seed_face_index
         
         self.wedge_1 = []
         self.wedge_2 = []
@@ -800,8 +858,8 @@ class CutLineManipulatorWidget(object):
         
         region = context.region  
         rv3d = context.space_data.region_3d
-        world_mouse = region_2d_to_location_3d(region, rv3d, (mouse_x, mouse_y),self.cut_line.plane_com)
-        world_widget = region_2d_to_location_3d(region, rv3d, (self.x, self.y),self.cut_line.plane_com)
+        world_mouse = region_2d_to_location_3d(region, rv3d, (mouse_x, mouse_y), self.initial_com)
+        world_widget = region_2d_to_location_3d(region, rv3d, (self.x, self.y), self.initial_com)
         
         if not self.transform:
             
@@ -827,13 +885,11 @@ class CutLineManipulatorWidget(object):
                 else:
                     self.transform_mode = 'EDGE_PERPENDICULAR'
                     
-                    
-                
 
                 print(loc_angle)
                 print(self.transform_mode)
                 
-            return None  #this tells it whether to recalc things
+            return {'DO_NOTHING'}  #this tells it whether to recalc things
             
         else:
             #we were transforming but went back in the circle
@@ -842,11 +898,15 @@ class CutLineManipulatorWidget(object):
                 self.transform_mode = None
                 
                 #reset our initial values
-                new_tan= self.initial_tan
-                new_com = self.initial_com
-                new_no = self.initial_plane_no
+                self.cut_line.plane_com = self.initial_com
+                self.cut_line.plane_no = self.initial_plane_no
+                self.cut_line.plane_pt = self.initial_plane_pt
+                self.cut_line.vec_x = self.vec_x
+                self.cut_line.vec_y = self.vec_y
+                self.cut_line.seed_face_index = self.initial_seed
                 
-                return [new_com, new_no, new_tan, 'RESET']
+                
+                return {'RECUT'}
                 
             
             else:
@@ -859,17 +919,16 @@ class CutLineManipulatorWidget(object):
                     world_vec = world_mouse - world_widget
                     translate = screen_dist/loc_vec.length * world_vec.dot(self.initial_plane_no) * self.initial_plane_no
                     
-                    new_com = self.initial_com + translate
-                    new_tan = self.initial_tan + translate
-                    new_no = self.initial_plane_no
+                    self.cut_line.plane_com = self.initial_com + translate
                     
-                    return [new_com, new_no, new_tan, self.transform_mode]
+                    return {'REHIT','RECUT'}
                 
                 elif self.transform_mode in {'EDGE_PERPENDICULAR', 'EDGE_PARALLEL'}:
                     
                     #establish the transform axes
+                    '''
                     screen_com = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com)
-                    vertical_screen_vec = Vector((math.cos(self.angle + .5 * math.pi), math.sin(self.angle + .5 * math.pi)))  #MYSTERY why isnt this pi/2
+                    vertical_screen_vec = Vector((math.cos(self.angle + .5 * math.pi), math.sin(self.angle + .5 * math.pi)))
                     screen_y = screen_com + vertical_screen_vec
                     world_pre_y = region_2d_to_location_3d(region, rv3d, (screen_y[0], screen_y[1]),self.cut_line.plane_com)
                     world_y = world_pre_y - self.cut_line.plane_com
@@ -879,36 +938,42 @@ class CutLineManipulatorWidget(object):
                     
                     world_x = self.initial_plane_no.cross(world_y)
                     world_x.normalize()
-                    self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
-                    self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
-                    self.cut_line.plane_z = self.cut_line.plane_com + 2 * self.initial_plane_no
+                    '''
+                    
+                    axis_1  = rv3d.view_rotation * Vector((0,0,1))
+                    axis_1.normalize()
+                    
+                    axis_2 = self.initial_plane_no.cross(axis_1)
+                    axis_2.normalize()
+                    
+                    #self.cut_line.vec_x = world_x
+                    #self.cut_line.vec_y = world_y
+                    
+                    #self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
+                    #self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
+                    #self.cut_line.plane_z = self.cut_line.plane_com + 2 * self.initial_plane_no
                     
                     #identify which quadrant we are in
                     screen_angle = math.atan2(loc_vec[1], loc_vec[0])
                     
                     if self.transform_mode == 'EDGE_PARALLEL':
 
-                    
-
                         rot_angle = screen_angle - self.angle #+ .5 * math.pi  #Mystery
                         rot_angle = math.fmod(rot_angle + 4 * math.pi, 2 * math.pi)  #correct for any negatives
                         print('rotating by %f' % rot_angle)
                         sin = math.sin(rot_angle/2)
                         cos = math.cos(rot_angle/2)
-                        quat = Quaternion((cos, sin*world_x[0], sin*world_x[1], sin*world_x[2]))
-                        
-                        new_no = self.initial_plane_no.copy() #its not rotated yet
-                        new_no.rotate(quat)
-    
+                        #quat = Quaternion((cos, sin*world_x[0], sin*world_x[1], sin*world_x[2]))
+                        quat = Quaternion((cos, sin*axis_1[0], sin*axis_1[1], sin*axis_1[2]))    
                         #rotate around x axis...update y
-                        world_y = new_no.cross(world_x)
-                        new_com = self.initial_com
-                        new_tan = new_com + world_x
+                        #world_y = new_no.cross(world_x)
+                        #new_com = self.initial_com
+                        #new_tan = new_com + world_x
                         
                         
-                        self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
-                        self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
-                        self.cut_line.plane_z = self.cut_line.plane_com + 2 * new_no
+                        #self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
+                        #self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
+                        #self.cut_line.plane_z = self.cut_line.plane_com + 2 * new_no
                     #self.cut_line.plane_no = new_normal
                     
                     else:
@@ -917,22 +982,36 @@ class CutLineManipulatorWidget(object):
                         print('rotating by %f' % rot_angle)
                         sin = math.sin(rot_angle/2)
                         cos = math.cos(rot_angle/2)
-                        quat = Quaternion((cos, sin*world_y[0], sin*world_y[1], sin*world_y[2]))
+                        #quat = Quaternion((cos, sin*world_y[0], sin*world_y[1], sin*world_y[2]))
+                        quat = Quaternion((cos, sin*axis_2[0], sin*axis_2[1], sin*axis_2[2])) 
                         
-                        new_no = self.initial_plane_no.copy() #its not rotated yet
-                        new_no.rotate(quat)
+                        #new_no = self.initial_plane_no.copy() #its not rotated yet
+                        #new_no.rotate(quat)
     
                         #rotate around x axis...update y
-                        world_x = world_y.cross(new_no)
-                        new_com = self.initial_com
-                        new_tan = new_com + world_x
+                        #world_x = world_y.cross(new_no)
+                        #new_com = self.initial_com
+                        #new_tan = new_com + world_x
                         
                         
-                        self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
-                        self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
-                        self.cut_line.plane_z = self.cut_line.plane_com + 2 * new_no
-                    #return [new_com, new_no, new_tan]
-                    return[new_com, new_no, new_tan, self.transform_mode]
+                        #self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
+                        #self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
+                        #self.cut_line.plane_z = self.cut_line.plane_com + 2 * new_no
+                    
+               
+                    new_no = self.initial_plane_no.copy() #its not rotated yet
+                    new_no.rotate(quat)
+
+                    new_x = self.vec_x.copy() #its not rotated yet
+                    new_x.rotate(quat)
+                   
+                    new_y = self.vec_y.copy()
+                    new_y.rotate(quat)
+                    
+                    self.cut_line.vec_x = new_x
+                    self.cut_line.vec_y = new_y
+                    self.cut_line.plane_no = new_no    
+                    return {'RECUT'}
         
         #
         #Tranfsorm mode = NORMAL_TANSLATE

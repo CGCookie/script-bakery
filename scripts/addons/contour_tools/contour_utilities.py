@@ -1180,8 +1180,6 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     prev_eds = []
     seeds =[]
     
-    print("the seeded index is %i" % seed_index)
-    print("there are this many faces in the bmesh: %i" % len(bme.faces))
     if seed_index > len(bme.faces) - 1:
         print('looks like we hit an Ngon, tentative support')
     
