@@ -9,29 +9,19 @@ class QuickSceneOptions(bpy.types.Menu):
 
 	    layout.operator("gpencil.active_frame_delete", "Delete Grease", icon='GREASEPENCIL')
 
-# addon_keymaps = []
-
+	    only_render = context.space_data.show_only_render
+	    if only_render:
+		    layout.operator("scene.show_only_render", "Disable Only Render")
+	    else:
+	    	layout.operator("scene.show_only_render", "Show Only Render")
+	    	
 def register():
 	bpy.utils.register_class(QuickSceneOptions)
-
-	# wm = bpy.context.window_manager
-
- #    # create the Scene Tools menu hotkey
-	# km = wm.keyconfigs.addon.keymaps.new(name='3D View', space_type='VIEW_3D')
-	# kmi = km.keymap_items.new('wm.call_menu', 'ACCENT_GRAVE', 'PRESS', shift=True)
-	# kmi.properties.name = 'scene.quick_options' 
-	
-	# addon_keymaps.append(km)
 
 
 def unregister():
 	bpy.utils.unregister_class(QuickSceneOptions)
 
-	# remove keymaps when add-on is deactivated
-	# wm = bpy.context.window_manager
-	# for km in addon_keymaps:
-	#     wm.keyconfigs.addon.keymaps.remove(km)
-	# del addon_keymaps[:]
 
 if __name__ == "__main__":
 	register()

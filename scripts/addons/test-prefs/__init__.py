@@ -30,6 +30,8 @@ from bpy.props import StringProperty
 from bpy.types import AddonPreferences
 from bpy import context
 
+from bl_ui.space_userpref_keymap import InputKeyMapPanel
+
 
 class TestPreferences(AddonPreferences):
     bl_idname = __package__
@@ -40,6 +42,8 @@ class TestPreferences(AddonPreferences):
         default="Y"
         )
 
+    _fake_panel = InputKeyMapPanel()
+    
     def draw(self, context):
         layout = self.layout
         split = layout.split()
@@ -47,7 +51,13 @@ class TestPreferences(AddonPreferences):
         col = split.column()
         col.label(text="Global")
 
-        col.prop(self, "test_print_key")
+        col = layout.column()
+        kc = bpy.context.window_manager.keyconfigs.addon
+        for km, kmi in addon_keymaps:
+            km = km.active()
+            col.context_pointer_set("keymap", km)
+            self._fake_panel.draw_kmi([], kc, km, kmi, col, 0)
+
 
 addon_prefs = context.user_preferences.addons[__package__].preferences
 
@@ -55,19 +65,17 @@ addon_keymaps = []
 
 def register():
 
-    print("Preferences:" + str(addon_prefs['test_print_key']))
-
     bpy.utils.register_module(__name__)
     pref_test.register()
 
-    wm = bpy.context.window_manager
+    kc = bpy.context.window_manager.keyconfigs.addon
 
     # create the object mode Quick Tools menu hotkey
-    km = wm.keyconfigs.addon.keymaps.new(name='Object Mode')
+    km = kc.keymaps.new(name='Object Mode')
     kmi = km.keymap_items.new('view3d.print_test', 'Y', 'PRESS')
-    #kmi.properties.name = 'object.tools_menu'
+    kmi.active = False
 
-    addon_keymaps.append(km)
+    addon_keymaps.append((km, kmi))
 
 #addon_prefs['test_print_key']
 
@@ -76,11 +84,9 @@ def unregister():
     pref_test.unregister()
         
     # remove keymaps when add-on is deactivated
-    wm = bpy.context.window_manager
-    for km in addon_keymaps:
-        wm.keyconfigs.addon.keymaps.remove(km)
-    del addon_keymaps[:]
-
+    for km, kmi in addon_keymaps:
+        km.keymap_items.remove(kmi)
+    addon_keymaps.clear()
 
 if __name__ == "__main__":
     register() 
