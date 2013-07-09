@@ -525,7 +525,7 @@ class ContourCutLine(object):
             ideal_to_com += align
         
         ideal_to_com = 1/len(self.verts_simple) * ideal_to_com
-        print(ideal_to_com)
+        
         return ideal_to_com
     
     
@@ -551,8 +551,8 @@ class ContourCutLine(object):
             cyclic = False
         
         if len(verts_1) != len(self.verts_simple):
-            print(len(verts_1))
-            print(len(self.verts_simple))
+            #print(len(verts_1))
+            #print(len(self.verts_simple))
             print('non uniform loops, stopping until your developer gets smarter')
             return
         
@@ -651,7 +651,7 @@ class ContourCutLine(object):
         
         if auto_align and cyclic:
             alignment_quality = self.connectivity_analysis(other)
-            pct_change = 1
+            #pct_change = 1
             left_bound = -1
             right_bound = 1
             iterations = 0
@@ -661,7 +661,7 @@ class ContourCutLine(object):
                 width = right_bound - left_bound
                 
                 self.shift = 0.5 * (left_bound + right_bound)
-                self.simplify_cross(len(self.eds_simple))
+                self.simplify_cross(len(self.eds_simple)) #TODO not sure this needs to happen here
                 alignment_quality = self.connectivity_analysis(other)
                 
                 self.shift = left_bound
@@ -705,6 +705,7 @@ class ContourCutLine(object):
                 #print(alignment_quality_left)
                 #print(alignment_quality_right)
             print('converged or didnt in %i iterations' % iterations)
+            print('final alignment quality is %f' % alignment_quality)
               
     def active_element(self,context,x,y):
         settings = context.user_preferences.addons['contour_tools'].preferences

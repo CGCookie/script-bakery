@@ -646,9 +646,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
             else:
                 for cut_line in self.cut_lines:
-                    if cut_line.head.world_position:
-                        cut_line.head.screen_from_world(context)
-                        cut_line.tail.screen_from_world(context)
+                    if cut_line.verts_simple != []:
+                        #cut_line.head.screen_from_world(context)
+                        #cut_line.tail.screen_from_world(context)
                         cut_line.update_screen_coords(context)
                 return{'PASS_THROUGH'}  
         
@@ -714,8 +714,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.hover_target.update_screen_coords(context)
                         
                         
-                        auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align        
-                        self.push_mesh_data(context, a_align = auto_align)
+                            auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align        
+                            self.push_mesh_data(context, a_align = auto_align)
                         
                         
                     elif self.drag_target.desc != 'CUT_LINE' and not self.widget_interaction:
@@ -880,15 +880,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                 inval_length = (v - pt).length
                                 if (check[1] >= 0 and check[1] <= 1 and inval_length < pair_length) or hit[2] == -1:
                                     print('invalid pair %s' % str(pair))
+                                    print('the hit face index is value is %i' % hit[2])
                                     
                                     if pair in valid_pairs:
                                         valid_pairs.remove(pair)
-        print('found valid pairs')
-        if debug:                            
-            print(valid_pairs)
-        
+        print('found valid pairs as follows')       
+        print(valid_pairs)
         
         #TODO disect an comment this code
+        if len(valid_pairs) == 0:
+            print('no valid pairs!!')
         if re_order and len(valid_pairs) > 0:
             #sort the pairs
             new_order = []
