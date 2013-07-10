@@ -257,14 +257,17 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
 
+    @classmethod
+    def poll(cls, context):
+        mode = bpy.context.mode
+        obj = context.active_object
+        return (obj and obj.type == 'MESH' and mode in ('OBJECT', 'EDIT_MESH'))
+
     def draw(self, context):
         layout = self.layout
-
         col = layout.column()
-
         col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')    
-
-
+        
 
 def retopo_draw_callback(self,context):
     
