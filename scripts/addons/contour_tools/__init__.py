@@ -249,8 +249,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
         row.prop(self, "widget_color")
         row.prop(self, "widget_color2")
         row.prop(self, "widget_color3")
+       
 
-        
 class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
     '''Retopologize Forms with Contour Strokes'''
     bl_label = "Contour Retopolgy"
@@ -263,10 +263,26 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
         obj = context.active_object
         return (obj and obj.type == 'MESH' and mode in ('OBJECT', 'EDIT_MESH'))
 
+    vertex_count = IntProperty(
+            name = "Number of Vertices",
+            description = "Vertex Count Per Edge Ring",
+            default=10,
+            min = 3,
+            max = 100,
+            ) 
+    cyclic = BoolProperty(
+            name = "Cyclic",
+            description = "Make Retopo Loops Cyclic",
+            default = False)
+
     def draw(self, context):
         layout = self.layout
         col = layout.column()
-        col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')    
+        col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')
+
+        row = layout.row()
+        row.prop(self, "vertex_count")
+        row.prop(self, "cyclic")   
         
 
 def retopo_draw_callback(self,context):
