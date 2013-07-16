@@ -35,9 +35,11 @@ else:
 '''
 import bpy
 import bmesh
+import blf
 import math
 import time
 from mathutils import Vector
+from bpy_extras.view3d_utils import location_3d_to_region_2d
 import contour_utilities
 from contour_classes import ContourCutLine, ExistingVertList, CutLineManipulatorWidget
 from mathutils.geometry import intersect_line_plane, intersect_point_line
@@ -72,6 +74,13 @@ class ContourToolsAddonPreferences(AddonPreferences):
             description = "Display the extracted mesh edges.  Usually only turned off for debugging",
             default=True,
             )
+    
+    show_cut_indices = BoolProperty(
+            name="Show Cut Indices",
+            description = "Display the order the operator stores cuts.  Usually only turned on for debugging",
+            default=False,
+            )
+        
     
     show_ring_edges = BoolProperty(
             name="Show Ring Edges",
@@ -201,6 +210,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
         # User Settings
         row = layout.row()        
         row.prop(self, "show_edges", text="Show Edge Loops")
+        row.prop(self, "show_cut_indices", text = "Edge Indices")
         row.prop(self, "line_thick", text ="Edge Thickness")
         
         row = layout.row(align=True)
@@ -270,8 +280,14 @@ def retopo_draw_callback(self,context):
     
     settings = context.user_preferences.addons['contour_tools'].preferences
     if len(self.cut_lines) > 0:
-        for c_cut in self.cut_lines:
+        for i, c_cut in enumerate(self.cut_lines):
             c_cut.draw(context, settings,three_dimensional = self.navigating)
+            
+            if c_cut.verts_simple != []:
+                loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, c_cut.verts_simple[0])
+                blf.position(0, loc[0], loc[1], 0)
+                blf.draw(0, str(i))
+                    
             
     
     if self.follow_lines != [] and settings.show_edges:

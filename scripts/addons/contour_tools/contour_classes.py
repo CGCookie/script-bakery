@@ -233,6 +233,7 @@ class ContourCutLine(object):
                 else:
                     contour_utilities.draw_polyline_from_points(context, points, self.geom_color, settings.line_thick,"GL_LINE_STIPPLE")
                     contour_utilities.draw_points(context,points, self.vert_color, settings.vert_size)
+                
             if debug:
                 if settings.vert_inds:
                     for i, point in enumerate(self.verts):
