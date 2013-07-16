@@ -203,6 +203,18 @@ class ContourToolsAddonPreferences(AddonPreferences):
             max=50,
             )   
         
+    vertex_count = IntProperty(
+            name = "Number of Vertices",
+            description = "Vertex Count Per Edge Ring",
+            default=10,
+            min = 3,
+            max = 100,
+            )
+    
+    cyclic = BoolProperty(
+            name = "Cyclic",
+            description = "Make Retopo Loops Cyclic",
+            default = False)
     
     def draw(self, context):
         layout = self.layout
@@ -273,26 +285,16 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
         obj = context.active_object
         return (obj and obj.type == 'MESH' and mode in ('OBJECT', 'EDIT_MESH'))
 
-    vertex_count = IntProperty(
-            name = "Number of Vertices",
-            description = "Vertex Count Per Edge Ring",
-            default=10,
-            min = 3,
-            max = 100,
-            ) 
-    cyclic = BoolProperty(
-            name = "Cyclic",
-            description = "Make Retopo Loops Cyclic",
-            default = False)
+
 
     def draw(self, context):
         layout = self.layout
         col = layout.column()
         col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')
-
+        cgc_contour = context.user_preferences.addons['contour_tools'].preferences
         row = layout.row()
-        row.prop(self, "vertex_count")
-        row.prop(self, "cyclic")   
+        row.prop(cgc_contour, "vertex_count")
+        row.prop(cgc_contour, "cyclic")   
         
 
 def retopo_draw_callback(self,context):
