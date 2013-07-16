@@ -249,6 +249,7 @@ class ContourCutLine(object):
         #draw contour points? later
     
     def hit_object(self, context, ob, method = 'VIEW'):
+        settings = context.user_preferences.addons['contour_tools'].preferences
         region = context.region  
         rv3d = context.space_data.region_3d
         
@@ -290,16 +291,33 @@ class ContourCutLine(object):
             hit = ob.ray_cast(imx*a, imx*b)    
     
             if hit[2] != -1:
+                self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y), mx * hit[0])
+                self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y), mx * hit[0])
+                
                 self.plane_pt = mx * hit[0]
                 self.seed_face_index = hit[2]
 
+                if settings.use_perspective:
+                    
+                    cut_vec = self.head.world_position - self.tail.world_position
+                    cut_vec.normalize()
+                    self.plane_no = cut_vec.cross(vec).normalized()
+                    self.vec_x = -1 * cut_vec.normalized()
+                    self.vec_y = self.plane_no.cross(self.vec_x)
+                    
+
+                    
                 self.plane_x = self.plane_pt + self.vec_x
                 self.plane_y = self.plane_pt + self.vec_y
                 self.plane_z = self.plane_pt + self.plane_no
+                    
+                                #we need to populate the 3 axis vectors
             
-                self.head.world_position = region_2d_to_location_3d(region, rv3d, (self.head.x, self.head.y), mx * hit[0])
-                self.tail.world_position = region_2d_to_location_3d(region, rv3d, (self.tail.x, self.tail.y), mx * hit[0])
+            
+
                 #self.plane_tan.world_position = self.plane_pt + self.vec_y
+                
+                
                 
             else:
                 self.plane_pt = None
@@ -509,19 +527,20 @@ class ContourCutLine(object):
         
         COM_self = contour_utilities.get_com(self.verts_simple)
         COM_other = contour_utilities.get_com(other.verts_simple)
-        delta_com_vect = COM_self - COM_other
+        delta_com_vect = COM_self - COM_other  #final - initial :: self - other
         delta_com_vect.normalize()
         
 
         
         ideal_to_com = 0
         for i, v in enumerate(self.verts_simple):
-            connector = v - other.verts_simple[i]
+            connector = v - other.verts_simple[i]  #continue convention of final - initial :: self - other
             connector.normalize()
             align = connector.dot(delta_com_vect)
             #this shouldnt happen but it appears to be...shrug
             if align < 0:
                 print('damn reverse!')
+                print(align)
                 align *= -1    
             ideal_to_com += align
         
@@ -702,7 +721,7 @@ class ContourCutLine(object):
                     
                     
                 #print('pct change iteration %i was %f' % (iterations, pct_change))
-                #print(alignment_quality)
+                print(alignment_quality)
                 #print(alignment_quality_left)
                 #print(alignment_quality_right)
             print('converged or didnt in %i iterations' % iterations)

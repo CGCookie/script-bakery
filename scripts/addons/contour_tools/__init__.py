@@ -166,7 +166,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
             default=False,
             )
     
-    
+    use_perspective = BoolProperty(
+            name="Use Perspective",
+            description = 'will cause non parallel cuts from same view',
+            default=False,
+            )
+     
     widget_color = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(.6,0.5,0.35), subtype="COLOR")
     widget_color2 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0.1,.1, .3), subtype="COLOR")
     widget_color3 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0.6,0.06,0.06), subtype="COLOR")
@@ -241,6 +246,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
         row = layout.row(align=True)
         row.prop(self, "auto_align")
         row.prop(self, "live_update")
+        row.prop(self, "use_perspective")
         
         row = layout.row()
         row.prop(self, "use_x_ray", "Enable X-Ray at Mesh Creation")
@@ -482,6 +488,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.drag_target.cut_object(context, self.original_form, self.bme)
                             self.hover_target.simplify_cross(self.segments)
                             if 'REHIT' in recalc_vals:
+                                print('updating the com')
                                 self.hover_target.update_com()
                                 
                             self.hover_target.update_screen_coords(context)
@@ -946,12 +953,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         if end:
                             new_order.append(list(set(pair) - end)[0])
                         else:
-                            new_order.insert(0, list(set(pair)-beg)[0])
-                            
+                            new_order.insert(0, list(set(pair)-beg)[0])   
                         break
-            if debug:
-                print('the new order is')            
-                print(new_order)     
+            
+            print('the new order is')            
+            print(new_order)     
+            
             cuts_copy = valid_cuts.copy()
             valid_cuts = []
             for i, n in enumerate(new_order):
@@ -992,7 +999,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             print('alignment')
             print('##################')
             self.valid_cuts[i+1].align_to_other(self.valid_cuts[i], auto_align = a_align)
-                
+        
+        print('check out the shifts?')
+        for cut in self.valid_cuts:
+            print(cut.shift)
+                  
         #work out the connectivity edges
         for i, cut_line in enumerate(self.valid_cuts):
             for v in cut_line.verts_simple:
