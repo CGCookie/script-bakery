@@ -308,9 +308,24 @@ def retopo_draw_callback(self,context):
     settings = context.user_preferences.addons['contour_tools'].preferences
     if len(self.cut_lines) > 0:
         for i, c_cut in enumerate(self.cut_lines):
-            c_cut.draw(context, settings,three_dimensional = self.navigating)
-            
-            if c_cut.verts_simple != []:
+            if self.widget_interaction and self.drag_target == c_cut:
+                interact = True
+                point1 = contour_utilities.get_com(c_cut.verts_simple)
+                point2 = c_cut.plane_com
+                point3 = c_cut.plane_com + c_cut.plane_no
+                
+                l_color = (settings.vert_rgb[0],settings.vert_rgb[1],settings.vert_rgb[2],1)
+                v_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
+                contour_utilities.draw_polyline_from_3dpoints(context, [point2,point1], l_color, settings.line_thick,"GL_LINE_STIPPLE")
+                contour_utilities.draw_polyline_from_3dpoints(context, [point2,point3], l_color, settings.line_thick,"GL_LINE_STIPPLE")
+                
+                contour_utilities.draw_3d_points(context, [point1,point2,point3], v_color, settings.vert_size)
+
+            else:
+                interact = False
+            c_cut.draw(context, settings,three_dimensional = self.navigating, interacting = interact)
+        
+            if c_cut.verts_simple != [] and settings.show_cut_indices:
                 loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, c_cut.verts_simple[0])
                 blf.position(0, loc[0], loc[1], 0)
                 blf.draw(0, str(i))

@@ -147,7 +147,7 @@ class ContourCutLine(object):
         self.verts_simple_screen = [location_3d_to_region_2d(context.region, context.space_data.region_3d, loc) for loc in self.verts_simple]
         
           
-    def draw(self,context, settings, three_dimensional = True):
+    def draw(self,context, settings, three_dimensional = True, interacting = False):
         '''
         setings are the addon preferences for contour tools
         '''
@@ -229,10 +229,12 @@ class ContourCutLine(object):
             if settings.show_ring_edges:
                 if three_dimensional:
                     contour_utilities.draw_polyline_from_3dpoints(context, points, self.geom_color, settings.line_thick,"GL_LINE_STIPPLE")
-                    contour_utilities.draw_3d_points(context, points, self.vert_color, settings.vert_size)
+                    if not interacting:
+                        contour_utilities.draw_3d_points(context, points, self.vert_color, settings.vert_size)
                 else:
                     contour_utilities.draw_polyline_from_points(context, points, self.geom_color, settings.line_thick,"GL_LINE_STIPPLE")
-                    contour_utilities.draw_points(context,points, self.vert_color, settings.vert_size)
+                    if not interacting:
+                        contour_utilities.draw_points(context,points, self.vert_color, settings.vert_size)
                 
             if debug:
                 if settings.vert_inds:
@@ -645,6 +647,9 @@ class ContourCutLine(object):
                 
         #iterate all verts and "handshake problem" them
         #into a dictionary?  That's not very effecient!
+        if auto_align:
+            self.shift = 0
+            self.simplify_cross(len(self.eds_simple))
         edge_len_dict = {}
         for i in range(0,len(verts_1)):
             for n in range(0,len(self.verts_simple)):
