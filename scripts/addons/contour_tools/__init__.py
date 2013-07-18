@@ -613,6 +613,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
                 self.hover_target.simplify_cross(self.segments)
                 self.hover_target.update_screen_coords(context)
+                
+                if self.valid_cuts != []:
+                    i = self.valid_cuts.index(self.hover_target)
+                    if i > 0 and i <= len(self.valid_cuts) - 2:
+                        bqual = self.hover_target.connectivity_analysis(self.valid_cuts[i-1])
+                        aqual = self.hover_target.connectivity_analysis(self.valid_cuts[i+1])
+                        print("quality ahead %f, quality behind: %f " % (bqual, aqual))
+                    
+                
                 self.push_mesh_data(context, a_align = False)
         #######################################
         

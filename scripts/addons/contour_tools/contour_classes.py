@@ -547,8 +547,8 @@ class ContourCutLine(object):
         ideal_to_com = 1/len(self.verts_simple) * ideal_to_com
         
         return ideal_to_com
-    
-    
+        
+        
     def align_to_other(self,other, auto_align = True):
         
         '''
@@ -664,10 +664,10 @@ class ContourCutLine(object):
                
         final_shift = shift_lengths.index(min(shift_lengths))
         if final_shift != 0:
+            print('pre-shift alignment % f' % self.connectivity_analysis(other))
             print("shifting verts by %i segments" % final_shift)
             self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
-        
-        self.connectivity_analysis(other)
+            print('post-shift alignment % f' % self.connectivity_analysis(other))
         
         if auto_align and cyclic:
             alignment_quality = self.connectivity_analysis(other)
@@ -682,42 +682,41 @@ class ContourCutLine(object):
                 
                 self.shift = 0.5 * (left_bound + right_bound)
                 self.simplify_cross(len(self.eds_simple)) #TODO not sure this needs to happen here
+                self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
                 alignment_quality = self.connectivity_analysis(other)
                 
                 self.shift = left_bound
                 self.simplify_cross(len(self.eds_simple))
+                self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
                 alignment_quality_left = self.connectivity_analysis(other)
                 
                 self.shift = right_bound
                 self.simplify_cross(len(self.eds_simple))
+                self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
                 alignment_quality_right = self.connectivity_analysis(other)
                 
                 if alignment_quality_left < alignment_quality and alignment_quality_right < alignment_quality:
                     
-                    left_bound += width*1/4
-                    right_bound -= width*1/4
+                    left_bound += width*1/8
+                    right_bound -= width*1/8
                     
                     
                 elif alignment_quality_left > alignment_quality and alignment_quality_right > alignment_quality:
                     
                     if alignment_quality_right > alignment_quality_left:
-                        left_bound = right_bound - 0.5 * width
+                        left_bound = right_bound - 0.75 * width
                     else:
-                        right_bound = left_bound + 0.5 * width
+                        right_bound = left_bound + 0.75* width
                     
                 elif alignment_quality_left < alignment_quality and alignment_quality_right > alignment_quality:
                     #print('move to the right')
                     #right becomes the new middle
-                    right_bound += width * 1/4
-                    left_bound += width * 3/4
-                    
-                    alignment_quality = alignment_quality_right
+                    left_bound += width * 1/4
             
                 elif alignment_quality_left > alignment_quality and alignment_quality_right < alignment_quality:
                     #print('move to the left')
                     #right becomes the new middle
-                    right_bound -= width * 3/4
-                    left_bound -= width * 1/4
+                    right_bound -= width * 1/4
                     
                     
                 #print('pct change iteration %i was %f' % (iterations, pct_change))
