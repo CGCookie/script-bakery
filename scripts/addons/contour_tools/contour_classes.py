@@ -1100,20 +1100,13 @@ class CutLineManipulatorWidget(object):
             contour_utilities.draw_polyline_from_points(context, self.wedge_2, self.color, self.line_width, "GL_LINES")
             contour_utilities.draw_polyline_from_points(context, self.wedge_3, self.color, self.line_width, "GL_LINES")
             contour_utilities.draw_polyline_from_points(context, self.wedge_4, self.color, self.line_width, "GL_LINES")
-            
-            
-            #check to make sure normal isn't
-            #too paralell to view
-                #draw arrow up (no)
-            
-                #draw arrow down (no)
                 
             #draw arc 1
             l = len(self.arc_arrow_1)
             contour_utilities.draw_polyline_from_points(context, self.arc_arrow_1[:l-1], self.color2, self.line_width, "GL_LINES")
             #draw a line perpendicular to arc
-            point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
-            point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
+            point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
+            point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
             contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color3, self.line_width, "GL_LINES")
             
             #drawa arc 2
