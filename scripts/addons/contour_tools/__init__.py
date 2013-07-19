@@ -528,7 +528,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #else detect proximity to items around
             else:
                 #identify hover target for highlighting
-                if self.cut_lines:
+                if self.cut_lines != []:
                     new_target = False
                     target_at_all = False
                     prospective_targets = []
@@ -1126,6 +1126,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.segments = len(self.sel_edges)
                 self.existing_cut = ExistingVertList(self.sel_verts, self.sel_edges,self.destination_ob.matrix_world)
             else:
+                self.existing_cut = None
                 self.sel_verts = None
                 self.segments = 10
             
