@@ -1093,7 +1093,7 @@ class CutLineManipulatorWidget(object):
         
     def draw(self, context):
         
-
+        settings = context.user_preferences.addons['contour_tools'].preferences
         if not self.transform:
             #draw wedges
             contour_utilities.draw_polyline_from_points(context, self.wedge_1, self.color, self.line_width, "GL_LINES")
@@ -1135,34 +1135,34 @@ class CutLineManipulatorWidget(object):
             #draw a small inner circle
             contour_utilities.draw_polyline_from_points(context, self.inner_circle, self.color, self.line_width, "GL_LINES")
             
-            
-            if self.transform_mode == "NORMAL_TRANSLATE":
-                #draw a ling from the center of mass to the mouse
-                points = [self.initial_com, self.cut_line.plane_com]
-                contour_utilities.draw_3d_points(context, points, self.cut_line.vert_color, 2)
-                contour_utilities.draw_polyline_from_3dpoints(context, points, self.cut_line.geom_color ,2 , "GL_STIPPLE")
-                
-            else:
-                rv3d = context.space_data.region_3d
-                view_x = rv3d.view_rotation * Vector((1,0,0))
-                p1 = self.cut_line.plane_com
-                p2 = p1 + view_x
-                p3 = p1 + self.cut_line.plane_no
-                
-                
-                p1_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p1)
-                p2_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p2)
-                p3_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p3)
-                
-                vec_2d_scale = p1_2d - p2_2d
-                screen_scale = self.radius / vec_2d_scale.length
-                
-                vec_2d = p1_2d - p3_2d
-                
-                p4_2d = p1_2d + screen_scale * vec_2d
-                
-                contour_utilities.draw_points(context, [p1_2d, p4_2d], self.cut_line.vert_color, 2)
-                contour_utilities.draw_polyline_from_points(context, [p1_2d, p4_2d], self.cut_line.geom_color ,2 , "GL_STIPPLE")
+            if not settings.live_update:
+                if self.transform_mode == "NORMAL_TRANSLATE":
+                    #draw a line representing the COM translation
+                    points = [self.initial_com, self.cut_line.plane_com]
+                    contour_utilities.draw_3d_points(context, points, self.color3, 4)
+                    contour_utilities.draw_polyline_from_3dpoints(context, points, self.color ,2 , "GL_STIPPLE")
+                    
+                else:
+                    rv3d = context.space_data.region_3d
+                    view_x = rv3d.view_rotation * Vector((1,0,0))
+                    p1 = self.cut_line.plane_com
+                    p2 = p1 + view_x
+                    p3 = p1 + self.cut_line.plane_no
+                    
+                    
+                    p1_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p1)
+                    p2_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p2)
+                    p3_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p3)
+                    
+                    vec_2d_scale = p1_2d - p2_2d
+                    screen_scale = self.radius / vec_2d_scale.length
+                    
+                    vec_2d = p1_2d - p3_2d
+                    
+                    p4_2d = p1_2d + screen_scale * vec_2d
+                    
+                    contour_utilities.draw_points(context, [p1_2d, p4_2d], self.color3, 5)
+                    contour_utilities.draw_polyline_from_points(context, [p1_2d, p4_2d], self.color ,2 , "GL_STIPPLE")
                 
             
             #If self.transform_mode != 
