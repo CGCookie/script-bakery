@@ -199,7 +199,24 @@ def arc_arrow(x,y,r1,thta1,thta2,res, arrow_size, arrow_angle, ccw = True):
     points.append(points[-1] + arrow_size * arrow_side_1)
     points.append(points[-2] + arrow_size * arrow_side_2) 
            
-    return(points)      
+    return(points)
+
+def simple_curce(x,y,r,res):
+    '''
+    args: 
+    x,y - center coordinate of cark
+    r1 = radius of arc
+    '''
+    points = [Vector((0,0))]*res  #The arc + 2 arrow points
+
+    for i in range(0,res):
+        theta = i * 2 * math.pi / res
+        x1 = math.cos(theta) 
+        y1 = math.sin(theta)
+    
+        points[i]=Vector((r * x1 + x, r * y1 + y))
+           
+    return(points)     
     
 def RPD_closed_loop(verts,match_factor):
     '''

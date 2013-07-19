@@ -1088,45 +1088,84 @@ class CutLineManipulatorWidget(object):
         
         self.arc_arrow_1 = contour_utilities.arc_arrow(self.x, self.y, self.arc_radius, left - deg_45+.2, left + deg_45-.2, 10, self.arrow_size, 2*deg_45, ccw = True)
         self.arc_arrow_2 = contour_utilities.arc_arrow(self.x, self.y, self.arc_radius, right - deg_45+.2, right + deg_45-.2, 10, self.arrow_size,2*deg_45, ccw = True)
+        self.inner_circle = contour_utilities.simple_curce(self.x, self.y, self.inner_radius, 20)
+        self.inner_circle.append(self.inner_circle[0])
         
     def draw(self, context):
         
 
-        
-        #draw wedges
-        contour_utilities.draw_polyline_from_points(context, self.wedge_1, self.color, self.line_width, "GL_LINES")
-        contour_utilities.draw_polyline_from_points(context, self.wedge_2, self.color, self.line_width, "GL_LINES")
-        contour_utilities.draw_polyline_from_points(context, self.wedge_3, self.color, self.line_width, "GL_LINES")
-        contour_utilities.draw_polyline_from_points(context, self.wedge_4, self.color, self.line_width, "GL_LINES")
-        
-        
-        #check to make sure normal isn't
-        #too paralell to view
-            #draw arrow up (no)
-        
-            #draw arrow down (no)
+        if not self.transform:
+            #draw wedges
+            contour_utilities.draw_polyline_from_points(context, self.wedge_1, self.color, self.line_width, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, self.wedge_2, self.color, self.line_width, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, self.wedge_3, self.color, self.line_width, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, self.wedge_4, self.color, self.line_width, "GL_LINES")
             
-        #draw arc 1
-        l = len(self.arc_arrow_1)
-        contour_utilities.draw_polyline_from_points(context, self.arc_arrow_1[:l-1], self.color2, self.line_width, "GL_LINES")
-        #draw a line perpendicular to arc
-        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
-        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
-        contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color3, self.line_width, "GL_LINES")
-        
-        #drawa arc 2
-        contour_utilities.draw_polyline_from_points(context, self.arc_arrow_2[:l-1], self.color2, self.line_width, "GL_LINES")
-        
-        
-        #draw an up and down arrow
-        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))
-        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))
-        contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
-        
-        point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
-        point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
-        contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
+            
+            #check to make sure normal isn't
+            #too paralell to view
+                #draw arrow up (no)
+            
+                #draw arrow down (no)
+                
+            #draw arc 1
+            l = len(self.arc_arrow_1)
+            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_1[:l-1], self.color2, self.line_width, "GL_LINES")
+            #draw a line perpendicular to arc
+            point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
+            point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  math.pi), math.sin(self.angle +  math.pi)))
+            contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color3, self.line_width, "GL_LINES")
+            
+            #drawa arc 2
+            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_2[:l-1], self.color2, self.line_width, "GL_LINES")
+            
+            
+            #draw an up and down arrow
+            point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))
+            point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))
+            contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
+            
+            point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
+            point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
+            contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
+        else:
+            
 
+
+            #draw a small inner circle
+            contour_utilities.draw_polyline_from_points(context, self.inner_circle, self.color, self.line_width, "GL_LINES")
+            
+            
+            if self.transform_mode == "NORMAL_TRANSLATE":
+                #draw a ling from the center of mass to the mouse
+                points = [self.initial_com, self.cut_line.plane_com]
+                contour_utilities.draw_3d_points(context, points, self.cut_line.vert_color, 2)
+                contour_utilities.draw_polyline_from_3dpoints(context, points, self.cut_line.geom_color ,2 , "GL_STIPPLE")
+                
+            else:
+                rv3d = context.space_data.region_3d
+                view_x = rv3d.view_rotation * Vector((1,0,0))
+                p1 = self.cut_line.plane_com
+                p2 = p1 + view_x
+                p3 = p1 + self.cut_line.plane_no
+                
+                
+                p1_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p1)
+                p2_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p2)
+                p3_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p3)
+                
+                vec_2d_scale = p1_2d - p2_2d
+                screen_scale = self.radius / vec_2d_scale.length
+                
+                vec_2d = p1_2d - p3_2d
+                
+                p4_2d = p1_2d + screen_scale * vec_2d
+                
+                contour_utilities.draw_points(context, [p1_2d, p4_2d], self.cut_line.vert_color, 2)
+                contour_utilities.draw_polyline_from_points(context, [p1_2d, p4_2d], self.cut_line.geom_color ,2 , "GL_STIPPLE")
+                
+            
+            #If self.transform_mode != 
 #cut line, a user interactive 2d line which represents a plane in 3d splace
     #head (type conrol point)
     #tail (type control points)
