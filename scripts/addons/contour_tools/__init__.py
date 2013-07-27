@@ -1119,8 +1119,32 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #the selected object will be the original form
             self.original_form = [ob for ob in context.selected_objects if ob.name != context.object.name][0]
             
-            #note, we will have to use bmesh.update_edit_mesh
-            self.sel_edges = [ed for ed in self.dest_bme.edges if ed.select]  #we will have to bridge these :-)
+            
+            #count and collect the selected edges if any
+            ed_inds = [ed.index for ed in self.dest_bme.edges if ed.select]
+            
+            if len(ed_inds):
+                vert_loops = contour_utilities.edge_loops_from_bmedges(self.dest_bme, ed_inds)
+                if len(vert_loops) > 1:
+                    self.report({'ERROR'}, 'single edge loop must be selected')
+                    #TODO: clean up things and free the bmesh
+                    return {'CANCELLED'}
+                
+                else:
+                    best_loop = vert_loops[0]
+                    if best_loop[-1] != best_loop[0]: #typically this means not cyclcic unless there is a tail []_
+                        if len(list(set(best_loop))) == len(best_loop): #verify no tail
+                            self.sel_edges = [ed for ed in self.dest_bme.edges if ed.select]
+                        
+                        else:
+                            self.report({'ERROR'}, 'Edge loop selection has extra parts')
+                            #TODO: clean up things and free the bmesh
+                            return {'CANCELLED'}
+                    else:
+                        self.sel_edges = [ed for ed in self.dest_bme.edges if ed.select]
+            else:
+                self.sel_edges = None
+                
             if self.sel_edges and len(self.sel_edges):
                 self.sel_verts = [vert for vert in self.dest_bme.verts if vert.select]
                 self.segments = len(self.sel_edges)
