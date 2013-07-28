@@ -388,6 +388,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         context.area.tag_redraw()
         settings = context.user_preferences.addons['contour_tools'].preferences
         
+        
         if event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
             
@@ -487,7 +488,59 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     bpy.ops.mesh.bridge_edge_loops(type='SINGLE', use_merge=False, merge_factor=0.5, number_cuts=0, interpolation='PATH', smoothness=1, profile_shape_factor=0, profile_shape='SMOOTH')
                     bpy.ops.mesh.select_all(action='DESELECT')
             return{'FINISHED'}
-            
+        
+        elif event.type == 'A' and event.value == 'PRESS':
+            #verify the correct circumstance
+            if self.hover_target and self.hover_target.desc == 'CUT_LINE' and not self.widget_interaction:
+                ind = self.valid_cuts.index(self.hover_target)
+                ahead = ind + 1
+                behind = ind - 1
+                
+                if ahead != len(self.valid_cuts):
+                    self.hover_target.align_to_other(self.valid_cuts[ahead], auto_align = True)
+                    shift_a = self.hover_target.shift
+                else:
+                    shift_a = False
+                    
+                if behind != -1:
+                    self.hover_target.align_to_other(self.valid_cuts[behind], auto_align = True)
+                    shift_b = self.hover_target.shift
+                else:
+                    shift_b = False    
+                #align between
+                if not event.ctrl and not event.shift:
+                    print('align between')
+                    if shift_a and shift_b:
+                        #In some circumstances this may be a problem if there is
+                        #an integer jump of verts around the ring
+                        self.hover_target.shift = .5 * (shift_a + shift_b)
+                        
+                    #align ahead anyway
+                    elif shift_a:
+                        self.hover_target.shift = shift_a
+                    #align behind anyway
+                    else:
+                        self.hover_target.shift = shift_b
+    
+                #align ahead    
+                elif event.ctrl and not event.shift:
+                    
+                    print('align ahead')
+                    if shift_a:
+                        self.hover_target.shift = shift_a
+                        
+                    
+                #align behind    
+                elif event.shift and not event.ctrl:
+                    print('align behind')
+                    if shift_b:
+                        self.hover_target.shift = shift_b
+                
+                
+                self.hover_target.simplify_cross(self.segments)
+                self.hover_target.update_screen_coords(context)
+                self.push_mesh_data(context, re_order = False, debug = False, a_align = False)
+                
         elif event.type == 'MOUSEMOVE':
 
             if self.drag and self.drag_target:
