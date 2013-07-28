@@ -39,31 +39,31 @@ import quick_scene
 import bpy
 from bpy.types import AddonPreferences
 
-from bl_ui.space_userpref_keymap import InputKeyMapPanel
+#from bl_ui.space_userpref_keymap import InputKeyMapPanel
 
-class QuickToolsPreferences(AddonPreferences):
-    bl_idname = __package__
+# class QuickToolsPreferences(AddonPreferences):
+#     bl_idname = __package__
 
-    _fake_panel = InputKeyMapPanel()
+#     _fake_panel = InputKeyMapPanel()
 
-    def draw(self, context):
-        layout = self.layout
-        split = layout.split()
+#     def draw(self, context):
+#         layout = self.layout
+#         split = layout.split()
         
-        col = split.column()
-        col.label(text="Keymaps")
+#         col = split.column()
+#         col.label(text="Keymaps")
 
-        col = layout.column()
-        kc = bpy.context.window_manager.keyconfigs.addon
-        for km, kmi in addon_keymaps:
-            #km = km.active()
-            col.context_pointer_set("keymap", km)
-            self._fake_panel.draw_kmi([], kc, km, kmi, col, 0)
+#         col = layout.column()
+#         kc = bpy.context.window_manager.keyconfigs.addon
+#         for km, kmi in addon_keymaps:
+#             #km = km.active()
+#             col.context_pointer_set("keymap", km)
+#             self._fake_panel.draw_kmi([], kc, km, kmi, col, 0)
 
 addon_keymaps = []        
 
 def register():
-   bpy.utils.register_class(QuickToolsPreferences)
+   # bpy.utils.register_class(QuickToolsPreferences)
 
    quick_operators.register()
    quick_object_mode.register()
@@ -118,7 +118,7 @@ def register():
   
  
 def unregister():
-    bpy.utils.unregister_class(QuickToolsPreferences)
+    # bpy.utils.unregister_class(QuickToolsPreferences)
 
     quick_operators.unregister()
     quick_object_mode.unregister()
