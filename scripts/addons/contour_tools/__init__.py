@@ -209,8 +209,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
             )   
         
     vertex_count = IntProperty(
-            name = "Number of Vertices",
-            description = "Vertex Count Per Edge Ring",
+            name = "Vertex Count",
+            description = "The Number of Vertices Per Edge Ring",
             default=10,
             min = 3,
             max = 100,
