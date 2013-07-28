@@ -149,7 +149,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
             )
     
     auto_align = BoolProperty(
-            name="Iteratively Align verts",
+            name="Automatically Align verts",
             description = "Attempt to automatically align vertices in adjoining edgeloops. Improves outcome, but slows performance",
             default=False,
             )
