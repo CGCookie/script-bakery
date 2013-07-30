@@ -233,10 +233,11 @@ class ContourToolsAddonPreferences(AddonPreferences):
         row = layout.row()
         row.prop(self, "use_x_ray", "Enable X-Ray at Mesh Creation")
         
-        # Stroke Settings
+
+        # Visualization Settings
         box = layout.box().column(align=False)
         row = box.row()
-        row.label(text="Stroke Settings")
+        row.label(text="Visualization Settings")
 
         row = box.row()
         row.prop(self, "vert_rgb", text="Stroke Color")
@@ -247,21 +248,17 @@ class ContourToolsAddonPreferences(AddonPreferences):
         row.prop(self, "handle_size", text="Handle Size")
         row.prop(self, "stroke_thick", text="Stroke Thickness")
 
-        # Visualization Settings
-        box = layout.box().column(align=False)
-        row = box.row()
-        row.label(text="Visualization Settings")
-
-        row = box.row()
+        row = box.row(align=False)
         row.prop(self, "show_edges", text="Show Edge Loops")
         row.prop(self, "line_thick", text ="Edge Thickness")
         
+        row = box.row(align=False)
+        row.prop(self, "show_ring_edges", text="Show Edge Rings")
+        row.prop(self, "vert_size")
+
         row = box.row(align=True)
         row.prop(self, "show_cut_indices", text = "Edge Indices")
 
-        row = box.row(align=True)
-        row.prop(self, "show_ring_edges", text="Show Edge Rings")
-        row.prop(self, "vert_size")
 
         # Widget Settings
         box = layout.box().column(align=False)
