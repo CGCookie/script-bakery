@@ -149,7 +149,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
             )
     
     auto_align = BoolProperty(
-            name="Iteratively Align verts",
+            name="Automatically Align Vertices",
             description = "Attempt to automatically align vertices in adjoining edgeloops. Improves outcome, but slows performance",
             default=False,
             )
@@ -209,8 +209,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
             )   
         
     vertex_count = IntProperty(
-            name = "Number of Vertices",
-            description = "Vertex Count Per Edge Ring",
+            name = "Vertex Count",
+            description = "The Number of Vertices Per Edge Ring",
             default=10,
             min = 3,
             max = 100,
@@ -224,25 +224,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     def draw(self, context):
         layout = self.layout
 
-        # User Settings
-        row = layout.row()        
-        row.prop(self, "show_edges", text="Show Edge Loops")
-        row.prop(self, "show_cut_indices", text = "Edge Indices")
-        row.prop(self, "line_thick", text ="Edge Thickness")
-        
-        row = layout.row(align=True)
-        row.prop(self, "show_ring_edges", text="Show Edge Rings")
-        row.prop(self, "vert_size")
-        
-        row = layout.row()
-        row.prop(self, "vert_rgb")
-        row.prop(self, "geom_rgb")
-        row.prop(self, "actv_rgb")
-
-        row = layout.row(align=True)
-        row.prop(self, "handle_size", text="Handle Size")
-        row.prop(self, "stroke_thick", text="Stroke Thickness")
-        
+        # Interaction Settings
         row = layout.row(align=True)
         row.prop(self, "auto_align")
         row.prop(self, "live_update")
@@ -250,35 +232,76 @@ class ContourToolsAddonPreferences(AddonPreferences):
         
         row = layout.row()
         row.prop(self, "use_x_ray", "Enable X-Ray at Mesh Creation")
-
-        layout.separator()
         
+        # Stroke Settings
+        box = layout.box().column(align=False)
+        row = box.row()
+        row.label(text="Stroke Settings")
+
+        row = box.row()
+        row.prop(self, "vert_rgb", text="Stroke Color")
+        row.prop(self, "geom_rgb")
+        row.prop(self, "actv_rgb", text="Hover Color")
+
+        row = box.row(align=False)
+        row.prop(self, "handle_size", text="Handle Size")
+        row.prop(self, "stroke_thick", text="Stroke Thickness")
+
+        # Visualization Settings
+        box = layout.box().column(align=False)
+        row = box.row()
+        row.label(text="Visualization Settings")
+
+        row = box.row()
+        row.prop(self, "show_edges", text="Show Edge Loops")
+        row.prop(self, "line_thick", text ="Edge Thickness")
+        
+        row = box.row(align=True)
+        row.prop(self, "show_cut_indices", text = "Edge Indices")
+
+        row = box.row(align=True)
+        row.prop(self, "show_ring_edges", text="Show Edge Rings")
+        row.prop(self, "vert_size")
+
+        # Widget Settings
+        box = layout.box().column(align=False)
+        row = box.row()
+        row.label(text="Widget Settings")
+
+        row = box.row()
+        row.prop(self,"draw_widget", text = "Display Widget")
+
+        if self.draw_widget:
+            row = box.row()
+            row.prop(self, "widget_radius", text="Radius")
+            row.prop(self,"widget_radius_inner", text="Inner Radius")
+            row.prop(self, "widget_thickness", text="Line Thickness")
+            row.prop(self, "arrow_size", text="Arrow Size")
+
+            row = box.row()
+            row.prop(self, "widget_color", text="Color 1")
+            row.prop(self, "widget_color2", text="Color 2")
+            row.prop(self, "widget_color3", text="Color 3")
+
         # Debug Settings
-        layout.label(text="Debug Settings")
+        box = layout.box().column(align=False)
+        row = box.row()
+        row.label(text="Debug Settings")
         
-        layout.prop(self, "debug")
-        layout.prop(self, "vert_inds", text="Show Vertex Indices")
-        layout.prop(self, "simple_vert_inds", text="Show Simple Indices")
+        row = box.row()
+        row.prop(self, "debug")
+        
+        row = box.row()
+        row.prop(self, "vert_inds", text="Show Vertex Indices")
+        row.prop(self, "simple_vert_inds", text="Show Simple Indices")
 
-        row = layout.row()
+        row = box.row()
         row.prop(self, "show_verts", text="Show Raw Vertices")
-        row.prop(self,"draw_widget", text = "Widget Display")
+        
         row.prop(self, "raw_vert_size")
-        
-        layout.separator()
-        layout.label(text="Widget Settings")
-        row = layout.row()
-        row.prop(self, "widget_radius")
-        row.prop(self,"widget_radius_inner")
-        row.prop(self, "widget_thickness")
-        row.prop(self, "arrow_size")
-        
-        row = layout.row()
-        row.prop(self, "widget_color")
-        row.prop(self, "widget_color2")
-        row.prop(self, "widget_color3")
-       
 
+
+        
 class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
     '''Retopologize Forms with Contour Strokes'''
     bl_label = "Contour Retopolgy"
