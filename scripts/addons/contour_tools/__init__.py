@@ -237,7 +237,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
         # Visualization Settings
         box = layout.box().column(align=False)
         row = box.row()
-        row.label(text="Visualization Settings")
+        row.label(text="Stroke And Loop Settings")
 
         row = box.row()
         row.prop(self, "vert_rgb", text="Stroke Color")
