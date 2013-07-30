@@ -153,7 +153,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     auto_align = BoolProperty(
             name="Automatically Align Vertices",
             description = "Attempt to automatically align vertices in adjoining edgeloops. Improves outcome, but slows performance",
-            default=False,
+            default=True,
             )
     
     live_update = BoolProperty(
@@ -171,7 +171,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     use_perspective = BoolProperty(
             name="Use Perspective",
             description = 'will cause non parallel cuts from same view',
-            default=False,
+            default=True,
             )
      
     widget_color = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(.6,0.5,0.35), subtype="COLOR")
