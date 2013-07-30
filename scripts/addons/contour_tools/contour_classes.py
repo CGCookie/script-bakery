@@ -97,6 +97,7 @@ class ContourCutLine(object):
                  vert_color = (0,.2,1,1)):
         
         self.desc = "CUT_LINE"
+        self.select = True
         self.head = ContourControlPoint(self,x,y, color = handle_color)
         self.tail = ContourControlPoint(self,x,y, color = handle_color)
         #self.plane_tan = ContourControlPoint(self,x,y, color = (.8,.8,.8,1))

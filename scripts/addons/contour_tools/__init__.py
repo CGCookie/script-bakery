@@ -491,20 +491,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         elif event.type == 'A' and event.value == 'PRESS':
             #verify the correct circumstance
-            if self.hover_target and self.hover_target.desc == 'CUT_LINE' and not self.widget_interaction:
-                ind = self.valid_cuts.index(self.hover_target)
+            if self.selected and self.selected.desc == 'CUT_LINE' and not self.widget_interaction:
+                ind = self.valid_cuts.index(self.selected)
                 ahead = ind + 1
                 behind = ind - 1
                 
                 if ahead != len(self.valid_cuts):
-                    self.hover_target.align_to_other(self.valid_cuts[ahead], auto_align = True)
-                    shift_a = self.hover_target.shift
+                    self.selected.align_to_other(self.valid_cuts[ahead], auto_align = True)
+                    shift_a = self.selected.shift
                 else:
                     shift_a = False
                     
                 if behind != -1:
-                    self.hover_target.align_to_other(self.valid_cuts[behind], auto_align = True)
-                    shift_b = self.hover_target.shift
+                    self.selected.align_to_other(self.valid_cuts[behind], auto_align = True)
+                    shift_b = self.selected.shift
                 else:
                     shift_b = False    
                 #align between
@@ -513,36 +513,36 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     if shift_a and shift_b:
                         #In some circumstances this may be a problem if there is
                         #an integer jump of verts around the ring
-                        self.hover_target.shift = .5 * (shift_a + shift_b)
+                        self.selected.shift = .5 * (shift_a + shift_b)
                         
                     #align ahead anyway
                     elif shift_a:
-                        self.hover_target.shift = shift_a
+                        self.selected.shift = shift_a
                     #align behind anyway
                     else:
-                        self.hover_target.shift = shift_b
+                        self.selected.shift = shift_b
     
                 #align ahead    
                 elif event.ctrl and not event.shift:
                     
                     print('align ahead')
                     if shift_a:
-                        self.hover_target.shift = shift_a
+                        self.selected.shift = shift_a
                         
                     
                 #align behind    
                 elif event.shift and not event.ctrl:
                     print('align behind')
                     if shift_b:
-                        self.hover_target.shift = shift_b
+                        self.selected.shift = shift_b
                 
                 
-                self.hover_target.simplify_cross(self.segments)
-                self.hover_target.update_screen_coords(context)
+                self.selected.simplify_cross(self.segments)
+                self.selected.update_screen_coords(context)
                 self.push_mesh_data(context, re_order = False, debug = False, a_align = False)
                 
         elif event.type == 'MOUSEMOVE':
-
+                
             if self.drag and self.drag_target:
             
                 if self.drag_target.desc == 'CUT_LINE' and self.widget_interaction:
@@ -561,18 +561,6 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                 
                             self.hover_target.update_screen_coords(context)
 
-                    
-                #if hasattr(self.drag_target,"head") and not self.widget_interaction: #then it's a  line, we need to move both?
-                    #delta = Vector((event.mouse_region_x,event.mouse_region_y)) - Vector((self.initial_location_mouse))
-                    #self.drag_target.head.x = self.initial_location_head[0] + delta[0]
-                    #self.drag_target.head.y = self.initial_location_head[1] + delta[1]
-                    #self.drag_target.tail.x = self.initial_location_tail[0] + delta[0]
-                    #self.drag_target.tail.y = self.initial_location_tail[1] + delta[1]
-                    #self.drag_target.plane_tan.x = self.initial_location_tan[0] + delta[0]
-                    #self.drag_target.plane_tan.y = self.initial_location_tan[1] + delta[1]
-                    #self.drag_target.head.screen_to_world(context)
-                    #self.drag_target.tail.screen_to_world(context)
-                    #self.drag_target.plane_tan.screen_to_world(context)
                 elif self.drag_target.desc == 'CONTROL_POINT':
                     self.drag_target.x = event.mouse_region_x
                     self.drag_target.y = event.mouse_region_y
@@ -604,8 +592,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                     self.cut_line_widget.x = event.mouse_region_x
                                     self.cut_line_widget.y = event.mouse_region_y
                                     self.cut_line_widget.derive_screen(context)
-                        else:
-                            c_cut.geom_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)            
+                        elif not c_cut.select:
+                            c_cut.geom_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)          
                     if not target_at_all:
                         self.hover_target = None
                         self.cut_line_widget = None
@@ -656,6 +644,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.hover_target = None
                 self.widget_interaction = False
                 self.cut_line_widget = None
+                self.selected = None
                     
             else:
                 self.cut_lines.remove(self.hover_target.parent)
@@ -668,25 +657,25 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
     
         #########temporary testing#############
         if event.type in {'LEFT_ARROW','RIGHT_ARROW'}:
-            if self.hover_target and hasattr(self.hover_target, 'head'):
+            if self.selected and hasattr(self.selected, 'head'):
                 if event.type == 'LEFT_ARROW' and event.value == 'PRESS':
-                    self.hover_target.shift -= .05
-                    if self.hover_target.shift < -1:
-                        self.hover_target.shift = -1   
+                    self.selected.shift -= .05
+                    if self.selected.shift < -1:
+                        self.selected.shift = -1   
                 
                 if event.type == 'RIGHT_ARROW' and event.value == 'PRESS':
-                    self.hover_target.shift += .05
-                    if self.hover_target.shift > 1:
-                        self.hover_target.shift = 1
+                    self.selected.shift += .05
+                    if self.selected.shift > 1:
+                        self.selected.shift = 1
             
-                self.hover_target.simplify_cross(self.segments)
-                self.hover_target.update_screen_coords(context)
+                self.selected.simplify_cross(self.segments)
+                self.selected.update_screen_coords(context)
                 
                 if self.valid_cuts != []:
-                    i = self.valid_cuts.index(self.hover_target)
+                    i = self.valid_cuts.index(self.selected)
                     if i > 0 and i <= len(self.valid_cuts) - 2:
-                        bqual = self.hover_target.connectivity_analysis(self.valid_cuts[i-1])
-                        aqual = self.hover_target.connectivity_analysis(self.valid_cuts[i+1])
+                        bqual = self.selected.connectivity_analysis(self.valid_cuts[i-1])
+                        aqual = self.selected.connectivity_analysis(self.valid_cuts[i+1])
                         print("quality ahead %f, quality behind: %f " % (bqual, aqual))
                     
                 
@@ -775,6 +764,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         #event click
         elif event.type == 'LEFTMOUSE':
+            
             if event.value == 'RELEASE':
                 if self.drag and self.drag_target:
                     if self.drag_target.desc == 'CUT_LINE' and not self.widget_interaction: #then it's a new line
@@ -894,13 +884,21 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                     if self.hover_target.desc == 'CUT_LINE':
                         self.widget_interaction = True
+                        self.hover_target.select = True
+                        self.selected = self.hover_target
+                        for cut in self.cut_lines:
+                            if cut != self.hover_target:
+                                cut.select = False
 
                 #No active cutline under mouse -> make a new one
                 else:
                     v3d = context.space_data
                     region = v3d.region_3d 
-                    view = region.view_rotation * Vector((0,0,1))
                     
+                    #clear selection (perhaps self.selected.select = False, self.selected = None)
+                    for cut in self.cut_lines:
+                        cut.select = False
+                        
                     g_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
                     v_color = (settings.vert_rgb[0],settings.vert_rgb[1],settings.vert_rgb[2],1)
                     g_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
@@ -909,6 +907,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                                          vert_color = v_color))
                     self.drag_target = self.cut_lines[-1].tail
                     self.new = True
+                    
             
                     return {'RUNNING_MODAL'}
                 return {'RUNNING_MODAL'}
@@ -1291,6 +1290,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.drag_target = None
         #what is the mouse over top of currently
         self.hover_target = None
+        #keep track of selected cut_line (perhaps
+        self.selected = None
         
         #Keep reference to a cutline widget
         #an keep track of whether or not we are
