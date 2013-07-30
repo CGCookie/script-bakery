@@ -245,6 +245,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
         row.prop(self, "stroke_rgb", text="Stroke Color")
         row.prop(self, "handle_rgb", text="Handle Color")
         row.prop(self, "actv_rgb", text="Hover Color")
+        
+        row = box.row()
         row.prop(self, "vert_rgb", text="Vertex Color")
         row.prop(self, "geom_rgb", text="Edge Color")
         
