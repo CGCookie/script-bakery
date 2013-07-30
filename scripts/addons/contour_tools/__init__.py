@@ -1227,7 +1227,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             else:
                 self.existing_cut = None
                 self.sel_verts = None
-                self.segments = 10
+                self.segments = settings.vertex_count
             
         else:
             #make the irrelevant variables None
@@ -1253,7 +1253,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.dest_bme.from_mesh(self.dest_me)
             
             #default segments (spans)
-            self.segments = 10
+            self.segments = settings.vertex_count
         
         #get the info about the original form
         #and convert it to a bmesh for fast connectivity info
