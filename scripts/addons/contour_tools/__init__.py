@@ -114,6 +114,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
             max=10,
             )
     
+    stroke_rgb = FloatVectorProperty(name="Stroke Color", description="Color of Strokes", min=0, max=1, default=(0,0.2,1), subtype="COLOR")
+    handle_rgb = FloatVectorProperty(name="Handle Color", description="Color of Stroke Handles", min=0, max=1, default=(0.6,0,0), subtype="COLOR")
     vert_rgb = FloatVectorProperty(name="Widget Color", description="Color of Verts", min=0, max=1, default=(0,0.2,1), subtype="COLOR")
     geom_rgb = FloatVectorProperty(name="Geometry Color", description="Color For Edges", min=0, max=1, default=(0,1, .2), subtype="COLOR")
     actv_rgb = FloatVectorProperty(name="Widget Color", description="Active Cut Line", min=0, max=1, default=(0.6,.2,.8), subtype="COLOR")
@@ -240,9 +242,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
         row.label(text="Stroke And Loop Settings")
 
         row = box.row()
-        row.prop(self, "vert_rgb", text="Stroke Color")
-        row.prop(self, "geom_rgb")
+        row.prop(self, "stroke_rgb", text="Stroke Color")
+        row.prop(self, "handle_rgb", text="Handle Color")
         row.prop(self, "actv_rgb", text="Hover Color")
+        row.prop(self, "vert_rgb", text="Vertex Color")
+        row.prop(self, "geom_rgb", text="Edge Color")
+        
 
         row = box.row(align=False)
         row.prop(self, "handle_size", text="Handle Size")
