@@ -327,7 +327,7 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
         cgc_contour = context.user_preferences.addons['contour_tools'].preferences
         row = layout.row()
         row.prop(cgc_contour, "vertex_count")
-        row.prop(cgc_contour, "cyclic")   
+ 
         
 
 def retopo_draw_callback(self,context):
