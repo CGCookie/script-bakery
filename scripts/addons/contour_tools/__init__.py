@@ -1,9 +1,21 @@
 '''
-Created on Apr 23, 2013
+Copyright (C) 2013 CG Cookie
+http://cgcookie.com
+hello@cgcookie.com
 
-@author: Patrick
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
-
 
 bl_info = {
     "name": "Contour Retopology Tool",
@@ -114,6 +126,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
             max=10,
             )
     
+    stroke_rgb = FloatVectorProperty(name="Stroke Color", description="Color of Strokes", min=0, max=1, default=(0,0.2,1), subtype="COLOR")
+    handle_rgb = FloatVectorProperty(name="Handle Color", description="Color of Stroke Handles", min=0, max=1, default=(0.6,0,0), subtype="COLOR")
     vert_rgb = FloatVectorProperty(name="Widget Color", description="Color of Verts", min=0, max=1, default=(0,0.2,1), subtype="COLOR")
     geom_rgb = FloatVectorProperty(name="Geometry Color", description="Color For Edges", min=0, max=1, default=(0,1, .2), subtype="COLOR")
     actv_rgb = FloatVectorProperty(name="Widget Color", description="Active Cut Line", min=0, max=1, default=(0.6,.2,.8), subtype="COLOR")
@@ -151,7 +165,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     auto_align = BoolProperty(
             name="Automatically Align Vertices",
             description = "Attempt to automatically align vertices in adjoining edgeloops. Improves outcome, but slows performance",
-            default=False,
+            default=True,
             )
     
     live_update = BoolProperty(
@@ -169,7 +183,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     use_perspective = BoolProperty(
             name="Use Perspective",
             description = 'will cause non parallel cuts from same view',
-            default=False,
+            default=True,
             )
      
     widget_color = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(.6,0.5,0.35), subtype="COLOR")
@@ -233,35 +247,37 @@ class ContourToolsAddonPreferences(AddonPreferences):
         row = layout.row()
         row.prop(self, "use_x_ray", "Enable X-Ray at Mesh Creation")
         
-        # Stroke Settings
+
+        # Visualization Settings
         box = layout.box().column(align=False)
         row = box.row()
-        row.label(text="Stroke Settings")
+        row.label(text="Stroke And Loop Settings")
 
         row = box.row()
-        row.prop(self, "vert_rgb", text="Stroke Color")
-        row.prop(self, "geom_rgb")
+        row.prop(self, "stroke_rgb", text="Stroke Color")
+        row.prop(self, "handle_rgb", text="Handle Color")
         row.prop(self, "actv_rgb", text="Hover Color")
+        
+        row = box.row()
+        row.prop(self, "vert_rgb", text="Vertex Color")
+        row.prop(self, "geom_rgb", text="Edge Color")
+        
 
         row = box.row(align=False)
         row.prop(self, "handle_size", text="Handle Size")
         row.prop(self, "stroke_thick", text="Stroke Thickness")
 
-        # Visualization Settings
-        box = layout.box().column(align=False)
-        row = box.row()
-        row.label(text="Visualization Settings")
-
-        row = box.row()
+        row = box.row(align=False)
         row.prop(self, "show_edges", text="Show Edge Loops")
         row.prop(self, "line_thick", text ="Edge Thickness")
         
+        row = box.row(align=False)
+        row.prop(self, "show_ring_edges", text="Show Edge Rings")
+        row.prop(self, "vert_size")
+
         row = box.row(align=True)
         row.prop(self, "show_cut_indices", text = "Edge Indices")
 
-        row = box.row(align=True)
-        row.prop(self, "show_ring_edges", text="Show Edge Rings")
-        row.prop(self, "vert_size")
 
         # Widget Settings
         box = layout.box().column(align=False)
@@ -323,7 +339,7 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
         cgc_contour = context.user_preferences.addons['contour_tools'].preferences
         row = layout.row()
         row.prop(cgc_contour, "vertex_count")
-        row.prop(cgc_contour, "cyclic")   
+ 
         
 
 def retopo_draw_callback(self,context):
