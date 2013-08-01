@@ -1297,8 +1297,12 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
             #add the point, add the mapping move forward
             edge_mapping[len(verts)] = [f.index for f in ed.link_faces]
             verts.append(result[1])
-            seeds.append([face for face in ed.link_faces if face.index != seed_index][0])
-            seed_edge = True
+            potential_faces = [face for face in ed.link_faces if face.index != seed_index]
+            if len(potential_faces):
+                seeds.append(potential_faces[0])
+                seed_edge = True
+            else:
+                seed_edge = False
         
     if not seed_edge:
         print('failed to find a good face to start with, cancelling until your programmer gets smarter')

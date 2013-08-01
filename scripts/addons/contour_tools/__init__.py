@@ -627,20 +627,26 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                 prospective_targets.append(h_target)
                                 self.hover_target = h_target
                                 if hasattr(self.hover_target, "head"):
-                                    #Potentially may need to del the old widget?
-                                    ind = self.valid_cuts.index(self.hover_target)
-                                    ahead = ind + 1
-                                    behind = ind - 1
                                     
-                                    if ahead < len(self.cut_lines):
-                                        a_line = self.valid_cuts[ahead]
+                                    if self.valid_cuts and len(self.valid_cuts):
+                                        ind = self.valid_cuts.index(self.hover_target)
+                                        ahead = ind + 1
+                                        behind = ind - 1
+                                    
+                                        if ahead < len(self.cut_lines):
+                                            a_line = self.valid_cuts[ahead]
+                                        else:
+                                            a_line = None
+                                    
+                                        if behind > - 1:
+                                            b_line = self.valid_cuts[behind]
+                                        else:
+                                            b_line = None
+                                            
                                     else:
                                         a_line = None
-                                    
-                                    if behind > - 1:
-                                        b_line = self.valid_cuts[behind]
-                                    else:
                                         b_line = None
+                                        
                                     self.cut_line_widget = CutLineManipulatorWidget(context, settings, self.hover_target, event.mouse_region_x,event.mouse_region_y,cut_line_a = a_line, cut_line_b = b_line)
                                     self.cut_line_widget.derive_screen(context)
                                     
