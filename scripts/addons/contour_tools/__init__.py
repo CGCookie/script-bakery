@@ -512,6 +512,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     bpy.ops.mesh.select_all(action='DESELECT')
             return{'FINISHED'}
         
+        elif event.type == 'S' and event.value == 'PRESS':
+            if self.selected:
+                context.scene.cursor_location = self.selected.plane_com
+            
+            
         elif event.type == 'A' and event.value == 'PRESS':
             #verify the correct circumstance
             if self.selected and self.selected.desc == 'CUT_LINE' and not self.widget_interaction:
@@ -607,7 +612,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                 self.hover_target = h_target
                                 if hasattr(self.hover_target, "head"):
                                     #Potentially may need to del the old widget?
-                                    self.cut_line_widget = CutLineManipulatorWidget(context, settings, self.hover_target, event.mouse_region_x,event.mouse_region_y)
+                                    ind = self.valid_cuts.index(self.hover_target)
+                                    ahead = ind + 1
+                                    behind = ind - 1
+                                    
+                                    if ahead < len(self.cut_lines):
+                                        a_line = self.valid_cuts[ahead]
+                                    else:
+                                        a_line = None
+                                    
+                                    if behind > - 1:
+                                        b_line = self.valid_cuts[behind]
+                                    else:
+                                        b_line = None
+                                    self.cut_line_widget = CutLineManipulatorWidget(context, settings, self.hover_target, event.mouse_region_x,event.mouse_region_y,cut_line_a = a_line, cut_line_b = b_line)
                                     self.cut_line_widget.derive_screen(context)
                                     
                             else:
@@ -909,6 +927,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.widget_interaction = True
                         self.hover_target.select = True
                         self.selected = self.hover_target
+                        
                         for cut in self.cut_lines:
                             if cut != self.hover_target:
                                 cut.select = False
@@ -930,6 +949,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                                          vert_color = v_color))
                     self.drag_target = self.cut_lines[-1].tail
                     self.new = True
+                    self.selected = self.cut_lines[-1]
                     
             
                     return {'RUNNING_MODAL'}

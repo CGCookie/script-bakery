@@ -815,7 +815,7 @@ class ContourCutLine(object):
 
 
 class CutLineManipulatorWidget(object):
-    def __init__(self,context, settings, cut_line,x,y):
+    def __init__(self,context, settings, cut_line,x,y,cut_line_a = None, cut_line_b = None):
         
         self.desc = 'WIDGET'
         self.cut_line = cut_line
@@ -826,7 +826,20 @@ class CutLineManipulatorWidget(object):
         self.transform = False
         self.transform_mode = None
         
+        if cut_line_a:
+            self.a = cut_line_a.plane_com
+            self.a_no = cut_line_a.plane_no
+        else:
+            self.a = None
+            self.a_no = None
         
+        if cut_line_b:
+            self.b = cut_line_b.plane_com
+            self.b_no = cut_line_b.plane_no
+        else:
+            self.b = None
+            self.b_no = None
+            
         self.color = (settings.widget_color[0], settings.widget_color[1],settings.widget_color[2],1)
         self.color2 = (settings.widget_color2[0], settings.widget_color2[1],settings.widget_color2[2],1)
         self.color3 = (settings.widget_color3[0], settings.widget_color3[1],settings.widget_color3[2],1)
@@ -876,6 +889,8 @@ class CutLineManipulatorWidget(object):
         '''
         
         mouse_vec = Vector((mouse_x,mouse_y))
+        
+        
         self_vec = Vector((self.x,self.y))
         loc_vec = mouse_vec - self_vec
         
@@ -898,13 +913,13 @@ class CutLineManipulatorWidget(object):
                 
                 if loc_angle >= 1/4 * math.pi and loc_angle < 3/4 * math.pi:
                     #we are in the  left quadrant...which is perpendicular
-                    self.transform_mode = 'NORMAL_TRANSLATE'
+                    self.transform_mode = 'EDGE_SLIDE'
                     
                 elif loc_angle >= 3/4 * math.pi and loc_angle < 5/4 * math.pi:
                     self.transform_mode = 'EDGE_PARALLEL'
                 
                 elif loc_angle >= 5/4 * math.pi and loc_angle < 7/4 * math.pi:
-                    self.transform_mode = 'NORMAL_TRANSLATE'
+                    self.transform_mode = 'EDGE_SLIDE'
                 
                 else:
                     self.transform_mode = 'EDGE_PERPENDICULAR'
@@ -935,6 +950,44 @@ class CutLineManipulatorWidget(object):
             
             else:
                 
+                if self.transform_mode == 'EDGE_SLIDE':
+                    world_vec = world_mouse - world_widget
+                    screen_dist = loc_vec.length - self.inner_radius
+                    factor = screen_dist/loc_vec.length
+                    
+                    
+                    if self.a:
+                        vec_a = self.a - self.initial_com
+                        vec_a_dir = vec_a.normalized()
+                        
+                        if world_vec.dot(vec_a_dir) > 0 and factor * world_vec.dot(vec_a_dir) < vec_a.length:
+                            translate = factor * world_vec.dot(vec_a_dir) * vec_a_dir
+                            self.cut_line.plane_com = self.initial_com + translate
+                            return {'REHIT','RECUT'}
+                        
+                        elif not self.b and world_vec.dot(vec_a_dir) < 0:
+                            translate = factor * world_vec.dot(self.initial_plane_no) * self.initial_plane_no
+                            self.cut_line.plane_com = self.initial_com + translate
+                            return {'REHIT','RECUT'}
+                        
+                        
+                    if self.b:
+                        vec_b = self.b - self.initial_com
+                        vec_b_dir = vec_b.normalized()
+                        
+                        if world_vec.dot(vec_b_dir) > 0 and factor * world_vec.dot(vec_b_dir) < vec_b.length:
+                            translate = factor * world_vec.dot(vec_b_dir)* vec_b_dir
+                            self.cut_line.plane_com = self.initial_com + translate
+                            
+                            return {'REHIT','RECUT'}
+                        
+                        elif not self.a and world_vec.dot(vec_b_dir) < 0:
+                            translate = factor * world_vec.dot(self.initial_plane_no) * self.initial_plane_no
+                            self.cut_line.plane_com = self.initial_com + translate
+
+                    return {'DO_NOTHING'}
+
+                    
                 if self.transform_mode == 'NORMAL_TRANSLATE':
                     print('translating')
                     #the pixel distance used to scale the translation
