@@ -995,6 +995,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.verts = []
             self.edges = []
             self.face = []
+            self.follow_lines = []
             return
         
         imx = self.original_form.matrix_world.inverted()
