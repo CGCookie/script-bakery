@@ -25,7 +25,7 @@ bl_info = {
     "blender": (2, 6, 8),
     "location": "View 3D > Tool Shelf",
     "warning": 'Beta',  # used for warning icon and text in addons panel
-    "wiki_url": "",
+    "wiki_url": "http://cgcookie.com/blender/docs/contour-retopology/",
     "tracker_url": "https://github.com/CGCookie/script-bakery/issues?labels=Contour+Retopology&milestone=1&page=1&state=open",
     "category": "3D View"}
 
