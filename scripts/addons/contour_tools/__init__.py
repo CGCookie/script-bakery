@@ -227,7 +227,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
             description = "The Number of Vertices Per Edge Ring",
             default=10,
             min = 3,
-            max = 100,
+            max = 250,
             )
     
     cyclic = BoolProperty(
