@@ -685,7 +685,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 bpy.data.meshes.remove(me)
             return {'CANCELLED'}  
         
-        elif event.type == 'MIDDLEMOUSE':
+        elif event.type in {'MIDDLEMOUSE', 'NUMPAD_2', 'NUMPAD_4', 'NUMPAD_6', 'NUMPAD_8', 'NUMPAD_1', 'NUMPAD_3', 'NUMPAD_5', 'NUMPAD_7', 'NUMPAD_9'}:
 
             if event.value == 'PRESS':
                 self.navigating = True
