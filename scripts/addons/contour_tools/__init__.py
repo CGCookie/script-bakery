@@ -60,7 +60,10 @@ from bpy.types import Operator, AddonPreferences
 
 
 #a place to store stokes for later
-contour_cache = []
+global contour_cache 
+contour_cache = {}
+
+
 
 class ContourToolsAddonPreferences(AddonPreferences):
     bl_idname = __name__
@@ -990,13 +993,77 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #print('modal ret val')
         #print(ret_val)
         #return ret_val
-    def write_to_cache(self, cache):
-        cache = []
-        for cut in self.valid_cuts:
-            
-            data = [cut.plane_no, cut.plane_com, cut.vec_x, cut.vec_y,cut.seed_face_index]
-            cache.append(data)
+    def write_to_cache(self,tool_type):
+        global contour_cache
         
+        if tool_type in contour_cache:
+            del contour_cache[tool_type]
+            
+        if len(self.valid_cuts):
+            normals = [cut.plane_no for cut in self.valid_cuts]
+            x_vecs = [cut.vec_x for cut in self.valid_cuts]
+            y_vecs = [cut.vec_y for cut in self.valid_cuts]
+            plane_pts = [cut.plane_pt for cut in self.valid_cuts]
+            seeds = [cut.seed_face_index for cut in self.valid_cuts]
+            shifts = [cut.shift for cut in self.valid_cuts]
+            #todo, make this a little betetr
+            validate = [self.original_form.name, len(self.bme.faces), len(self.bme.verts)]
+            contour_cache[tool_type] = {'validate': validate,
+                                        'normals': normals,
+                                        'x_vecs':x_vecs,
+                                        'y_vecs':y_vecs,
+                                        'plane_pts':plane_pts,
+                                        'seeds':seeds,
+                                        'shifts':shifts,
+                                        'segments': self.segments}
+    
+    def load_from_cache(self,context, tool_type):
+        settings = context.user_preferences.addons['contour_tools'].preferences
+        if tool_type not in contour_cache:
+            return None
+        else:
+            data = contour_cache[tool_type]
+            if [self.original_form.name, len(self.bme.faces), len(self.bme.verts)] == data['validate']:
+                normals = data['normals']
+                x_vecs = data['x_vecs']
+                y_vecs = data['y_vecs']
+                plane_pts = data['plane_pts']
+                seeds = data['seeds']
+                shifts = data['shifts']
+                segments = data['segments']
+                
+                
+                #settings and things
+                (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
+                gc = settings.geom_rgb
+                lc = settings.stroke_rgb
+                vc = settings.vert_rgb
+                hc = settings.handle_rgb
+                
+                g_color = (gc[0],gc[1],gc[2],1)
+                l_color = (lc[0],lc[1],lc[2],1)
+                v_color = (vc[0],vc[1],vc[2],1)
+                h_color = (hc[0],hc[1],hc[2],1)
+        
+                for i, plane_no in enumerate(normals):
+                    cut = ContourCutLine(0, 0, line_width = settings.line_thick, line_color = l_color, handle_color = h_color, geom_color = g_color, vert_color = v_color)
+                    cut.plane_no = plane_no
+                    cut.seed_face_index = seeds[i]
+                    cut.vec_x = x_vecs[i]
+                    cut.vec_y = y_vecs[i]
+                    cut.plane_pt = plane_pts[i]
+                    cut.shift = shifts[i]
+                    
+                    cut.cut_object(context, self.original_form, self.bme)
+                    cut.simplify_cross(segments)
+                    cut.update_com()        
+                    cut.update_screen_coords(context) 
+                    cut.select = False  
+                    self.cut_lines.append(cut)
+                    
+                self.push_mesh_data(context, a_align = settings.auto_align)
+                    
+            
     def push_mesh_data(self,context, re_order = True, debug = False, a_align = False):
         
         total_verts = []
@@ -1087,7 +1154,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         print('found valid pairs as follows')       
         print(valid_pairs)
         
-        #TODO disect an comment this code
+        #TODO disect and comment this code
         if len(valid_pairs) == 0:
             print('no valid pairs!!')
         if re_order and len(valid_pairs) > 0:
@@ -1161,7 +1228,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         for cut in self.valid_cuts:
             print(cut.shift)
         
-        self.write_to_cache(contour_cache)
+        global contour_cache
+        self.write_to_cache('CUT_LINES')
                   
         #work out the connectivity edges
         for i, cut_line in enumerate(self.valid_cuts):
@@ -1326,6 +1394,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.destination_ob.show_x_ray = True
         
         #check for ngons, and if there are any...triangulate just the ngons
+        #this mainly stems from the obj.ray_cast function returning triangulate
+        #results and that it makes my cross section method easier.
         ngons = []
         for f in self.bme.faces:
             if len(f.verts) > 4:
@@ -1391,12 +1461,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #cut_linse are actual instances of the
         #ContourCutLine calss which controls the extraction of
         #the contours.
-        if settings.recover:
-            print('loading cache!')
-            print(contour_cache)
-
-        
         self.cut_lines = []
+        
         #the validity of a cut is determined by the inferred connectivity to
         #other cut_lines, we make a subset here.  CutLines are cheap so we duplicate
         #instead of referencing indices for now.
@@ -1405,6 +1471,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #this iw a collection of verts used for open GL drawing the spans
         self.follow_lines = []
         
+        if settings.recover:
+            print('loading cache!')
+            print(contour_cache['CUT_LINES'])
+            self.load_from_cache(context, 'CUT_LINES')
         #add in the draw callback and modal method
         self._handle = bpy.types.SpaceView3D.draw_handler_add(retopo_draw_callback, (self, context), 'WINDOW', 'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
