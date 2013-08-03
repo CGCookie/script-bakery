@@ -211,7 +211,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     
     widget_thickness = IntProperty(
             name="Widget Line Thickness",
-            description = "width lines used to draw widget",
+            description = "Width of lines used to draw widget",
             default=2,
             min = 1,
             max = 10,
