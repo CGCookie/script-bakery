@@ -378,6 +378,13 @@ class CGCOOKIE_OT_retopo_contour_menu(bpy.types.Menu):
 def retopo_draw_callback(self,context):
     
     settings = context.user_preferences.addons['contour_tools'].preferences
+
+    stroke_color = settings.stroke_rgb
+    handle_color = settings.handle_rgb
+    hover_color = settings.actv_rgb
+    g_color = settings.geom_rgb
+    v_color = settings.vert_rgb
+
     if len(self.cut_lines) > 0:
         for i, c_cut in enumerate(self.cut_lines):
             if self.widget_interaction and self.drag_target == c_cut:
@@ -401,13 +408,11 @@ def retopo_draw_callback(self,context):
                 loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, c_cut.verts_simple[0])
                 blf.position(0, loc[0], loc[1], 0)
                 blf.draw(0, str(i))
-                    
-            
-    
+
     if self.follow_lines != [] and settings.show_edges:
         for follow in self.follow_lines:
-            contour_utilities.draw_polyline_from_3dpoints(context, follow, (0,1,.2,1), settings.line_thick,"GL_LINE_STIPPLE")
-            
+            contour_utilities.draw_polyline_from_3dpoints(context, follow, (g_color[0], g_color[1], g_color[2], 1), settings.line_thick,"GL_LINE_STIPPLE")
+
     if self.cut_line_widget and settings.draw_widget:
         self.cut_line_widget.draw(context)
         
