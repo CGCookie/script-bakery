@@ -1421,7 +1421,7 @@ def register():
    
     # create the mode switch menu hotkey
     km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
-    kmi = km.keymap_items.new('wm.call_menu', 'T', 'PRESS', ctrl=True, shift=True)
+    kmi = km.keymap_items.new('wm.call_menu', 'V', 'PRESS', ctrl=True, shift=True)
     kmi.properties.name = 'object.retopology_menu' 
     kmi.active = True
     addon_keymaps.append((km, kmi))
