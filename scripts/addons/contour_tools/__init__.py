@@ -19,7 +19,7 @@ hello@cgcookie.com
 
 bl_info = {
     "name": "Contour Retopology Tool",
-    "description": "A tool to retopology forms quickly with contour strokes.",
+    "description": "A tool to retopologize forms quickly with contour strokes.",
     "author": "Patrick Moore",
     "version": (0, 0, 1),
     "blender": (2, 6, 8),
