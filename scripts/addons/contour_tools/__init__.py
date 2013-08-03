@@ -542,7 +542,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         elif event.type == 'S' and event.value == 'PRESS':
             if self.selected:
                 context.scene.cursor_location = self.selected.plane_com
-            
+        
+        elif event.type == 'C' and event.value == 'PRESS':
+            bpy.ops.view3d.view_center_cursor()
             
         elif event.type == 'A' and event.value == 'PRESS':
             #verify the correct circumstance
