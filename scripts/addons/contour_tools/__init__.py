@@ -318,7 +318,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
 
 
         
-class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
+class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel):
     '''Retopologize Forms with Contour Strokes'''
     bl_label = "Contour Retopolgy"
     bl_space_type = 'VIEW_3D'
@@ -340,7 +340,18 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
         row = layout.row()
         row.prop(cgc_contour, "vertex_count")
  
-        
+
+class CGCOOKIE_OT_retopo_contour_menu(bpy.types.Menu):  
+    bl_label = "Retopology"
+    bl_space_type = 'VIEW_3D'
+    bl_idname = "object.retopology_menu"
+
+    def draw(self, context):
+        layout = self.layout
+
+        layout.operator_context = 'INVOKE_DEFAULT'
+
+        layout.operator("cgcookie.retop_contour")  
 
 def retopo_draw_callback(self,context):
     
@@ -1393,15 +1404,37 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         for line in self.cut_lines:
             print(line.view_dir)
 
+
+# Used to store keymaps for addon
+addon_keymaps = []
+
+
 #resgistration
 def register():
     bpy.utils.register_class(ContourToolsAddonPreferences)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour_panel)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour)
+    bpy.utils.register_class(CGCOOKIE_OT_retopo_contour_menu)
+
+    # Create the addon hotkeys
+    kc = bpy.context.window_manager.keyconfigs.addon
+   
+    # create the mode switch menu hotkey
+    km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
+    kmi = km.keymap_items.new('wm.call_menu', 'T', 'PRESS', ctrl=True, shift=True)
+    kmi.properties.name = 'object.retopology_menu' 
+    kmi.active = True
+    addon_keymaps.append((km, kmi))
     
 
 #unregistration
 def unregister():
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour)
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour_panel)
+    bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour_menu)
     bpy.utils.unregister_class(ContourToolsAddonPreferences)
+
+    # Remove addon hotkeys
+    for km, kmi in addon_keymaps:
+        km.keymap_items.remove(kmi)
+    addon_keymaps.clear()
