@@ -249,7 +249,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     recover_clip = IntProperty(
             name = "Recover Clip",
             description = "Number of cuts to leave out, usually just 0 or 1",
-            default=1,
+            default=0,
             min = 0,
             max = 10,
             )
@@ -1023,12 +1023,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             del contour_cache[tool_type]
             
         if len(self.valid_cuts):
-            normals = [cut.plane_no for cut in self.valid_cuts]
-            x_vecs = [cut.vec_x for cut in self.valid_cuts]
-            y_vecs = [cut.vec_y for cut in self.valid_cuts]
-            plane_pts = [cut.plane_pt for cut in self.valid_cuts]
-            seeds = [cut.seed_face_index for cut in self.valid_cuts]
-            shifts = [cut.shift for cut in self.valid_cuts]
+            normals = [cut.plane_no for cut in self.cut_lines]
+            x_vecs = [cut.vec_x for cut in self.cut_lines]
+            y_vecs = [cut.vec_y for cut in self.cut_lines]
+            plane_pts = [cut.plane_pt for cut in self.cut_lines]
+            seeds = [cut.seed_face_index for cut in self.cut_lines]
+            shifts = [cut.shift for cut in self.cut_lines]
             #todo, make this a little betetr
             validate = [self.original_form.name, len(self.bme.faces), len(self.bme.verts)]
             contour_cache[tool_type] = {'validate': validate,
@@ -1040,7 +1040,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                         'shifts':shifts,
                                         'segments': self.segments}
     
-    def load_from_cache(self,context, tool_type):
+    def load_from_cache(self,context, tool_type,clip):
         settings = context.user_preferences.addons['contour_tools'].preferences
         if tool_type not in contour_cache:
             return None
@@ -1069,6 +1069,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 h_color = (hc[0],hc[1],hc[2],1)
         
                 for i, plane_no in enumerate(normals):
+                    if i > (len(normals) - 1- clip): continue
                     cut = ContourCutLine(0, 0, line_width = settings.line_thick, line_color = l_color, handle_color = h_color, geom_color = g_color, vert_color = v_color)
                     cut.plane_no = plane_no
                     cut.seed_face_index = seeds[i]
@@ -1497,7 +1498,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         if settings.recover:
             print('loading cache!')
             print(contour_cache['CUT_LINES'])
-            self.load_from_cache(context, 'CUT_LINES')
+            self.load_from_cache(context, 'CUT_LINES', settings.recover_clip)
         #add in the draw callback and modal method
         self._handle = bpy.types.SpaceView3D.draw_handler_add(retopo_draw_callback, (self, context), 'WINDOW', 'POST_PIXEL')
         context.window_manager.modal_handler_add(self)
