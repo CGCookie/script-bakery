@@ -42,7 +42,7 @@ def callback_register(self, context):
         return None
             
 def callback_cleanup(self, context):
-    if str(bpy.app.build_revision)[2:7] == "unkno" or eval(str(bpy.app.build_revision)[2:7]) >= 53207:
+    if str(bpy.app.build_revision)[2:7].lower() == "unkno" or eval(str(bpy.app.build_revision)[2:7]) >= 53207:
         bpy.types.SpaceView3D.draw_handler_remove(self._handle, "WINDOW")
     else:
         context.region.callback_remove(self._handle)
