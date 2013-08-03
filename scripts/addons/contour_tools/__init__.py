@@ -351,7 +351,7 @@ class CGCOOKIE_OT_retopo_contour_menu(bpy.types.Menu):
 
         layout.operator_context = 'INVOKE_DEFAULT'
 
-        layout.operator("cgcookie.retop_contour")  
+        layout.operator("cgcookie.retop_contour", text="Draw Contours")  
 
 def retopo_draw_callback(self,context):
     
