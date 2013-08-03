@@ -58,8 +58,9 @@ from mathutils.geometry import intersect_line_plane, intersect_point_line
 from bpy.props import EnumProperty, StringProperty,BoolProperty, IntProperty, FloatVectorProperty
 from bpy.types import Operator, AddonPreferences
 
-methods = (('0','WALKING','0'),('1','BRUTE','1'))
 
+#a place to store stokes for later
+contour_cache = []
 
 class ContourToolsAddonPreferences(AddonPreferences):
     bl_idname = __name__
@@ -235,6 +236,11 @@ class ContourToolsAddonPreferences(AddonPreferences):
             description = "Make Retopo Loops Cyclic",
             default = False)
     
+    recover = BoolProperty(
+            name = "Recover",
+            description = "Recover strokes from last session",
+            default = False)
+    
     def draw(self, context):
         layout = self.layout
 
@@ -339,6 +345,9 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel)  :
         cgc_contour = context.user_preferences.addons['contour_tools'].preferences
         row = layout.row()
         row.prop(cgc_contour, "vertex_count")
+        
+        row = layout.row()
+        row.prop(cgc_contour, "recover")
  
         
 
@@ -672,7 +681,6 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #TODO:  Delete the destination ob in case we dont need it
             #need to carefully implement this so people dont delete their wok
             
-            
             #clean up callbacks to prevent crash
             context.area.header_text_set()
             contour_utilities.callback_cleanup(self,context)
@@ -982,7 +990,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #print('modal ret val')
         #print(ret_val)
         #return ret_val
-    
+    def write_to_cache(self, cache):
+        cache = []
+        for cut in self.valid_cuts:
+            
+            data = [cut.plane_no, cut.plane_com, cut.vec_x, cut.vec_y,cut.seed_face_index]
+            cache.append(data)
+        
     def push_mesh_data(self,context, re_order = True, debug = False, a_align = False):
         
         total_verts = []
@@ -1127,6 +1141,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
             del cuts_copy
             self.valid_cuts = valid_cuts
+            
               
         #now, put the mesh data together
         n_rings = len(self.valid_cuts)
@@ -1145,6 +1160,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         print('check out the shifts?')
         for cut in self.valid_cuts:
             print(cut.shift)
+        
+        self.write_to_cache(contour_cache)
                   
         #work out the connectivity edges
         for i, cut_line in enumerate(self.valid_cuts):
@@ -1374,12 +1391,17 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #cut_linse are actual instances of the
         #ContourCutLine calss which controls the extraction of
         #the contours.
+        if settings.recover:
+            print('loading cache!')
+            print(contour_cache)
+
+        
         self.cut_lines = []
         #the validity of a cut is determined by the inferred connectivity to
         #other cut_lines, we make a subset here.  CutLines are cheap so we duplicate
         #instead of referencing indices for now.
         self.valid_cuts = []
-        
+    
         #this iw a collection of verts used for open GL drawing the spans
         self.follow_lines = []
         
