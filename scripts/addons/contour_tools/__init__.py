@@ -128,9 +128,9 @@ class ContourToolsAddonPreferences(AddonPreferences):
     
     stroke_rgb = FloatVectorProperty(name="Stroke Color", description="Color of Strokes", min=0, max=1, default=(0,0.2,1), subtype="COLOR")
     handle_rgb = FloatVectorProperty(name="Handle Color", description="Color of Stroke Handles", min=0, max=1, default=(0.6,0,0), subtype="COLOR")
-    vert_rgb = FloatVectorProperty(name="Widget Color", description="Color of Verts", min=0, max=1, default=(0,0.2,1), subtype="COLOR")
+    vert_rgb = FloatVectorProperty(name="Vertex Color", description="Color of Verts", min=0, max=1, default=(0,0.2,1), subtype="COLOR")
     geom_rgb = FloatVectorProperty(name="Geometry Color", description="Color For Edges", min=0, max=1, default=(0,1, .2), subtype="COLOR")
-    actv_rgb = FloatVectorProperty(name="Widget Color", description="Active Cut Line", min=0, max=1, default=(0.6,.2,.8), subtype="COLOR")
+    actv_rgb = FloatVectorProperty(name="Active Color", description="Active Cut Line", min=0, max=1, default=(0.6,.2,.8), subtype="COLOR")
     
     raw_vert_size = IntProperty(
             name="Raw Vertex Size",
