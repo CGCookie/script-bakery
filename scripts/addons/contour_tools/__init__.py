@@ -246,6 +246,14 @@ class ContourToolsAddonPreferences(AddonPreferences):
             description = "Recover strokes from last session",
             default = False)
     
+    recover_clip = IntProperty(
+            name = "Recover Clip",
+            description = "Number of cuts to leave out, usually just 0 or 1",
+            default=1,
+            min = 0,
+            max = 10,
+            )
+    
     def draw(self, context):
         layout = self.layout
 
@@ -353,7 +361,7 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel):
         
         row = layout.row()
         row.prop(cgc_contour, "recover")
- 
+        row.prop(cgc_contour, "recover_clip")
 
 class CGCOOKIE_OT_retopo_contour_menu(bpy.types.Menu):  
     bl_label = "Retopology"
