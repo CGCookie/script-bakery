@@ -249,7 +249,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     recover_clip = IntProperty(
             name = "Recover Clip",
             description = "Number of cuts to leave out, usually just 0 or 1",
-            default=0,
+            default=1,
             min = 0,
             max = 10,
             )
