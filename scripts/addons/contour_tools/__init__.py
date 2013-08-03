@@ -157,8 +157,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
             )
     
     stroke_thick = IntProperty(
-            name="Stroke",
-            description = "width lines drawn by user",
+            name="Stroke Thickness",
+            description = "Width of stroke lines drawn by user",
             default=1,
             min = 1,
             max = 10,
@@ -184,7 +184,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     
     use_perspective = BoolProperty(
             name="Use Perspective",
-            description = 'will cause non parallel cuts from same view',
+            description = 'Will cause non parallel cuts from same view',
             default=True,
             )
      
@@ -195,7 +195,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     
     widget_radius = IntProperty(
             name="Widget Radius",
-            description = "size of cutline widget radius",
+            description = "Size of cutline widget radius",
             default=50,
             min = 20,
             max = 100,
@@ -203,7 +203,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     
     widget_radius_inner = IntProperty(
             name="Widget Inner Radius",
-            description = "size of cutline widget innerradius",
+            description = "Size of cutline widget inner radius",
             default=15,
             min = 5,
             max = 30,
