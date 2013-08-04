@@ -877,8 +877,8 @@ def space_evenly_on_path(verts, edges, segments, shift = 0, debug = False):  #pr
     '''
     
     if segments >= len(verts):
-        print('more segments requested than original verts...I refuse to subdivide until my developer gets smarter')
-        return verts, edges
+        print('more segments requested than original verts')
+        
      
     #determine if cyclic or not, first vert same as last vert
     if 0 in edges[-1]:
@@ -893,8 +893,8 @@ def space_evenly_on_path(verts, edges, segments, shift = 0, debug = False):  #pr
    
     #calc_length
     arch_len = 0
-    cumulative_lengths = [0] #is this a stupid way to do this?
-    for i in range(0,len(verts)-1): #changed from len(verts)-2...whyyyy indiexes
+    cumulative_lengths = [0]#this is a list of the run sums
+    for i in range(0,len(verts)-1):
         v0 = verts[i]
         v1 = verts[i+1]
         V = v1-v0
@@ -929,6 +929,8 @@ def space_evenly_on_path(verts, edges, segments, shift = 0, debug = False):  #pr
     
     n = 0 #index to save some looping through the cumulative lengths list
           #now we are leaving it 0 becase we may end up needing the beginning of the loop last
+          #and if we are subdividing, we may hit the same cumulative lenght several times.
+          #for now, use the slow and generic way, later developsomething smarter.
     for i in range(0,segments- 1 + cyclic * 1):
         desired_length_raw = (i + 1 + cyclic * -1)/segments * arch_len + shift * arch_len / segments
         #print('the length we desire for the %i segment is %f compared to the total length which is %f' % (i, desired_length_raw, arch_len))
@@ -942,13 +944,17 @@ def space_evenly_on_path(verts, edges, segments, shift = 0, debug = False):  #pr
         
         #find the original vert with the largets legnth
         #not greater than the desired length
+        #I used to set n = J after each iteration
         for j in range(n, len(verts)+1):
 
             if cumulative_lengths[j] > desired_length:
                 #print('found a greater length at vert %i' % j)
                 #this was supposed to save us some iterations so that
                 #we don't have to start at the beginning each time....
-                #n = j - 1
+                if j >= 1:
+                    n = j - 1 #going one back allows us to space multiple verts on one edge
+                else:
+                    n = 0
                 break
 
         extra = desired_length - cumulative_lengths[j-1]

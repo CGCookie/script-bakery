@@ -783,15 +783,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE','NUMPAD_PLUS','NUMPAD_MINUS'}:
             
             if (event.type == 'WHEELUPMOUSE' and event.ctrl) or (event.type == 'NUMPAD_PLUS' and event.value == 'PRESS'):
-                if len(self.cut_lines):
-                    max_segments =  min([len(cut.verts) for cut in self.cut_lines])
-                else:
-                    max_segments = 10
+                #if len(self.cut_lines):
+                    #max_segments =  min([len(cut.verts) for cut in self.cut_lines])
+                #else:
+                    #max_segments = 10
                     
-                if self.segments >= max_segments and not self.sel_verts:
-                    self.segments = max_segments
-                    return {'RUNNING_MODAL'}
-                elif not self.sel_verts:
+                #if self.segments >= max_segments and not self.sel_verts:
+                    #self.segments = max_segments
+                    #return {'RUNNING_MODAL'}
+                if not self.sel_verts: #used to be elif
                     self.segments += 1
                     
                 else:

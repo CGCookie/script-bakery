@@ -741,7 +741,7 @@ class ContourCutLine(object):
                     
                     
                 #print('pct change iteration %i was %f' % (iterations, pct_change))
-                print(alignment_quality)
+                #print(alignment_quality)
                 #print(alignment_quality_left)
                 #print(alignment_quality_right)
             print('converged or didnt in %i iterations' % iterations)
@@ -940,7 +940,7 @@ class CutLineManipulatorWidget(object):
                     self.transform_mode = 'EDGE_PERPENDICULAR'
                     
 
-                print(loc_angle)
+                #print(loc_angle)
                 print(self.transform_mode)
                 
             return {'DO_NOTHING'}  #this tells it whether to recalc things
