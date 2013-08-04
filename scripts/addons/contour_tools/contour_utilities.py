@@ -935,13 +935,13 @@ def space_evenly_on_path(verts, edges, segments, shift = 0, debug = False):  #pr
         desired_length_raw = (i + 1 + cyclic * -1)/segments * arch_len + shift * arch_len / segments
         #print('the length we desire for the %i segment is %f compared to the total length which is %f' % (i, desired_length_raw, arch_len))
         #like a mod function, but for non integers?
-        if desired_length_raw >= arch_len:
+        if desired_length_raw > arch_len:
             desired_length = desired_length_raw - arch_len       
         elif desired_length_raw < 0:
-            desired_length = arch_len + desired_length_raw
+            desired_length = arch_len + desired_length_raw #this is the end, + a negative number
         else:
             desired_length = desired_length_raw
-        
+
         #find the original vert with the largets legnth
         #not greater than the desired length
         #I used to set n = J after each iteration
@@ -951,10 +951,10 @@ def space_evenly_on_path(verts, edges, segments, shift = 0, debug = False):  #pr
                 #print('found a greater length at vert %i' % j)
                 #this was supposed to save us some iterations so that
                 #we don't have to start at the beginning each time....
-                if j >= 1:
-                    n = j - 1 #going one back allows us to space multiple verts on one edge
-                else:
-                    n = 0
+                #if j >= 1:
+                    #n = j - 1 #going one back allows us to space multiple verts on one edge
+                #else:
+                    #n = 0
                 break
 
         extra = desired_length - cumulative_lengths[j-1]
