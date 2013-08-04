@@ -931,13 +931,13 @@ class CutLineManipulatorWidget(object):
                     self.transform_mode = 'EDGE_SLIDE'
                     
                 elif loc_angle >= 3/4 * math.pi and loc_angle < 5/4 * math.pi:
-                    self.transform_mode = 'EDGE_PARALLEL'
+                    self.transform_mode = 'ROTATE_VIEW'
                 
                 elif loc_angle >= 5/4 * math.pi and loc_angle < 7/4 * math.pi:
                     self.transform_mode = 'EDGE_SLIDE'
                 
                 else:
-                    self.transform_mode = 'EDGE_PERPENDICULAR'
+                    self.transform_mode = 'ROTATE_VIEW_PERPENDICULAR'
                     
 
                 #print(loc_angle)
@@ -1015,7 +1015,7 @@ class CutLineManipulatorWidget(object):
                     
                     return {'REHIT','RECUT'}
                 
-                elif self.transform_mode in {'EDGE_PERPENDICULAR', 'EDGE_PARALLEL'}:
+                elif self.transform_mode in {'ROTATE_VIEW_PERPENDICULAR', 'ROTATE_VIEW'}:
                     
                     #establish the transform axes
                     '''
@@ -1048,7 +1048,7 @@ class CutLineManipulatorWidget(object):
                     #identify which quadrant we are in
                     screen_angle = math.atan2(loc_vec[1], loc_vec[0])
                     
-                    if self.transform_mode == 'EDGE_PARALLEL':
+                    if self.transform_mode == 'ROTATE_VIEW':
 
                         rot_angle = screen_angle - self.angle #+ .5 * math.pi  #Mystery
                         rot_angle = math.fmod(rot_angle + 4 * math.pi, 2 * math.pi)  #correct for any negatives
@@ -1116,7 +1116,7 @@ class CutLineManipulatorWidget(object):
             
             #add the translation vector to the
         
-        #Transform mode = EDGE_PARALLEL
+        #Transform mode = ROTATE_VIEW
         
         #Transfrom mode = EDGE_PEREPENDICULAR
         

@@ -569,12 +569,30 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         elif event.type == 'S' and event.value == 'PRESS':
             if self.selected:
                 context.scene.cursor_location = self.selected.plane_com
+                action = 'Snap cursor to selected loop'
+                message = "%s: %s" % (event.type, action)
+                context.area.header_text_set(text = message)
         
         elif event.type == 'C' and event.value == 'PRESS':
             bpy.ops.view3d.view_center_cursor()
+            action = 'Center cursor'
+            message = "%s: %s" % (event.type, action)
+            context.area.header_text_set(text = message)
             
         elif event.type == 'A' and event.value == 'PRESS':
             #verify the correct circumstance
+            
+            #strings to build report message
+            if event.ctrl:
+                ctrl_str = 'Ctrl + '
+            else:
+                ctrl_str = ''
+                
+            if event.shift:
+                shift_str = 'Shift + '
+            else:
+                shift_str = ''
+                
             if self.selected and self.selected.desc == 'CUT_LINE' and not self.widget_interaction:
                 ind = self.valid_cuts.index(self.selected)
                 ahead = ind + 1
@@ -593,7 +611,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     shift_b = False    
                 #align between
                 if not event.ctrl and not event.shift:
-                    print('align between')
+                    action = 'Align to neighbors'
                     if shift_a and shift_b:
                         #In some circumstances this may be a problem if there is
                         #an integer jump of verts around the ring
@@ -609,21 +627,24 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 #align ahead    
                 elif event.ctrl and not event.shift:
                     
-                    print('align ahead')
+                    action = 'Align to next cut'
                     if shift_a:
                         self.selected.shift = shift_a
                         
                     
                 #align behind    
                 elif event.shift and not event.ctrl:
-                    print('align behind')
+                    action = 'Align to previous cut'
                     if shift_b:
                         self.selected.shift = shift_b
                 
-                
+
                 self.selected.simplify_cross(self.segments)
                 self.selected.update_screen_coords(context)
                 self.push_mesh_data(context, re_order = False, debug = False, a_align = False)
+                
+                message = ctrl_str + shift_str + event.type + ' :  ' + action
+                context.area.header_text_set(text = message)
                 
         elif event.type == 'MOUSEMOVE':
                 
@@ -644,6 +665,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                 self.hover_target.update_com()
                                 
                             self.hover_target.update_screen_coords(context)
+                            
+                    message = "Widget interaction: " + str(self.cut_line_widget.transform_mode)
+                    context.area.header_text_set(text = message)
 
                 elif self.drag_target.desc == 'CONTROL_POINT':
                     self.drag_target.x = event.mouse_region_x
@@ -700,6 +724,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     if not target_at_all:
                         self.hover_target = None
                         self.cut_line_widget = None
+                        context.area.header_text_set()
                                 
             if self.navigating:
                 for cut in self.cut_lines:
@@ -740,9 +765,18 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'PASS_THROUGH'}
         
         
-        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target:
-            if hasattr(self.hover_target, "head"):
+        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target or \
+             event.type == 'X' and event.value == 'PRESS' and self.selected:
+            if self.hover_target:
+                
                 self.cut_lines.remove(self.hover_target)
+                self.hover_target = None
+                self.widget_interaction = False
+                self.cut_line_widget = None
+                self.selected = None
+            
+            elif not self.hover_target and self.selected and event.type == 'X':
+                self.cut_lines.remove(self.selected)
                 self.hover_target = None
                 self.widget_interaction = False
                 self.cut_line_widget = None
@@ -753,36 +787,34 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.hover_target = None
             
             auto_align = context.user_preferences.addons['contour_tools'].preferences.auto_align        
-            self.push_mesh_data(context, a_align = auto_align)    
+            self.push_mesh_data(context, a_align = auto_align)
+            action = 'Delete selected loop'
+            message = "%s: %s" % (event.type, action)
+            context.area.header_text_set(text = message)  
             return {'RUNNING_MODAL'}
             
     
-        #########temporary testing#############
-        if event.type in {'LEFT_ARROW','RIGHT_ARROW'}:
+
+        if event.type in {'LEFT_ARROW','RIGHT_ARROW'} and event.value == 'PRESS':
             if self.selected and hasattr(self.selected, 'head'):
-                if event.type == 'LEFT_ARROW' and event.value == 'PRESS':
+                if event.type == 'LEFT_ARROW':
                     self.selected.shift -= .05
+                    action = 'Decrease'
                     if self.selected.shift < -1:
                         self.selected.shift = -1   
                 
-                if event.type == 'RIGHT_ARROW' and event.value == 'PRESS':
+                if event.type == 'RIGHT_ARROW':
+                    action = 'Increase'
                     self.selected.shift += .05
                     if self.selected.shift > 1:
                         self.selected.shift = 1
             
                 self.selected.simplify_cross(self.segments)
                 self.selected.update_screen_coords(context)
-                
-                if self.valid_cuts != []:
-                    i = self.valid_cuts.index(self.selected)
-                    if i > 0 and i <= len(self.valid_cuts) - 2:
-                        bqual = self.selected.connectivity_analysis(self.valid_cuts[i-1])
-                        aqual = self.selected.connectivity_analysis(self.valid_cuts[i+1])
-                        print("quality ahead %f, quality behind: %f " % (bqual, aqual))
-                    
-                
                 self.push_mesh_data(context, a_align = False)
-        #######################################
+                message = "%s: %s shift to %f" % (event.type, action, self.selected.shift)
+                context.area.header_text_set(text = message)
+
         
         
         if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE','NUMPAD_PLUS','NUMPAD_MINUS'}:
@@ -802,7 +834,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 else:
                     self.segments = len(self.sel_edges)
                     
-                message = "Segments: %i" % self.segments
+                message = "%s: Set segments to %i" % (event.type, self.segments)
                 context.area.header_text_set(text = message)
                 
                 for cut_line in self.cut_lines:
@@ -833,7 +865,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 else:
                     self.segments = len(self.sel_edges)
         
-                message = "Segments: %i" % self.segments
+                #message = "Segments: %i" % self.segments
+                message = "%s: Set segments to %i" % (event.type, self.segments)
                 context.area.header_text_set(text = message)
                 
                 for cut_line in self.cut_lines:
