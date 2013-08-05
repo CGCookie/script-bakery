@@ -118,6 +118,12 @@ class ContourToolsAddonPreferences(AddonPreferences):
             min = 0,
             max = 4,
             )
+
+    show_debug = BoolProperty(
+            name="Show Debug Settings",
+            description = "Show the debug settings, useful for troubleshooting",
+            default=False,
+            )
     
     vert_size = IntProperty(
             name="Vertex Size",
@@ -322,19 +328,21 @@ class ContourToolsAddonPreferences(AddonPreferences):
         box = layout.box().column(align=False)
         row = box.row()
         row.label(text="Debug Settings")
-        
-        row = box.row()
-        row.prop(self, "debug")
-        
-        row = box.row()
-        row.prop(self, "vert_inds", text="Show Vertex Indices")
-        row.prop(self, "simple_vert_inds", text="Show Simple Indices")
 
         row = box.row()
-        row.prop(self, "show_verts", text="Show Raw Vertices")
+        row.prop(self, "show_debug", text="Show Debug Settings")
         
-        row.prop(self, "raw_vert_size")
+        if self.show_debug:
+            row = box.row()
+            row.prop(self, "debug")
+            
+            row = box.row()
+            row.prop(self, "vert_inds", text="Show Vertex Indices")
+            row.prop(self, "simple_vert_inds", text="Show Simple Indices")
 
+            row = box.row()
+            row.prop(self, "show_verts", text="Show Raw Vertices")
+            row.prop(self, "raw_vert_size")
 
         
 class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel):
