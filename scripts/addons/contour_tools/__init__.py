@@ -65,6 +65,9 @@ from bpy.types import Operator, AddonPreferences
 global contour_cache 
 contour_cache = {}
 
+contour_undo_cache = {}
+
+contour_mesh_cache = {}
 
 
 class ContourToolsAddonPreferences(AddonPreferences):
