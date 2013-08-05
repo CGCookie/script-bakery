@@ -1043,10 +1043,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     for cut in self.cut_lines:
                         cut.select = False
                         
+                    s_color = (settings.stroke_rgb[0],settings.stroke_rgb[1],settings.stroke_rgb[2],1)
                     g_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
                     v_color = (settings.vert_rgb[0],settings.vert_rgb[1],settings.vert_rgb[2],1)
                     g_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
                     self.cut_lines.append(ContourCutLine(event.mouse_region_x, event.mouse_region_y,# view,
+                                                         stroke_color = s_color,
                                                          geom_color = g_color,
                                                          vert_color = v_color))
                     self.drag_target = self.cut_lines[-1].tail
@@ -1116,7 +1118,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
                 for i, plane_no in enumerate(normals):
                     if i > (len(normals) - 1- clip): continue
-                    cut = ContourCutLine(0, 0, line_width = settings.line_thick, line_color = l_color, handle_color = h_color, geom_color = g_color, vert_color = v_color)
+                    cut = ContourCutLine(0, 0, line_width = settings.line_thick, stroke_color = l_color, handle_color = h_color, geom_color = g_color, vert_color = v_color)
                     cut.plane_no = plane_no
                     cut.seed_face_index = seeds[i]
                     cut.vec_x = x_vecs[i]
