@@ -106,7 +106,7 @@ class ExistingVertList(object):
 class ContourCutLine(object): 
     
     def __init__(self, x, y, line_width = 3,
-                 line_color = (0,0,1,1), 
+                 stroke_color = (0,0,1,1), 
                  handle_color = (1,0,0,1),
                  geom_color = (0,1,0,1),
                  vert_color = (0,.2,1,1)):
@@ -154,7 +154,7 @@ class ContourCutLine(object):
         
         #visual stuff
         self.line_width = line_width
-        self.line_color = line_color
+        self.stroke_color = stroke_color
         self.geom_color = geom_color
         self.vert_color = vert_color
         
@@ -208,7 +208,7 @@ class ContourCutLine(object):
         if self.head:
             points = [(self.head.x,self.head.y),(self.tail.x,self.tail.y)]
             
-            contour_utilities.draw_polyline_from_points(context, points, (0,.2,1,1), settings.stroke_thick, "GL_LINE_STIPPLE")
+            contour_utilities.draw_polyline_from_points(context, points, self.stroke_color, settings.stroke_thick, "GL_LINE_STIPPLE")
         
             #draw the two handles
             contour_utilities.draw_points(context, points, self.head.color, settings.handle_size)
