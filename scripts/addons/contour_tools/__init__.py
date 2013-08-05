@@ -477,7 +477,51 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         settings = context.user_preferences.addons['contour_tools'].preferences
         
         
-        if event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
+        
+        if event.type in {'G','R'} and event.value == 'PRESS' and not self.hot_key and self.selected:
+            self.hot_key = event.type
+            
+            if event.type == 'G' and self.selected:
+                self.widget_interaction = True
+                if self.valid_cuts and len(self.valid_cuts) and self.selected in self.valid_cuts:
+                    ind = self.valid_cuts.index(self.selected)
+                    ahead = ind + 1
+                    behind = ind - 1
+                
+                    if ahead < len(self.cut_lines):
+                        a_line = self.valid_cuts[ahead]
+                    else:
+                        a_line = None
+                
+                    if behind > - 1:
+                        b_line = self.valid_cuts[behind]
+                    else:
+                        b_line = None
+                        
+                else:
+                    a_line = None
+                    b_line = None
+                    
+                self.cut_line_widget = CutLineManipulatorWidget(context, settings, self.selected,
+                                                                 event.mouse_region_x,event.mouse_region_y,
+                                                                 cut_line_a = a_line, cut_line_b = b_line,
+                                                                 hotkey = 'G')
+                self.cut_line_widget.transform_mode = 'EDGE_SLIDE'
+                
+            elif event.type == 'R' and self.selected:
+                
+                screen_loc = loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.selected.plane_com)
+                self.cut_line_widget = CutLineManipulatorWidget(context, settings, self.selected,
+                                                                 screen_loc[0], screen_loc[1],
+                                                                 cut_line_a = None, cut_line_b = None,
+                                                                 hotkey = 'R')
+                self.cut_line_widget.initial_x = event.mouse_region_x
+                self.cut_line_widget.initial_y = event.mouse_region_y
+                self.cut_line_widget.transform_mode = 'ROTATE_VIEW'
+            
+            
+            
+        if not self.hot_key and event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
             
             if context.mode == 'EDIT_MESH':
@@ -684,7 +728,19 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     self.drag_target.x = event.mouse_region_x
                     self.drag_target.y = event.mouse_region_y
                     self.drag_target.screen_to_world(context)
-                
+            
+            elif self.hot_key and self.selected: 
+                recalc_vals = self.cut_line_widget.user_interaction(context, event.mouse_region_x,event.mouse_region_y)
+                if settings.live_update:     
+                    self.selected.hit_object(context, self.original_form, method = '3_AXIS_COM')
+                    self.selected.cut_object(context, self.original_form, self.bme)
+                    self.selected.simplify_cross(self.segments)
+                    if 'REHIT' in recalc_vals:
+                        self.selected.update_com()
+                        
+                    self.selected.update_screen_coords(context)
+        
+                   
             #else detect proximity to items around
             else:
                 #identify hover target for highlighting
@@ -805,6 +861,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'RUNNING_MODAL'}
             
     
+
+
 
         if event.type in {'LEFT_ARROW','RIGHT_ARROW'} and event.value == 'PRESS':
             if self.selected and hasattr(self.selected, 'head'):
@@ -1015,54 +1073,62 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
             if event.value == 'PRESS':
                 
-                #we drag until we release
-                self.drag = True
-                self.drag_target = self.hover_target
-                
-                #this code will go away I think
-                if self.hover_target:
-                    #if hasattr(self.drag_target,"head"):
-                        #self.initial_location_head = (self.drag_target.head.x, self.drag_target.head.y)
-                        #self.initial_location_tail = (self.drag_target.tail.x, self.drag_target.tail.y)
-                        #self.initial_location_tan = (self.drag_target.plane_tan.x, self.drag_target.plane_tan.y)
-                        #self.initial_location_mouse = (event.mouse_region_x,event.mouse_region_y)
-                        
+                if not self.hot_key:
+                    #we drag until we release
+                    self.drag = True
+                    self.drag_target = self.hover_target
                     
-                    if self.hover_target.desc == 'CUT_LINE':
-                        self.widget_interaction = True
-                        self.hover_target.select = True
-                        self.selected = self.hover_target
+                    #this code will go away I think
+                    if self.hover_target:
+                        #if hasattr(self.drag_target,"head"):
+                            #self.initial_location_head = (self.drag_target.head.x, self.drag_target.head.y)
+                            #self.initial_location_tail = (self.drag_target.tail.x, self.drag_target.tail.y)
+                            #self.initial_location_tan = (self.drag_target.plane_tan.x, self.drag_target.plane_tan.y)
+                            #self.initial_location_mouse = (event.mouse_region_x,event.mouse_region_y)
+                            
                         
+                        if self.hover_target.desc == 'CUT_LINE':
+                            self.widget_interaction = True
+                            self.hover_target.select = True
+                            self.selected = self.hover_target
+                            
+                            for cut in self.cut_lines:
+                                if cut != self.hover_target:
+                                    cut.select = False
+    
+                    #No active cutline under mouse -> make a new one
+                    else:
+                        v3d = context.space_data
+                        region = v3d.region_3d 
+                        
+                        #clear selection (perhaps self.selected.select = False, self.selected = None)
                         for cut in self.cut_lines:
-                            if cut != self.hover_target:
-                                cut.select = False
-
-                #No active cutline under mouse -> make a new one
-                else:
-                    v3d = context.space_data
-                    region = v3d.region_3d 
+                            cut.select = False
+                            
+                        s_color = (settings.stroke_rgb[0],settings.stroke_rgb[1],settings.stroke_rgb[2],1)
+                        h_color = (settings.handle_rgb[0],settings.handle_rgb[1],settings.handle_rgb[2],1)
+                        g_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
+                        v_color = (settings.vert_rgb[0],settings.vert_rgb[1],settings.vert_rgb[2],1)
+    
+                        self.cut_lines.append(ContourCutLine(event.mouse_region_x, event.mouse_region_y,# view,
+                                                             stroke_color = s_color,
+                                                             handle_color = h_color,
+                                                             geom_color = g_color,
+                                                             vert_color = v_color))
+                        self.drag_target = self.cut_lines[-1].tail
+                        self.new = True
+                        self.selected = self.cut_lines[-1]
                     
-                    #clear selection (perhaps self.selected.select = False, self.selected = None)
-                    for cut in self.cut_lines:
-                        cut.select = False
-                        
-                    s_color = (settings.stroke_rgb[0],settings.stroke_rgb[1],settings.stroke_rgb[2],1)
-                    h_color = (settings.handle_rgb[0],settings.handle_rgb[1],settings.handle_rgb[2],1)
-                    g_color = (settings.geom_rgb[0],settings.geom_rgb[1],settings.geom_rgb[2],1)
-                    v_color = (settings.vert_rgb[0],settings.vert_rgb[1],settings.vert_rgb[2],1)
-
-                    self.cut_lines.append(ContourCutLine(event.mouse_region_x, event.mouse_region_y,# view,
-                                                         stroke_color = s_color,
-                                                         handle_color = h_color,
-                                                         geom_color = g_color,
-                                                         vert_color = v_color))
-                    self.drag_target = self.cut_lines[-1].tail
-                    self.new = True
-                    self.selected = self.cut_lines[-1]
-                    
-            
                     return {'RUNNING_MODAL'}
-                return {'RUNNING_MODAL'}
+                
+                else: #self.hotkey exists.
+                    self.hot_key = None
+                    self.widget_interaction = False
+                    self.cut_line_widget = None
+                    
+                    self.push_mesh_data(context, a_align = False)   
+                    return {'RUNNING_MODAL'}
+                  
             return {'RUNNING_MODAL'}
         return {'RUNNING_MODAL'}
         #ret_val = retopo_modal(self, context, event)
@@ -1528,6 +1594,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #interacting with a widget.
         self.cut_line_widget = None
         self.widget_interaction = False
+        self.hot_key = None
         
         #at the begniinging of a drag, we want to keep track
         #of where things started out

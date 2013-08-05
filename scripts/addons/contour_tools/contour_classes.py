@@ -830,12 +830,15 @@ class ContourCutLine(object):
 
 
 class CutLineManipulatorWidget(object):
-    def __init__(self,context, settings, cut_line,x,y,cut_line_a = None, cut_line_b = None):
+    def __init__(self,context, settings, cut_line,x,y,cut_line_a = None, cut_line_b = None, hotkey = False):
         
         self.desc = 'WIDGET'
         self.cut_line = cut_line
         self.x = x
         self.y = y
+        self.hotkey = hotkey
+        self.initial_x = None
+        self.initial_y = None
         
         #this will get set later by interaction
         self.transform = False
@@ -866,6 +869,7 @@ class CutLineManipulatorWidget(object):
         
         self.arc_radius = .5 * (self.radius + self.inner_radius)
         self.screen_no = None
+
         self.angle = 0
         
         #intitial conditions for "undo"
@@ -906,6 +910,8 @@ class CutLineManipulatorWidget(object):
         mouse_vec = Vector((mouse_x,mouse_y))
         
         
+        #In hotkey mode G, this will be spawned at the mouse
+        #essentially being the initial mouse
         self_vec = Vector((self.x,self.y))
         loc_vec = mouse_vec - self_vec
         
@@ -915,8 +921,7 @@ class CutLineManipulatorWidget(object):
         world_mouse = region_2d_to_location_3d(region, rv3d, (mouse_x, mouse_y), self.initial_com)
         world_widget = region_2d_to_location_3d(region, rv3d, (self.x, self.y), self.initial_com)
         
-        if not self.transform:
-            
+        if not self.transform and not self.hotkey:
             #this represents a switch...since by definition we were not transforming to begin with
             if loc_vec.length > self.inner_radius:
                 self.transform = True
@@ -947,7 +952,7 @@ class CutLineManipulatorWidget(object):
             
         else:
             #we were transforming but went back in the circle
-            if loc_vec.length < self.inner_radius:
+            if loc_vec.length < self.inner_radius and not self.hotkey:
                 self.transform = False
                 self.transform_mode = None
                 
@@ -966,9 +971,13 @@ class CutLineManipulatorWidget(object):
             else:
                 
                 if self.transform_mode == 'EDGE_SLIDE':
+                    
                     world_vec = world_mouse - world_widget
                     screen_dist = loc_vec.length - self.inner_radius
-                    factor = screen_dist/loc_vec.length
+                    if self.hotkey:
+                        factor =  1
+                    else:
+                        factor = screen_dist/loc_vec.length
                     
                     
                     if self.a:
@@ -1054,24 +1063,22 @@ class CutLineManipulatorWidget(object):
                     screen_angle = math.atan2(loc_vec[1], loc_vec[0])
                     
                     if self.transform_mode == 'ROTATE_VIEW':
-
-                        rot_angle = screen_angle - self.angle #+ .5 * math.pi  #Mystery
+                        if not self.hotkey:
+                            rot_angle = screen_angle - self.angle #+ .5 * math.pi  #Mystery
+                            
+                        else:
+                            init_angle = math.atan2(self.initial_y, self.initial_x)
+                            init_angle = math.fmod(init_angle + 4 * math.pi, 2 * math.pi)
+                            rot_angle = screen_angle - init_angle
+                            
                         rot_angle = math.fmod(rot_angle + 4 * math.pi, 2 * math.pi)  #correct for any negatives
                         print('rotating by %f' % rot_angle)
                         sin = math.sin(rot_angle/2)
                         cos = math.cos(rot_angle/2)
                         #quat = Quaternion((cos, sin*world_x[0], sin*world_x[1], sin*world_x[2]))
-                        quat = Quaternion((cos, sin*axis_1[0], sin*axis_1[1], sin*axis_1[2]))    
-                        #rotate around x axis...update y
-                        #world_y = new_no.cross(world_x)
-                        #new_com = self.initial_com
-                        #new_tan = new_com + world_x
-                        
-                        
-                        #self.cut_line.plane_x = self.cut_line.plane_com + 2 * world_x
-                        #self.cut_line.plane_y = self.cut_line.plane_com + 2 * world_y
-                        #self.cut_line.plane_z = self.cut_line.plane_com + 2 * new_no
-                    #self.cut_line.plane_no = new_normal
+                        quat = Quaternion((cos, sin*axis_1[0], sin*axis_1[1], sin*axis_1[2]))
+
+
                     
                     else:
                         rot_angle = screen_angle - self.angle + math.pi #+ .5 * math.pi  #Mystery
@@ -1168,7 +1175,7 @@ class CutLineManipulatorWidget(object):
     def draw(self, context):
         
         settings = context.user_preferences.addons['contour_tools'].preferences
-        if not self.transform:
+        if not self.transform and not self.hotkey:
             #draw wedges
             contour_utilities.draw_polyline_from_points(context, self.wedge_1, self.color, self.line_width, "GL_LINES")
             contour_utilities.draw_polyline_from_points(context, self.wedge_2, self.color, self.line_width, "GL_LINES")
@@ -1195,7 +1202,7 @@ class CutLineManipulatorWidget(object):
             point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
             point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
             contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
-        else:
+        elif not self.hotkey:
             
 
 
