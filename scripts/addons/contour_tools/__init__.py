@@ -1616,7 +1616,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.follow_lines = []
         
         
-        self.header_message = 'LMB: Select Stroke, RMB or x:Delete Sroke, A/Ctrl + A/Shift + A:Align, S:Cursor to Stroke, C:View to Cursor'
+        self.header_message = 'LMB: Select Stroke, RMB / X: Delete Sroke, A / Ctrl+A / Shift+A: Align, S: Cursor to Stroke, C: View to Cursor'
         context.area.header_text_set(self.header_message)
         if settings.recover:
             print('loading cache!')
