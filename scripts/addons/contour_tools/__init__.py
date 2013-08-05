@@ -593,7 +593,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             else:
                 shift_str = ''
                 
-            if self.selected and self.selected.desc == 'CUT_LINE' and not self.widget_interaction:
+            if len(self.valid_cuts) and self.selected and self.selected.desc == 'CUT_LINE' and not self.widget_interaction:
                 ind = self.valid_cuts.index(self.selected)
                 ahead = ind + 1
                 behind = ind - 1
@@ -690,9 +690,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             if new_target:
                                 prospective_targets.append(h_target)
                                 self.hover_target = h_target
-                                if hasattr(self.hover_target, "head"):
+                                if self.hover_target.desc == 'CUT_LINE':
                                     
-                                    if self.valid_cuts and len(self.valid_cuts):
+                                    if self.valid_cuts and len(self.valid_cuts) and self.hover_target in self.valid_cuts:
                                         ind = self.valid_cuts.index(self.hover_target)
                                         ahead = ind + 1
                                         behind = ind - 1
@@ -724,7 +724,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     if not target_at_all:
                         self.hover_target = None
                         self.cut_line_widget = None
-                        context.area.header_text_set()
+                        context.area.header_text_set(self.header_message)
                                 
             if self.navigating:
                 for cut in self.cut_lines:
@@ -1533,6 +1533,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #this iw a collection of verts used for open GL drawing the spans
         self.follow_lines = []
         
+        
+        self.header_message = 'LMB: Select Stroke, RMB or x:Delete Sroke, A/Ctrl + A/Shift + A:Align, S:Cursor to Stroke, C:View to Cursor'
+        context.area.header_text_set(self.header_message)
         if settings.recover:
             print('loading cache!')
             print(contour_cache['CUT_LINES'])

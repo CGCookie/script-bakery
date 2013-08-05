@@ -999,7 +999,12 @@ class CutLineManipulatorWidget(object):
                         elif not self.a and world_vec.dot(vec_b_dir) < 0:
                             translate = factor * world_vec.dot(self.initial_plane_no) * self.initial_plane_no
                             self.cut_line.plane_com = self.initial_com + translate
-
+                            
+                    if not self.a and not self.b:
+                        translate = factor * world_vec.dot(self.initial_plane_no) * self.initial_plane_no
+                        self.cut_line.plane_com = self.initial_com + translate
+                        return {'REHIT','RECUT'}
+                    
                     return {'DO_NOTHING'}
 
                     
