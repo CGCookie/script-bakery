@@ -1058,6 +1058,83 @@ def point_in_tri(P, A, B, C):
     
     #Check if point is in triangle
     return (u >= 0) & (v >= 0) & (u + v < 1)
+
+
+def com_mid_ray_test(new_cut, established_cut, obj, search_factor = .5):
+    '''
+    function used to test intial validity of a connection
+    between two cuts.
+    
+    args:
+        new_cut:  a ContourCutLine
+        existing_cut: ContourCutLine
+        obj: The retopo object
+        search_factor:  percentage of object bbox diagonal to search
+        aim:  False or angle that new cut COM must fall within compared
+              to existing plane normal.  Eg...pi/4 would be a 45 degree
+              aiming cone
+    
+    
+    returns: Bool
+    '''
+    
+    
+    A = established_cut.plane_com  #the COM of the cut loop
+    B = new_cut.plane_com #the COM of the other cut loop
+    C = .5 * (A + B)  #the midpoint of the line between them
+                    
+                    
+    #pick a vert roughly in the middle
+    n = math.floor(len(established_cut.verts_simple)/2)
+            
+            
+    ray = A - established_cut.verts_simple[n]
+    
+    #just in case the vert IS the center of mass :-(
+    if ray.length < .0001 and n != 0:
+        ray = A - established_cut.verts_simple[n-1]
+            
+    ray.normalize()
+            
+            
+    #limit serach to some fraction of the object bbox diagonal
+    #search_radius = 1/2 * search_factor * obj.dimensions.length
+    search_radius = 100
+    imx = obj.matrix_world.inverted()     
+            
+    hit = obj.ray_cast(imx * (C + search_radius * ray), imx * (C - search_radius * ray))
+            
+    if hit[2] != -1:
+        return True
+    else:
+        return False
+    
+    
+def com_line_cross_test(com1, com2, pt, no, factor = 2):
+    '''
+    test used to make sure a cut is reasoably between
+    2 other cuts
+    
+    higher factor requires better aligned cuts
+    '''
+    
+    v = intersect_line_plane(com1,com2,pt,no)
+    if v:
+        #if the distance between the intersection is less than
+        #than 1/factor the distance between the current pair
+        #than this pair is invalide because there is a loop
+        #in between
+        check = intersect_point_line(v,com1,com2)
+        invalid_length = (com2 - com1).length/factor  #length beyond which an intersection is invalid
+        test_length = (v - pt).length
+        
+        #this makes sure the plane is between A and B
+        #meaning the test plane is between the two COM's
+        in_between = check[1] >= 0 and check[1] <= 1
+        
+        if in_between and test_length < invalid_length:
+            return True
+
     
 def discrete_curl(verts, z): #Adapted from Open Dental CAD by Patrick Moore
     '''

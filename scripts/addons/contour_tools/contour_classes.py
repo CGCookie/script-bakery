@@ -662,7 +662,7 @@ class ContourCutLine(object):
                 self.verts.reverse()
                 
         #iterate all verts and "handshake problem" them
-        #into a dictionary?  That's not very effecient!
+        #into a dictionary?  That's not very efficient!
         if auto_align:
             self.shift = 0
             self.simplify_cross(len(self.eds_simple))
