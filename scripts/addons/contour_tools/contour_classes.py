@@ -264,8 +264,7 @@ class ContourCutLine(object):
                         loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, point)
                         blf.position(0, loc[0], loc[1], 0)
                         blf.draw(0, str(i))
-        #draw contour points? later
-    
+    #draw contour points? later    
     def hit_object(self, context, ob, method = 'VIEW'):
         settings = context.user_preferences.addons['contour_tools'].preferences
         region = context.region  
@@ -432,7 +431,19 @@ class ContourCutLine(object):
             self.plane_com = contour_utilities.get_com(self.verts_simple)
         else:
             self.plane_com = None
-                
+    
+    def adjust_cut_to_object_surface(self,ob):
+        
+        vecs = []
+        for v in self.verts_simple:
+            surface_no = ob.closest_point_on_mesh(v)[1]
+            vecs.append(surface_no)
+            
+        (com, no) = contour_utilities.calculate_best_plane(vecs)
+        
+        #TODO add some sanity checks
+        self.plane = no
+                    
     def derive_3_axis_control(self, method = 'FROM_VECS', n=0):
         '''
         args
