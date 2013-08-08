@@ -415,6 +415,67 @@ def approx_radius(verts, COM):
     app_rad = 1/l * app_rad
     
     return app_rad    
+
+
+# calculate a best-fit plane to the given vertices
+#modified from LoopTools addon
+#TODO: CREDIT
+#TODO: LINK
+def calculate_best_plane(locs):
+    
+    # calculating the center of masss
+    com = Vector()
+    for loc in locs:
+        com += loc
+    com /= len(locs)
+    x, y, z = com
+    
+    
+    # creating the covariance matrix
+    mat = Matrix(((0.0, 0.0, 0.0),
+                  (0.0, 0.0, 0.0),
+                  (0.0, 0.0, 0.0),
+                 ))
+    
+    for loc in locs:
+        mat[0][0] += (loc[0]-x)**2
+        mat[1][0] += (loc[0]-x)*(loc[1]-y)
+        mat[2][0] += (loc[0]-x)*(loc[2]-z)
+        mat[0][1] += (loc[1]-y)*(loc[0]-x)
+        mat[1][1] += (loc[1]-y)**2
+        mat[2][1] += (loc[1]-y)*(loc[2]-z)
+        mat[0][2] += (loc[2]-z)*(loc[0]-x)
+        mat[1][2] += (loc[2]-z)*(loc[1]-y)
+        mat[2][2] += (loc[2]-z)**2
+    
+    # calculating the normal to the plane
+    normal = False
+    try:
+        mat.invert()
+    except:
+        if sum(mat[0]) == 0.0:
+            normal = Vector((1.0, 0.0, 0.0))
+        elif sum(mat[1]) == 0.0:
+            normal = Vector((0.0, 1.0, 0.0))
+        elif sum(mat[2]) == 0.0:
+            normal = Vector((0.0, 0.0, 1.0))
+    if not normal:
+        # warning! this is different from .normalize()
+        itermax = 500
+        iter = 0
+        vec = Vector((1.0, 1.0, 1.0))
+        vec2 = (mat * vec)/(mat * vec).length
+        while vec != vec2 and iter<itermax:
+            iter+=1
+            vec = vec2
+            vec2 = mat * vec
+            if vec2.length != 0:
+                vec2 /= vec2.length
+        if vec2.length == 0:
+            vec2 = Vector((1.0, 1.0, 1.0))
+        normal = vec2
+    
+    return(com, normal)
     
 def cross_section(bme, mx, point, normal, debug = True):
     '''

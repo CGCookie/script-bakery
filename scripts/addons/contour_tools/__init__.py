@@ -478,7 +478,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         
         
-        if event.type in {'G','R'} and event.value == 'PRESS' and not self.hot_key and self.selected:
+        if event.type in {'G','R','K'} and event.value == 'PRESS' and not self.hot_key and self.selected:
             self.hot_key = event.type
             
             if event.type == 'G' and self.selected:
@@ -520,7 +520,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.cut_line_widget.transform_mode = 'ROTATE_VIEW'
             
             
-            
+            elif event.type == 'K' and self.selected:
+                
+                self.selected.adjust_cut_to_object_surface(self,self.original_form)
+                self.selected.hit_object(context, self.original_form, method = '3_AXIS_COM')
+                self.selected.cut_object(context, self.original_form, self.bme)
+                self.selected.simplify_cross(self.segments)
+                self.selected.update_com()                
+                self.selected.update_screen_coords(context)
+                
+                
         if not self.hot_key and event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
             
