@@ -863,7 +863,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.cut_line_widget = None
                 self.selected = None
             
-            elif not self.hover_target and self.selected and event.type == 'X':
+            elif self.selected and event.type == 'X':
                 if self.selected in self.valid_cuts:
                     self.valid_cuts.remove(self.selected)
                 self.cut_lines.remove(self.selected)
@@ -871,12 +871,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.widget_interaction = False
                 self.cut_line_widget = None
                 self.selected = None
-                    
-            else:
-                if self.hover_target.parent in self.valid_cuts:
-                    self.valid_cuts.remove(self.hover_target.parent)
-                self.cut_lines.remove(self.hover_target.parent)
-                self.hover_target = None
+
             
                   
             self.connect_valid_cuts_to_make_mesh()
@@ -1008,7 +1003,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.hover_target.update_com()        
                             self.hover_target.update_screen_coords(context)
                             
-                        
+                        self.align_cut(self.drag_target, mode = 'BETWEEN')
+                        self.connect_valid_cuts_to_make_mesh()
 
                         
                     #a new cut is made and this is the release of the handle
