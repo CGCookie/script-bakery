@@ -701,6 +701,62 @@ def point_inside_loop2d(loop, point):
     
     return inside
 
+
+
+def generic_axes_from_plane_normal(p_pt, no):
+    '''
+    will take a point on a plane and normal vector
+    and return two orthogonal vectors which create
+    a right handed coordinate system with z axist aligned
+    to plane normal
+    '''
+    
+    #get the equation of a plane ax + by + cz = D
+    #Given point P, normal N ...any point R in plane satisfies
+    # Nx * (Rx - Px) + Ny * (Ry - Py) + Nz * (Rz - Pz) = 0
+    #now pick any xy, yz or xz and solve for the other point
+    
+    a = no[0]
+    b = no[1]
+    c = no[2]
+    
+    Px = p_pt[0]
+    Py = p_pt[1]
+    Pz = p_pt[2]
+    
+    D = a * Px + b * Py + c * Pz
+    
+    #generate a randomply perturbed R from the known p_pt
+    R = p_pt + Vector((random.random(), random.random(), random.random()))
+    
+    #z = D/c - a/c * x - b/c * y
+    if c != 0:
+        Rz =  D/c - a/c * R[0] - b/c * R[1]
+        R[2] = Rz
+       
+    #y = D/b - a/b * x - c/b * z 
+    elif b!= 0:
+        Ry = D/b - a/b * R[0] - c/b * R[2] 
+        R[1] = Ry
+    #x = D/a - b/a * y - c/a * z
+    elif a != 0:
+        Rx = D/a - b/a * R[1] - c/a * R[2]
+        R[0] = Rz
+    else:
+        print('undefined plane you wanker!')
+        return(False)
+    
+    #now R represents some other point in the plane
+    #we will use this to define an arbitrary local
+    #x' y' and z'
+    X_prime = R - p_pt
+    X_prime.normalize()
+    
+    Y_prime = no.cross(X_prime)
+    Y_prime.normalize()
+    
+    return (X_prime, Y_prime)
+
 def point_inside_loop_almost3D(pt, verts, no, p_pt = None, threshold = .01, debug = False):
     '''
     http://blenderartists.org/forum/showthread.php?259085-Brainstorming-for-Virtual-Buttons&highlight=point+inside+loop
@@ -736,49 +792,7 @@ def point_inside_loop_almost3D(pt, verts, no, p_pt = None, threshold = .01, debu
     if distance_point_to_plane(pt, p_pt, no) > threshold:
         return False
     
-    #get the equation of a plane ax + by + cz = D
-    #Given point P, normal N ...any point R in plane satisfies
-    # Nx * (Rx - Px) + Ny * (Ry - Py) + Nz * (Rz - Pz) = 0
-    #now pick any xy, yz or xz and solve for the other point
-    
-    a = no[0]
-    b = no[1]
-    c = no[2]
-    
-    Px = p_pt[0]
-    Py = p_pt[1]
-    Pz = p_pt[2]
-    
-    D = a * Px + b * Py + c * Pz
-    
-    #generate a randomply perturbed R from the known p_pt
-    R = p_pt + Vector((random.random(), random.random(), random.random()))
-    
-    #z = D/c - a/c * x - b/c * y
-    if c != 0:
-       Rz =  D/c - a/c * R[0] - b/c * R[1]
-       R[2] = Rz
-       
-    #y = D/b - a/b * x - c/b * z 
-    elif b!= 0:
-        Ry = D/b - a/b * R[0] - c/b * R[2] 
-        R[1] = Ry
-    #x = D/a - b/a * y - c/a * z
-    elif a != 0:
-        Rx = D/a - b/a * R[1] - c/a * R[2]
-        R[0] = Rz
-    else:
-        print('undefined plane you wanker!')
-        return(False)
-    
-    #no R represents any other point in the plane
-    #we will use this to edefin an arbitrary local
-    #x' y' and z'
-    X_prime = R - p_pt
-    X_prime.normalize()
-    
-    Y_prime = no.cross(X_prime)
-    Y_prime.normalize()
+    (X_prime, Y_prime) = generic_axes_from_plane_normal(p_pt, no)
     
     verts_prime = []
     

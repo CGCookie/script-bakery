@@ -527,10 +527,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                                                  cut_line_a = a_line, cut_line_b = b_line,
                                                                  hotkey = 'G')
                 self.cut_line_widget.transform_mode = 'EDGE_SLIDE'
+                self.cut_line_widget.derive_screen(context)
                 
             elif event.type == 'R' and self.selected:
                 
-                screen_loc = loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.selected.plane_com)
+                screen_loc = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.selected.plane_com)
                 self.cut_line_widget = CutLineManipulatorWidget(context, settings, self.selected,
                                                                  screen_loc[0], screen_loc[1],
                                                                  cut_line_a = None, cut_line_b = None,
@@ -538,17 +539,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.cut_line_widget.initial_x = event.mouse_region_x
                 self.cut_line_widget.initial_y = event.mouse_region_y
                 self.cut_line_widget.transform_mode = 'ROTATE_VIEW'
+                self.cut_line_widget.derive_screen(context)
             
             
-            elif event.type == 'K' and self.selected:
+            #elif event.type == 'K' and self.selected:
                 
-                self.selected.adjust_cut_to_object_surface(self,self.original_form)
-                self.selected.hit_object(context, self.original_form, method = '3_AXIS_COM')
-                self.selected.cut_object(context, self.original_form, self.bme)
-                self.selected.simplify_cross(self.segments)
-                self.selected.update_com()                
-                self.selected.update_screen_coords(context)
-                
+                #self.selected.adjust_cut_to_object_surface(self.original_form)
+                #self.selected.generic_3_axis_from_normal()
+                #self.selected.hit_object(context, self.original_form, method = '3_AXIS_COM')
+                #self.selected.cut_object(context, self.original_form, self.bme)
+                #self.selected.simplify_cross(self.segments)
+                #self.selected.update_com()
+                #self.align_cut(self.selected, 'BETWEEN')         
+                #self.selected.update_screen_coords(context)
+                #self.connect_valid_cuts_to_make_mesh()
                 
         if not self.hot_key and event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
@@ -863,6 +867,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target or \
              event.type == 'X' and event.value == 'PRESS' and self.selected:
+            
             if self.hover_target and event.type == 'RIGHTMOUSE':
                 if self.hover_target in self.valid_cuts:
                     self.valid_cuts.remove(self.hover_target)
@@ -892,21 +897,32 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
     
 
-
+        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hot_key:
+            
+            self.cut_line_widget.cancel_transform()
+            self.selected.cut_object(context, self.original_form, self.bme)
+            self.selected.simplify_cross(self.segments)
+            self.selected.update_com()
+            self.selected.update_screen_coords(context)
+            
+            self.hot_key = False
+            self.cut_line_widget = None
+            self.widget_interaction = False
+            
 
         if event.type in {'LEFT_ARROW','RIGHT_ARROW'} and event.value == 'PRESS':
             if self.selected and hasattr(self.selected, 'head'):
                 if event.type == 'LEFT_ARROW':
                     self.selected.shift -= .05
                     action = 'Decrease'
-                    if self.selected.shift < -1:
-                        self.selected.shift = -1   
+                    if self.selected.shift < -1.5:
+                        self.selected.shift = -1.5   
                 
                 if event.type == 'RIGHT_ARROW':
                     action = 'Increase'
                     self.selected.shift += .05
-                    if self.selected.shift > 1:
-                        self.selected.shift = 1
+                    if self.selected.shift > 1.5:
+                        self.selected.shift = 1.5
             
                 self.selected.simplify_cross(self.segments)
                 self.selected.update_screen_coords(context)
@@ -1070,13 +1086,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                     #this code will go away I think
                     if self.hover_target:
-                        #if hasattr(self.drag_target,"head"):
-                            #self.initial_location_head = (self.drag_target.head.x, self.drag_target.head.y)
-                            #self.initial_location_tail = (self.drag_target.tail.x, self.drag_target.tail.y)
-                            #self.initial_location_tan = (self.drag_target.plane_tan.x, self.drag_target.plane_tan.y)
-                            #self.initial_location_mouse = (event.mouse_region_x,event.mouse_region_y)
                             
-                        
                         if self.hover_target.desc == 'CUT_LINE':
                             self.widget_interaction = True
                             self.hover_target.select = True
@@ -1555,6 +1565,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.verts = total_verts
         self.faces = total_faces
         self.edges = total_edges
+        
+        self.write_to_cache('CUT_LINES')
   
     def invoke(self, context, event):
         #if edit mode

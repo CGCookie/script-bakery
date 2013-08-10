@@ -435,15 +435,34 @@ class ContourCutLine(object):
     def adjust_cut_to_object_surface(self,ob):
         
         vecs = []
+        rot = ob.matrix_world.to_quaternion()
         for v in self.verts_simple:
-            surface_no = ob.closest_point_on_mesh(v)[1]
-            vecs.append(surface_no)
+            closest = ob.closest_point_on_mesh(v)  #this will be in local coords!
             
+            s_no = closest[1]
+            
+            vecs.append(self.plane_com + s_no)
+        
+        print(self.plane_no)    
         (com, no) = contour_utilities.calculate_best_plane(vecs)
         
         #TODO add some sanity checks
-        self.plane = no
-                    
+    
+        #first sanity check...keep normal in same dir
+        if self.plane_no.dot(rot * no) < 0:
+            no *= -1
+        
+        self.plane_no = rot * no
+        
+        
+        
+        
+    
+    def generic_3_axis_from_normal(self):
+        
+        (self.vec_x, self.vec_y) = contour_utilities.generic_axes_from_plane_normal(self.plane_com, self.plane_no)
+        
+                       
     def derive_3_axis_control(self, method = 'FROM_VECS', n=0):
         '''
         args
@@ -967,13 +986,6 @@ class CutLineManipulatorWidget(object):
                 self.transform = False
                 self.transform_mode = None
                 
-                #reset our initial values
-                self.cut_line.plane_com = self.initial_com
-                self.cut_line.plane_no = self.initial_plane_no
-                self.cut_line.plane_pt = self.initial_plane_pt
-                self.cut_line.vec_x = self.vec_x
-                self.cut_line.vec_y = self.vec_y
-                self.cut_line.seed_face_index = self.initial_seed
                 
                 
                 return {'RECUT'}
@@ -1182,7 +1194,18 @@ class CutLineManipulatorWidget(object):
         self.arc_arrow_2 = contour_utilities.arc_arrow(self.x, self.y, self.arc_radius, right - deg_45+.2, right + deg_45-.2, 10, self.arrow_size,2*deg_45, ccw = True)
         self.inner_circle = contour_utilities.simple_curce(self.x, self.y, self.inner_radius, 20)
         self.inner_circle.append(self.inner_circle[0])
+    
+    def cancel_transform(self):
         
+        #reset our initial values
+        self.cut_line.plane_com = self.initial_com
+        self.cut_line.plane_no = self.initial_plane_no
+        self.cut_line.plane_pt = self.initial_plane_pt
+        self.cut_line.vec_x = self.vec_x
+        self.cut_line.vec_y = self.vec_y
+        self.cut_line.seed_face_index = self.initial_seed
+                
+                  
     def draw(self, context):
         
         settings = context.user_preferences.addons['contour_tools'].preferences
@@ -1213,41 +1236,47 @@ class CutLineManipulatorWidget(object):
             point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
             point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
             contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
-        elif not self.hotkey:
+        
+        elif self.transform:
             
 
 
             #draw a small inner circle
             contour_utilities.draw_polyline_from_points(context, self.inner_circle, self.color, self.line_width, "GL_LINES")
             
-            if not settings.live_update:
-                if self.transform_mode == "NORMAL_TRANSLATE":
-                    #draw a line representing the COM translation
-                    points = [self.initial_com, self.cut_line.plane_com]
-                    contour_utilities.draw_3d_points(context, points, self.color3, 4)
-                    contour_utilities.draw_polyline_from_3dpoints(context, points, self.color ,2 , "GL_STIPPLE")
-                    
-                else:
-                    rv3d = context.space_data.region_3d
-                    view_x = rv3d.view_rotation * Vector((1,0,0))
-                    p1 = self.cut_line.plane_com
-                    p2 = p1 + view_x
-                    p3 = p1 + self.cut_line.plane_no
-                    
-                    
-                    p1_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p1)
-                    p2_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p2)
-                    p3_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p3)
-                    
-                    vec_2d_scale = p1_2d - p2_2d
-                    screen_scale = self.radius / vec_2d_scale.length
-                    
-                    vec_2d = p1_2d - p3_2d
-                    
-                    p4_2d = p1_2d + screen_scale * vec_2d
-                    
-                    contour_utilities.draw_points(context, [p1_2d, p4_2d], self.color3, 5)
-                    contour_utilities.draw_polyline_from_points(context, [p1_2d, p4_2d], self.color ,2 , "GL_STIPPLE")
+            if not self.hotkey:
+                if not settings.live_update:
+                    if self.transform_mode == "NORMAL_TRANSLATE":
+                        #draw a line representing the COM translation
+                        points = [self.initial_com, self.cut_line.plane_com]
+                        contour_utilities.draw_3d_points(context, points, self.color3, 4)
+                        contour_utilities.draw_polyline_from_3dpoints(context, points, self.color ,2 , "GL_STIPPLE")
+                        
+                    else:
+                        rv3d = context.space_data.region_3d
+                        view_x = rv3d.view_rotation * Vector((1,0,0))
+                        p1 = self.cut_line.plane_com
+                        p2 = p1 + view_x
+                        p3 = p1 + self.cut_line.plane_no
+                        p5 = p1 - self.cut_line.plane_no
+                        
+                        p1_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p1)
+                        p2_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p2)
+                        p3_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p3)
+                        
+                        
+                        p5_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p5)
+                        
+                        vec_2d_scale = p1_2d - p2_2d
+                        screen_scale = self.radius / vec_2d_scale.length
+                        
+                        vec_2d = p1_2d - p3_2d
+                        
+                        p4_2d = p1_2d + screen_scale * vec_2d
+                        p6_2d = p1_2d - screen_scale * vec_2d
+                        
+                        contour_utilities.draw_points(context, [p1_2d, p4_2d, p6_2d], self.color3, 5)
+                        contour_utilities.draw_polyline_from_points(context, [p6_2d, p4_2d], self.color ,2 , "GL_STIPPLE")
                 
             
             #If self.transform_mode != 
