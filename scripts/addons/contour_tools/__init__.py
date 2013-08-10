@@ -1067,7 +1067,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     if self.hover_target:
                         
                         #we drag until we release unless we are just selecting
-                        if not self.ctrl:
+                        if not event.ctrl:
                             self.drag = True
                             self.drag_target = self.hover_target
                             
@@ -1096,7 +1096,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     #we don't carer about ctrl
                     elif not self.hover_target:
                         v3d = context.space_data
-
+                        self.drag = True
+                        
                         
                         #clear selection (perhaps self.selected.select = False, self.selected = None)
                         for cut in self.cut_lines:
