@@ -1062,26 +1062,41 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             if event.value == 'PRESS':
                 
                 if not self.hot_key:
-                    #we drag until we release
-                    self.drag = True
-                    self.drag_target = self.hover_target
                     
-                    #this code will go away I think
+                    #make sure we have something under tehre
                     if self.hover_target:
+                        
+                        #we drag until we release unless we are just selecting
+                        if not self.ctrl:
+                            self.drag = True
+                            self.drag_target = self.hover_target
                             
-                        if self.hover_target.desc == 'CUT_LINE':
+                            ###Implied that we are on a cut_line here
+                            #TODO if we have other objects available to use
                             self.widget_interaction = True
-                            self.hover_target.select = True
-                            self.selected = self.hover_target
                             
-                            for cut in self.cut_lines:
-                                if cut != self.hover_target:
-                                    cut.select = False
+                        #we are just selecting    
+                        else:
+                            self.drag = False
+                            self.drag_target = None
+                            self.widget_interaction = False
+                            
+                            #perhaps this is neeed to crush the widget?
+                            if self.cut_line_widget:
+                                del self.cut_line_widget
+                                self.cut_line_widget = None
+                    
+                        self.hover_target.select = True
+                        self.selected = self.hover_target    
+                        for cut in self.cut_lines:
+                            if cut != self.hover_target:
+                                cut.select = False
     
-                    #No active cutline under mouse -> make a new one
-                    else:
+                    #No active cut line under mouse -> make a new one
+                    #we don't carer about ctrl
+                    elif not self.hover_target:
                         v3d = context.space_data
-                        region = v3d.region_3d 
+
                         
                         #clear selection (perhaps self.selected.select = False, self.selected = None)
                         for cut in self.cut_lines:
