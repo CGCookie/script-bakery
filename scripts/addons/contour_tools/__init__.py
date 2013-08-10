@@ -682,52 +682,29 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 shift_str = ''
                 
             if len(self.valid_cuts) and self.selected and self.selected.desc == 'CUT_LINE' and not self.widget_interaction:
-                ind = self.valid_cuts.index(self.selected)
-                ahead = ind + 1
-                behind = ind - 1
                 
-                if ahead != len(self.valid_cuts):
-                    self.selected.align_to_other(self.valid_cuts[ahead], auto_align = True)
-                    shift_a = self.selected.shift
-                else:
-                    shift_a = False
-                    
-                if behind != -1:
-                    self.selected.align_to_other(self.valid_cuts[behind], auto_align = True)
-                    shift_b = self.selected.shift
-                else:
-                    shift_b = False    
-                #align between
                 if not event.ctrl and not event.shift:
                     action = 'Align to neighbors'
-                    if shift_a and shift_b:
-                        #In some circumstances this may be a problem if there is
-                        #an integer jump of verts around the ring
-                        self.selected.shift = .5 * (shift_a + shift_b)
+                    act = 'BETWEEN'
+                    print('between')
                         
-                    #align ahead anyway
-                    elif shift_a:
-                        self.selected.shift = shift_a
-                    #align behind anyway
-                    else:
-                        self.selected.shift = shift_b
-    
                 #align ahead    
                 elif event.ctrl and not event.shift:
                     
                     action = 'Align to next cut'
-                    if shift_a:
-                        self.selected.shift = shift_a
-                        
+                    act = 'FORWARD'
+                    print('FORWARD')
                     
                 #align behind    
                 elif event.shift and not event.ctrl:
                     action = 'Align to previous cut'
-                    if shift_b:
-                        self.selected.shift = shift_b
-                
+                    act = 'BACKWARD'
+                    print('BACKWARD')
 
+                print('ALIGNING CUT LINE 704 with hotkey A')
+                self.align_cut(self.selected, mode = act, fine_grain = True)
                 self.selected.simplify_cross(self.segments)
+                
                 self.selected.update_screen_coords(context)
                 self.connect_valid_cuts_to_make_mesh()
                 
@@ -912,19 +889,23 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 
         if event.type in {'LEFT_ARROW','RIGHT_ARROW'} and event.value == 'PRESS':
             if self.selected and hasattr(self.selected, 'head'):
+                print('shift before: %f', self.selected.shift)
                 if event.type == 'LEFT_ARROW':
+                    
                     self.selected.shift -= .05
                     action = 'Decrease'
-                    if self.selected.shift < -1.5:
-                        self.selected.shift = -1.5   
+                    if self.selected.shift < -1:
+                        self.selected.shift = -1   
                 
                 if event.type == 'RIGHT_ARROW':
                     action = 'Increase'
                     self.selected.shift += .05
-                    if self.selected.shift > 1.5:
-                        self.selected.shift = 1.5
-            
+                    if self.selected.shift > 1:
+                        self.selected.shift = 1
+                
+                print('shift after: %f', self.selected.shift)
                 self.selected.simplify_cross(self.segments)
+                self.align_cut(self.selected, mode = 'BETWEEN', fine_grain = False)
                 self.selected.update_screen_coords(context)
                 self.connect_valid_cuts_to_make_mesh()
                 message = "%s: %s shift to %f" % (event.type, action, self.selected.shift)
@@ -1027,7 +1008,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.hover_target.simplify_cross(self.segments)    
                             self.hover_target.update_com()        
                             self.hover_target.update_screen_coords(context)
-                            
+                        
+                        print('RELEASE CLICK ALIGN LINE 1011')    
                         self.align_cut(self.drag_target, mode = 'BETWEEN')
                         self.connect_valid_cuts_to_make_mesh()
 
@@ -1276,7 +1258,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         print(self.valid_cuts)
                             
             
-    def align_cut(self, cut, mode = 'FORWARD'):
+    def align_cut(self, cut, mode = 'BETWEEN', fine_grain = True):
         
         if len(self.valid_cuts) < 2:
             print('nothing to align with')
@@ -1292,13 +1274,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         behind = ind - 1
                 
         if ahead != len(self.valid_cuts):
-            cut.align_to_other(self.valid_cuts[ahead], auto_align = True)
+            cut.align_to_other(self.valid_cuts[ahead], auto_align = fine_grain)
             shift_a = cut.shift
         else:
             shift_a = False
                     
         if behind != -1:
-            cut.align_to_other(self.valid_cuts[behind], auto_align = True)
+            cut.align_to_other(self.valid_cuts[behind], auto_align = fine_grain)
             shift_b = cut.shift
         else:
             shift_b = False    

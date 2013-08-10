@@ -151,6 +151,7 @@ class ContourCutLine(object):
         
         #variable used to shift loop beginning on high res loop
         self.shift = 0
+        self.int_shift = 0
         
         #visual stuff
         self.line_width = line_width
@@ -426,6 +427,9 @@ class ContourCutLine(object):
         if self.verts !=[] and self.eds != []:
             [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments, self.shift)
             
+            #if self.int_shift:
+                #self.verts_simple = contour_utilities.list_shift(self.verts_simple, self.int_shift)
+            
     def update_com(self):
         if self.verts_simple != []:
             self.plane_com = contour_utilities.get_com(self.verts_simple)
@@ -602,14 +606,10 @@ class ContourCutLine(object):
         '''
         Modifies vert order of self to  provide best
         bridge between self verts and other loop
-        
         '''
         verts_1 = other.verts_simple
-        verts_2 = self.verts_simple
         
         eds_1 = other.eds_simple
-        eds_2 = self.eds_simple
-        
         
         print('testing alignment')
         if 0 in eds_1[-1]:
@@ -672,10 +672,10 @@ class ContourCutLine(object):
             curl_2 = contour_utilities.discrete_curl(self.verts_simple, ideal_direction)
             
             if curl_1 * curl_2 < 0:
-                print('reversing loop 2')
+                print('reversing derived loop direction')
                 print('curl1: %f and curl2: %f' % (curl_1,curl_2))
                 self.verts_simple.reverse()
-                print('reversing the base loops too...risky? I live dangerously')
+                print('reversing the base loop')
                 self.verts.reverse()
                 self.shift *= -1
                 
@@ -717,6 +717,7 @@ class ContourCutLine(object):
         if final_shift != 0:
             print('pre-shift alignment % f' % self.connectivity_analysis(other))
             print("shifting verts by %i segments" % final_shift)
+            self.int_shift = final_shift
             self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
             print('post-shift alignment % f' % self.connectivity_analysis(other))
         
