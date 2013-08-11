@@ -1156,7 +1156,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             y_vecs = [cut.vec_y for cut in self.cut_lines]
             plane_pts = [cut.plane_pt for cut in self.cut_lines]
             seeds = [cut.seed_face_index for cut in self.cut_lines]
-            shifts = [cut.shift for cut in self.cut_lines]
+            fine_shifts = [cut.shift for cut in self.cut_lines]
+            int_shifts = [cut.int_shift for cut in self.cut_lines]
             #todo, make this a little betetr
             validate = [self.original_form.name, len(self.bme.faces), len(self.bme.verts)]
             contour_cache[tool_type] = {'validate': validate,
@@ -1165,7 +1166,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                         'y_vecs':y_vecs,
                                         'plane_pts':plane_pts,
                                         'seeds':seeds,
-                                        'shifts':shifts,
+                                        'shifts':fine_shifts,
+                                        'int_shifts':int_shifts,
                                         'segments': self.segments}
     
     def load_from_cache(self,context, tool_type,clip):
@@ -1181,6 +1183,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 plane_pts = data['plane_pts']
                 seeds = data['seeds']
                 shifts = data['shifts']
+                int_shifts = data['int_shifts']
                 segments = data['segments']
                 
                 
@@ -1205,6 +1208,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     cut.vec_y = y_vecs[i]
                     cut.plane_pt = plane_pts[i]
                     cut.shift = shifts[i]
+                    cut.int_shift = int_shifts[i]
                     
                     cut.cut_object(context, self.original_form, self.bme)
                     cut.simplify_cross(segments)
@@ -1212,6 +1216,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     cut.update_screen_coords(context) 
                     cut.select = False  
                     self.cut_lines.append(cut)
+                    self.valid_cuts.append(cut)
                     
                 self.connect_valid_cuts_to_make_mesh()
                     

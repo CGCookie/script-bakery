@@ -174,12 +174,33 @@ class ExistingVertList(object):
             curl_2 = contour_utilities.discrete_curl(self.verts_simple, ideal_direction)
             
             if curl_1 * curl_2 < 0:
-                print('reversing derived loop direction')
-                print('curl1: %f and curl2: %f' % (curl_1,curl_2))
                 self.verts_simple.reverse()
-                print('reversing the base loop')
                 
-                
+
+            edge_len_dict = {}
+            for i in range(0,len(verts_1)):
+                for n in range(0,len(self.verts_simple)):
+                    edge = (i,n)
+                    vect = self.verts_simple[n] - verts_1[i]
+                    edge_len_dict[edge] = vect.length
+            
+            shift_lengths = []
+            #shift_cross = []
+            for shift in range(0,len(self.verts_simple)):
+                tmp_len = 0
+                #tmp_cross = 0
+                for i in range(0, len(self.verts_simple)):
+                    shift_mod = int(math.fmod(i+shift, len(self.verts_simple)))
+                    tmp_len += edge_len_dict[(i,shift_mod)]
+                shift_lengths.append(tmp_len)
+                   
+            final_shift = shift_lengths.index(min(shift_lengths))
+            if final_shift != 0:
+                print('pre rough shift alignment % f' % self.connectivity_analysis(other))
+                print("rough shifting verts by %i segments" % final_shift)
+                self.int_shift = final_shift
+                self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
+                print('post rough shift alignment % f' % self.connectivity_analysis(other))    
                 
         
         else:
