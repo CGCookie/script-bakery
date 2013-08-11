@@ -67,6 +67,9 @@ contour_cache = {}
 
 contour_undo_cache = {}
 
+#store any temporary triangulated objects
+#store the bmesh to prevent recalcing bmesh
+#each time :-)
 contour_mesh_cache = {}
 
 
@@ -1151,13 +1154,17 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             del contour_cache[tool_type]
             
         if len(self.valid_cuts):
-            normals = [cut.plane_no for cut in self.cut_lines]
-            x_vecs = [cut.vec_x for cut in self.cut_lines]
-            y_vecs = [cut.vec_y for cut in self.cut_lines]
-            plane_pts = [cut.plane_pt for cut in self.cut_lines]
-            seeds = [cut.seed_face_index for cut in self.cut_lines]
-            fine_shifts = [cut.shift for cut in self.cut_lines]
-            int_shifts = [cut.int_shift for cut in self.cut_lines]
+            normals = [cut.plane_no for cut in self.valid_cuts]
+            x_vecs = [cut.vec_x for cut in self.valid_cuts]
+            y_vecs = [cut.vec_y for cut in self.valid_cuts]
+            plane_pts = [cut.plane_pt for cut in self.valid_cuts]
+            seeds = [cut.seed_face_index for cut in self.valid_cuts]
+            fine_shifts = [cut.shift for cut in self.valid_cuts]
+            int_shifts = [cut.int_shift for cut in self.valid_cuts]
+            verts = [cut.verts for cut in self.valid_cuts]
+            verts_simple = [cut.verts_simple for cut in self.valid_cuts]
+            
+            
             #todo, make this a little betetr
             validate = [self.original_form.name, len(self.bme.faces), len(self.bme.verts)]
             contour_cache[tool_type] = {'validate': validate,
@@ -1168,7 +1175,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                                         'seeds':seeds,
                                         'shifts':fine_shifts,
                                         'int_shifts':int_shifts,
-                                        'segments': self.segments}
+                                        'segments': self.segments}#,
+                                        #'verts':verts,
+                                        #'verts_simple':verts_simple}
     
     def load_from_cache(self,context, tool_type,clip):
         settings = context.user_preferences.addons['contour_tools'].preferences
@@ -1181,6 +1190,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 x_vecs = data['x_vecs']
                 y_vecs = data['y_vecs']
                 plane_pts = data['plane_pts']
+                #verts = data['verts']
+                #verts_simple = data['verts_simple']
                 seeds = data['seeds']
                 shifts = data['shifts']
                 int_shifts = data['int_shifts']
@@ -1212,7 +1223,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                     cut.cut_object(context, self.original_form, self.bme)
                     cut.simplify_cross(segments)
-                    cut.update_com()        
+                    cut.update_com()   
+                    #cut.verts = verts[i]
+                    #cut.verts_simple = verts_simple[i]     
                     cut.update_screen_coords(context) 
                     cut.select = False  
                     self.cut_lines.append(cut)
