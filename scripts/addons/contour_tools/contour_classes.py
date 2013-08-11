@@ -101,7 +101,97 @@ class ExistingVertList(object):
         for i in vert_inds_sorted:
             v = verts[vert_inds_unsorted.index(i)]
             self.verts_simple.append(mx * v.co)
+            
         
+    def connectivity_analysis(self,other):
+        
+        
+        COM_self = contour_utilities.get_com(self.verts_simple)
+        COM_other = contour_utilities.get_com(other.verts_simple)
+        delta_com_vect = COM_self - COM_other  #final - initial :: self - other
+        delta_com_vect.normalize()
+        
+
+        
+        ideal_to_com = 0
+        for i, v in enumerate(self.verts_simple):
+            connector = v - other.verts_simple[i]  #continue convention of final - initial :: self - other
+            connector.normalize()
+            align = connector.dot(delta_com_vect)
+            #this shouldnt happen but it appears to be...shrug
+            if align < 0:
+                align *= -1    
+            ideal_to_com += align
+        
+        ideal_to_com = 1/len(self.verts_simple) * ideal_to_com
+        
+        return ideal_to_com
+        
+        
+    def align_to_other(self,other, auto_align = True):
+        
+        '''
+        Modifies vert order of self to  provide best
+        bridge between self verts and other loop
+        '''
+        verts_1 = other.verts_simple
+        
+        eds_1 = other.eds_simple
+        
+        print('testing alignment')
+        if 0 in eds_1[-1]:
+            cyclic = True
+            print('cyclic vert chain')
+        else:
+            cyclic = False
+        
+        if len(verts_1) != len(self.verts_simple):
+            #print(len(verts_1))
+            #print(len(self.verts_simple))
+            print('non uniform loops, stopping until your developer gets smarter')
+            return
+            
+        if cyclic:
+
+            V1_0 = verts_1[1] - verts_1[0]
+            V1_1 = verts_1[2] - verts_1[1]
+            
+            V2_0 = self.verts_simple[1] - self.verts_simple[0]
+            V2_1 = self.verts_simple[2] - self.verts_simple[1]
+            
+            no_1 = V1_0.cross(V1_1)
+            no_1.normalize()
+            no_2 = V2_0.cross(V2_1)
+            no_2.normalize()
+            
+            if no_1.dot(no_2) < 0:
+                no_2 = -1 * no_2
+            
+            #average the two directions    
+            ideal_direction = no_1.lerp(no_1,.5)
+        
+            curl_1 = contour_utilities.discrete_curl(verts_1, ideal_direction)
+            curl_2 = contour_utilities.discrete_curl(self.verts_simple, ideal_direction)
+            
+            if curl_1 * curl_2 < 0:
+                print('reversing derived loop direction')
+                print('curl1: %f and curl2: %f' % (curl_1,curl_2))
+                self.verts_simple.reverse()
+                print('reversing the base loop')
+                
+                
+                
+        
+        else:
+            #if the segement is not cyclic
+            #all we have to do is compare the endpoints
+            Vtotal_1 = verts_1[-1] - verts_1[0]
+            Vtotal_2 = self.verts_simple[-1] - self.verts_simple[0]
+    
+            if Vtotal_1.dot(Vtotal_2) < 0:
+                print('reversing path 2')
+                self.verts_simple.reverse()
+                      
             
 class ContourCutLine(object): 
     
@@ -427,8 +517,8 @@ class ContourCutLine(object):
         if self.verts !=[] and self.eds != []:
             [self.verts_simple, self.eds_simple] = contour_utilities.space_evenly_on_path(self.verts, self.eds, segments, self.shift)
             
-            #if self.int_shift:
-                #self.verts_simple = contour_utilities.list_shift(self.verts_simple, self.int_shift)
+            if self.int_shift:
+                self.verts_simple = contour_utilities.list_shift(self.verts_simple, self.int_shift)
             
     def update_com(self):
         if self.verts_simple != []:
@@ -695,6 +785,7 @@ class ContourCutLine(object):
         #into a dictionary?  That's not very efficient!
         if auto_align:
             self.shift = 0
+            self.int_shift = 0
             self.simplify_cross(len(self.eds_simple))
         edge_len_dict = {}
         for i in range(0,len(verts_1)):
@@ -715,11 +806,11 @@ class ContourCutLine(object):
                
         final_shift = shift_lengths.index(min(shift_lengths))
         if final_shift != 0:
-            print('pre-shift alignment % f' % self.connectivity_analysis(other))
-            print("shifting verts by %i segments" % final_shift)
+            print('pre rough shift alignment % f' % self.connectivity_analysis(other))
+            print("rough shifting verts by %i segments" % final_shift)
             self.int_shift = final_shift
             self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
-            print('post-shift alignment % f' % self.connectivity_analysis(other))
+            print('post rough shift alignment % f' % self.connectivity_analysis(other))
         
         if auto_align and cyclic:
             alignment_quality = self.connectivity_analysis(other)
@@ -734,17 +825,17 @@ class ContourCutLine(object):
                 
                 self.shift = 0.5 * (left_bound + right_bound)
                 self.simplify_cross(len(self.eds_simple)) #TODO not sure this needs to happen here
-                self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
+                #self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
                 alignment_quality = self.connectivity_analysis(other)
                 
                 self.shift = left_bound
                 self.simplify_cross(len(self.eds_simple))
-                self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
+                #self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
                 alignment_quality_left = self.connectivity_analysis(other)
                 
                 self.shift = right_bound
                 self.simplify_cross(len(self.eds_simple))
-                self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
+                #self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
                 alignment_quality_right = self.connectivity_analysis(other)
                 
                 if alignment_quality_left < alignment_quality and alignment_quality_right < alignment_quality:

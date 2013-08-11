@@ -927,59 +927,70 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 if not self.sel_verts: #used to be elif
                     self.segments += 1
                     
-                else:
-                    self.segments = len(self.sel_edges)
-                    
+                #else:  #
+                    #self.segments = len(self.sel_edges)
+                
+                    for cut_line in self.cut_lines:
+                        if not cut_line.verts:
+                            print('recutting this line because it has no freaking verts?')
+                            hit = cut_line.hit_object(context, self.original_form)
+                            if hit:
+                                cut_line.cut_object(context, self.original_form, self.bme)
+                                cut_line.simplify_cross(self.segments)
+                                cut_line.update_com()
+                                cut_line.update_screen_coords(context)
+                            else:
+                                self.cut_lines.remove(cut_line)
+    
+                        else:
+                            new_bulk_shift = round((cut_line.int_shift + cut_line.shift) * self.segments/(self.segments - 1))
+                            new_fine_shift = self.segments/(self.segments - 1) * (cut_line.shift + cut_line.int_shift) - new_bulk_shift
+                            print('bulk shift:  %i and fine shift:  %f' % (new_bulk_shift, new_fine_shift))
+                            cut_line.int_shift = new_bulk_shift
+                            cut_line.shift = new_fine_shift
+                            
+                            cut_line.simplify_cross(self.segments)
+                            cut_line.update_screen_coords(context)
+                
                 message = "%s: Set segments to %i" % (event.type, self.segments)
                 context.area.header_text_set(text = message)
-                
-                for cut_line in self.cut_lines:
-                    if not cut_line.verts:
-                        print('recutting this line because it has no freaking verts?')
-                        hit = cut_line.hit_object(context, self.original_form)
-                        if hit:
-                            cut_line.cut_object(context, self.original_form, self.bme)
-                            cut_line.simplify_cross(self.segments)
-                            cut_line.update_com()
-                            cut_line.update_screen_coords(context)
-                        else:
-                            self.cut_lines.remove(cut_line)
-
-                    else:
-                        cut_line.simplify_cross(self.segments)
-                        cut_line.update_screen_coords(context)
-                
                 
                 self.connect_valid_cuts_to_make_mesh()
                 return {'RUNNING_MODAL'}
             
             elif (event.type == 'WHEELDOWNMOUSE' and event.ctrl) or (event.type == 'NUMPAD_MINUS' and event.value == 'PRESS'):
             
-                if self.segments < 4:
-                    self.segments = 3
-                elif not self.sel_verts:
+                if not self.sel_verts and self.segments >= 4:
                     self.segments -= 1
-                else:
-                    self.segments = len(self.sel_edges)
+                    
+                    for cut_line in self.cut_lines:
+                        if not cut_line.verts:
+                            hit = cut_line.hit_object(context, self.original_form)
+                            if hit:
+                                cut_line.cut_object(context, self.original_form, self.bme)
+                                cut_line.simplify_cross(self.segments)
+                                cut_line.update_com()
+                                cut_line.update_screen_coords(context)
+                            else:
+                                self.cut_lines.remove(cut_line)
+                            
+                        else:
+                            new_bulk_shift = round((cut_line.int_shift + cut_line.shift) * self.segments/(self.segments + 1))
+                            new_fine_shift = self.segments/(self.segments + 1) * (cut_line.shift + cut_line.int_shift) - new_bulk_shift
+                            print('bulk shift:  %i and fine shift:  %f' % (new_bulk_shift, new_fine_shift))
+                            cut_line.int_shift = new_bulk_shift
+                            cut_line.shift = new_fine_shift
+                            cut_line.simplify_cross(self.segments)
+                            cut_line.update_screen_coords(context)
+                    
+                #else:  #redundant, 
+                    #self.segments = len(self.sel_edges)
         
                 #message = "Segments: %i" % self.segments
                 message = "%s: Set segments to %i" % (event.type, self.segments)
                 context.area.header_text_set(text = message)
                 
-                for cut_line in self.cut_lines:
-                    if not cut_line.verts:
-                        hit = cut_line.hit_object(context, self.original_form)
-                        if hit:
-                            cut_line.cut_object(context, self.original_form, self.bme)
-                            cut_line.simplify_cross(self.segments)
-                            cut_line.update_com()
-                            cut_line.update_screen_coords(context)
-                        else:
-                            self.cut_lines.remove(cut_line)
-                        
-                    else:
-                        cut_line.simplify_cross(self.segments)
-                        cut_line.update_screen_coords(context)
+                
             
                 self.connect_valid_cuts_to_make_mesh()
                 
@@ -1495,10 +1506,12 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
                 if dist_1.length < dist_0.length:
                     valid_cuts.reverse()
+                self.existing_cut.align_to_other(valid_cuts[0], auto_align = False)
                     
                     
             del cuts_copy
             self.valid_cuts = valid_cuts
+            
                 
     
     def connect_valid_cuts_to_make_mesh(self):
