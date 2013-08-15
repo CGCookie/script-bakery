@@ -33,3 +33,4 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+development/contour_tools.zip

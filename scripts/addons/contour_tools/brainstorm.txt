@@ -1,0 +1,41 @@
+Thought Explosion and Concepts
+	Seems like there are lots of different applications of contours and toplogy 
+	and it has been tackled or investigates a lot if differnet ways
+	
+	Cross Sections
+		
+	Countour Lines
+	
+	Features Lines and Points
+	
+	Silhouettes
+
+
+
+Links
+	#cross sections and silhouettes
+	http://blenderartists.org/forum/showthread.php?280868-Cross-section-script-ported-to-2-6
+	http://blenderartists.org/forum/showthread.php?207420-Rewriting-the-Cross-Section-Script
+	http://blenderartists.org/forum/showthread.php?283721-Mesh-Silhouette-My-first-Bmesh-Operator
+	
+	#
+	
+	#Mesh intersection script
+	http://airplanes3d.net/scripts-253_e.xml
+	
+	
+	#there may be some low level API code useful for projections, intersections etc
+	http://wiki.blender.org/index.php/Doc:2.6/Manual/Modeling/Meshes/Editing/Subdividing/Knife_Subdivide
+	http://wiki.blender.org/index.php/Doc:2.6/Manual/Modeling/Meshes#Mesh_Analysis
+
+
+Literature Resources and Papers
+	http://www.maths.ed.ac.uk/~aar/papers/vanwijk.pdf
+
+
+
+Contact Info for Devs
+
+	Patrick Moore
+	patrick.moore.bu@gmail.com
+	252-723-3456

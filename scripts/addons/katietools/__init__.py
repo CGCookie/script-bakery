@@ -6,7 +6,7 @@ bl_info = {
     "blender": (2,6,3),
     "api": 46461,
     "location": "View3D > Toolshelf",
-    "warning": 'work in progrss',
+    "warning": 'work in progress',
     "wiki_url": "",
     "tracker_url": "",
     "category": "3D View"}
