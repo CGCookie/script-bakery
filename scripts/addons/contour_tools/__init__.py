@@ -692,14 +692,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             context.area.header_text_set()
             contour_utilities.callback_cleanup(self,context)
             bm.free()
-            self.dest_bme.free()
-            self.bme.free()
-            if self.tmp_ob:
+            
+            #used to free the bmesh, now it stays in cache
+            #self.dest_bme.free()
+            #self.bme.free()
+            #if self.tmp_ob:
                 #context.scene.objects.unlink(self.tmp_ob)
-                me = self.tmp_ob.data
-                self.tmp_ob.user_clear()
-                bpy.data.objects.remove(self.tmp_ob)
-                bpy.data.meshes.remove(me)
+                #me = self.tmp_ob.data
+                #self.tmp_ob.user_clear()
+                #bpy.data.objects.remove(self.tmp_ob)
+                #bpy.data.meshes.remove(me)
             if back_to_edit:
                 #not sure why this is necessary?
                 #TODO:  make this bmesh data manipulation instead of bpy.ops
