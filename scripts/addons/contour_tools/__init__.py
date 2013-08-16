@@ -70,9 +70,62 @@ contour_undo_cache = {}
 #store any temporary triangulated objects
 #store the bmesh to prevent recalcing bmesh
 #each time :-)
+global contour_mesh_cache
 contour_mesh_cache = {}
 
+def object_validation(ob):
+    
+    valid = [ob.name, len(ob.data.vertices), len(ob.data.edges), len(ob.data.polygons)]
+    
+    return valid
 
+
+def write_mesh_cache(orig_ob,tmp_ob, bme):
+    
+    #TODO try taking this out
+    global contour_mesh_cache
+    
+    if 'valid' in contour_mesh_cache and contour_mesh_cache['valid']:
+        del contour_mesh_cache['valid']
+        
+    valid = object_validation(orig_ob) #TODO, maybe this should be polygons
+    
+    contour_mesh_cache['valid'] = valid
+    
+    if 'bme' in contour_mesh_cache and contour_mesh_cache['bme']:
+        bme_old = contour_mesh_cache['bme']
+        bme_old.free()
+        del contour_mesh_cache['bme']
+    
+    contour_mesh_cache['bme'] = bme
+    
+    if 'tmp' in contour_mesh_cache and contour_mesh_cache['tmp']:
+        old_obj = contour_mesh_cache['tmp']
+        
+        #context.scene.objects.unlink(self.tmp_ob)
+        me = old_obj.data
+        old_obj.user_clear()
+        bpy.data.objects.remove(old_obj)
+        bpy.data.meshes.remove(me)
+                
+        del contour_mesh_cache['tmp']
+        
+    contour_mesh_cache['tmp'] = tmp_ob
+    
+def clear_mesh_cache():
+    if 'valid' in contour_mesh_cache and contour_mesh_cache['valid']:
+        del contour_mesh_cache['valid']
+        
+    if 'bme' in contour_mesh_cache and contour_mesh_cache['bme']:
+        bme_old = contour_mesh_cache['bme']
+        bme_old.free()
+        del contour_mesh_cache['bme']
+    
+    if 'tmp' in contour_mesh_cache and contour_mesh_cache['tmp']:
+        old_obj = contour_mesh_cache['tmp']
+        bpy.data.objects.remove(old_obj.name)
+        del contour_mesh_cache['tmp']
+    
 class ContourToolsAddonPreferences(AddonPreferences):
     bl_idname = __name__
     
@@ -642,7 +695,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.dest_bme.free()
             self.bme.free()
             if self.tmp_ob:
-                context.scene.objects.unlink(self.tmp_ob)
+                #context.scene.objects.unlink(self.tmp_ob)
                 me = self.tmp_ob.data
                 self.tmp_ob.user_clear()
                 bpy.data.objects.remove(self.tmp_ob)
@@ -820,13 +873,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #clean up callbacks to prevent crash
             context.area.header_text_set()
             contour_utilities.callback_cleanup(self,context)
-            self.bme.free()
-            if self.tmp_ob:
-                context.scene.objects.unlink(self.tmp_ob)
-                me = self.tmp_ob.data
-                self.tmp_ob.user_clear()
-                bpy.data.objects.remove(self.tmp_ob)
-                bpy.data.meshes.remove(me)
+            
+            #don't free it anymore, let the clear cache do that
+            #self.bme.free()
+            #if self.tmp_ob:
+                #context.scene.objects.unlink(self.tmp_ob)
+                #me = self.tmp_ob.data
+                #self.tmp_ob.user_clear()
+                #bpy.data.objects.remove(self.tmp_ob)
+                #bpy.data.meshes.remove(me)
             return {'CANCELLED'}  
         
         elif event.type in {'MIDDLEMOUSE', 'NUMPAD_2', 'NUMPAD_4', 'NUMPAD_6', 'NUMPAD_8', 'NUMPAD_1', 'NUMPAD_3', 'NUMPAD_5', 'NUMPAD_7', 'NUMPAD_9'}:
@@ -1606,26 +1661,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.settings = settings
         if context.mode == 'EDIT_MESH':
             
-            
-            '''
-            self.destination_ob = context.object
-            self.dest_me = context.object.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
-            self.dest_bme = bmesh.new()
-            
-            #we will build this bmesh then add it to the existing one
-            self.tmp_bme = bmesh.new()
-            
-            self.dest_bme.from_mesh(self.dest_me)
-            '''
-            
-            ########################################################
-            #### This is temporary code until bmesh.ops improves ###
-            ########################################################
-            
             #the active object will be the retopo object
             #whose geometry we will be augmenting
             self.destination_ob = context.object
-
             
             #get the destination mesh data
             self.dest_me = self.destination_ob.data
@@ -1634,8 +1672,19 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.dest_bme = bmesh.from_edit_mesh(self.dest_me)
             
             #the selected object will be the original form
-            self.original_form = [ob for ob in context.selected_objects if ob.name != context.object.name][0]
+            #or we wil pull the mesh cache
+            target = [ob for ob in context.selected_objects if ob.name != context.object.name][0]
             
+            validation = object_validation(target)
+            if 'valid' in contour_mesh_cache and contour_mesh_cache['valid'] == validation:
+                use_cache = True
+                print('willing and able to use the cache!')
+            
+            else:
+                use_cache = False  #later, we will double check for ngons and things
+                clear_mesh_cache()
+                self.original_form = target
+                
             
             #count and collect the selected edges if any
             ed_inds = [ed.index for ed in self.dest_bme.edges if ed.select]
@@ -1671,26 +1720,38 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.sel_verts = None
                 self.segments = settings.vertex_count
             
-        else:
+        elif context.mode == 'OBJECT':
+            
             #make the irrelevant variables None
             self.sel_edges = None
             self.sel_verts = None
             self.existing_cut = None
             
             #the active object will be the target
-            self.original_form  = context.object
+            target = context.object
             
-            #no temp mesh needed
+            validation = object_validation(target)
+            
+            if 'valid' in contour_mesh_cache and contour_mesh_cache['valid'] == validation:
+                use_cache = True
+            
+            else:
+                use_cache = False
+                self.original_form  = target
+            
+            #no temp bmesh needed in object mode
+            #we will create a new obeject
             self.tmp_bme = None
             
-            #new blank mesh
-            self.dest_me = bpy.data.meshes.new(self.original_form.name + "_recontour")
-            #new object to hold it
-            self.destination_ob = bpy.data.objects.new(self.original_form.name + "_recontour",self.dest_me) #this is an empty currently
-            self.destination_ob.matrix_world = self.original_form.matrix_world
+            #new blank mesh data
+            self.dest_me = bpy.data.meshes.new(target.name + "_recontour")
+            
+            #new object to hold mesh data
+            self.destination_ob = bpy.data.objects.new(target.name + "_recontour",self.dest_me) #this is an empty currently
+            self.destination_ob.matrix_world = target.matrix_world
             self.destination_ob.update_tag()
             
-            #bmesh to operate on
+            #destination bmesh to operate on
             self.dest_bme = bmesh.new()
             self.dest_bme.from_mesh(self.dest_me)
             
@@ -1699,36 +1760,75 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         #get the info about the original form
         #and convert it to a bmesh for fast connectivity info
-        me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
-        self.bme = bmesh.new()
-        self.bme.from_mesh(me)
+        #or load the previous bme to save even more time
         
-        if settings.use_x_ray:
-            self.orig_x_ray = self.destination_ob.show_x_ray
-            self.destination_ob.show_x_ray = True
         
-        #check for ngons, and if there are any...triangulate just the ngons
-        #this mainly stems from the obj.ray_cast function returning triangulate
-        #results and that it makes my cross section method easier.
-        ngons = []
-        for f in self.bme.faces:
-            if len(f.verts) > 4:
-                ngons.append(f)
-        if len(ngons):
-            print('Ngons detected, this is a real hassle just so you know')
-            print('Ngons detected, this will probably double operator initial startup time')
-            new_geom = bmesh.ops.triangulate(self.bme, faces = ngons, use_beauty = True)
-            new_faces = new_geom['faces']
-            new_me = bpy.data.meshes.new('tmp_recontour_mesh')
-            self.bme.to_mesh(new_me)
-            new_me.update()
-            self.tmp_ob = bpy.data.objects.new('ContourTMP', new_me)
-            context.scene.objects.link(self.tmp_ob)
-            self.tmp_ob.matrix_world = self.original_form.matrix_world
-            self.original_form = self.tmp_ob
-        else:
-            self.tmp_ob = None
+        
+        if use_cache:
+            start = time.time()
+            print('the cache is valid for use!')
             
+            self.bme = contour_mesh_cache['bme']
+            print('loaded old bme in %f' % (time.time() - start))
+            
+            start = time.time()
+            
+            self.tmp_ob = contour_mesh_cache['tmp']
+            print('loaded old tmp ob in %f' % (time.time() - start))
+            
+            if self.tmp_ob:
+                self.original_form = self.tmp_ob
+            else:
+                self.original_form = target
+              
+        else:
+    
+            start = time.time()
+            
+            #clear any old saved data
+            clear_mesh_cache()
+            
+            me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
+            self.bme = bmesh.new()
+            self.bme.from_mesh(me)
+             
+            #check for ngons, and if there are any...triangulate just the ngons
+            #this mainly stems from the obj.ray_cast function returning triangulate
+            #results and that it makes my cross section method easier.
+            ngons = []
+            for f in self.bme.faces:
+                if len(f.verts) > 4:
+                    ngons.append(f)
+            if len(ngons):
+                print('Ngons detected, this is a real hassle just so you know')
+                print('Ngons detected, this will probably double operator initial startup time')
+                new_geom = bmesh.ops.triangulate(self.bme, faces = ngons, use_beauty = True)
+                new_faces = new_geom['faces']
+                new_me = bpy.data.meshes.new('tmp_recontour_mesh')
+                self.bme.to_mesh(new_me)
+                new_me.update()
+                self.tmp_ob = bpy.data.objects.new('ContourTMP', new_me)
+                #context.scene.objects.link(self.tmp_ob)
+                self.tmp_ob.matrix_world = self.original_form.matrix_world
+                
+                
+                ###THIS IS A HUGELY IMPORTANT THING TO NOTICE!###
+                #so maybe I need to make it more apparent or write it differnetly#
+                #We are using a temporary duplicate to handle ray casting
+                #and triangulation
+                self.original_form = self.tmp_ob
+                
+            else:
+                self.tmp_ob = None
+            
+            
+            #store this stuff for next time.  We will most likely use it again
+            #keep in mind, in some instances, tmp_ob is self.original orm
+            #where as in others is it unique.  We want to use "target" here to
+            #record validation because that is the the active or selected object
+            #which is visible in the scene with a unique name.
+            write_mesh_cache(target, self.tmp_ob, self.bme)
+            print('derived new bme and any triangulations in %f' % (time.time() - start))
 
         message = "Segments: %i" % self.segments
         context.area.header_text_set(text = message)
@@ -1743,6 +1843,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.faces = []
             
        
+        if settings.use_x_ray:
+            self.orig_x_ray = self.destination_ob.show_x_ray
+            self.destination_ob.show_x_ray = True
+            
+            
         #These are all variables/values used in the user interaction
         #and drawing
         
