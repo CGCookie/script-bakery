@@ -51,6 +51,7 @@ import bpy
 import bmesh
 import blf
 import math
+import sys
 import time
 from mathutils import Vector
 from bpy_extras.view3d_utils import location_3d_to_region_2d
@@ -65,7 +66,7 @@ from bpy.types import Operator, AddonPreferences
 global contour_cache 
 contour_cache = {}
 
-contour_undo_cache = {}
+contour_undo_cache = []
 
 #store any temporary triangulated objects
 #store the bmesh to prevent recalcing bmesh
@@ -125,7 +126,9 @@ def clear_mesh_cache():
         old_obj = contour_mesh_cache['tmp']
         bpy.data.objects.remove(old_obj.name)
         del contour_mesh_cache['tmp']
-    
+        
+
+        
 class ContourToolsAddonPreferences(AddonPreferences):
     bl_idname = __name__
     
@@ -553,9 +556,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         settings = context.user_preferences.addons['contour_tools'].preferences
         
         
+        if event.type == 'Z' and event.ctrl and event.value == 'PRESS':
+            self.undo_action(context)
         
         if event.type in {'G','R','K'} and event.value == 'PRESS' and not self.hot_key and self.selected:
+            
             self.hot_key = event.type
+            
+            #UNDO CODE
+            self.create_undo_entry('TRANSFORM', self.selected)
             
             if event.type == 'G' and self.selected:
                 self.widget_interaction = True
@@ -753,6 +762,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
             if len(self.valid_cuts) and self.selected and self.selected.desc == 'CUT_LINE' and not self.widget_interaction:
                 
+                #UNDO CODE
+                self.create_undo_entry('ALIGN', self.selected)
+            
                 if not event.ctrl and not event.shift:
                     action = 'Align to neighbors'
                     act = 'BETWEEN'
@@ -918,6 +930,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
              event.type == 'X' and event.value == 'PRESS' and self.selected:
             
             if self.hover_target and event.type == 'RIGHTMOUSE':
+                
+                #UNDO CODE
+                self.create_undo_entry('DELETE', self.hover_target)
+                
                 if self.hover_target in self.valid_cuts:
                     self.valid_cuts.remove(self.hover_target)
                 self.cut_lines.remove(self.hover_target)
@@ -927,8 +943,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.selected = None
             
             elif self.selected and event.type == 'X':
+                
+                #UNDO CODE
+                self.create_undo_entry('DELETE', self.selected)
+                
                 if self.selected in self.valid_cuts:
                     self.valid_cuts.remove(self.selected)
+                    
                 self.cut_lines.remove(self.selected)
                 self.hover_target = None
                 self.widget_interaction = False
@@ -960,7 +981,18 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
 
         if event.type in {'LEFT_ARROW','RIGHT_ARROW'} and event.value == 'PRESS':
-            if self.selected and hasattr(self.selected, 'head'):
+            if self.selected and self.selected.desc == 'CUT_LINE':
+                
+                #UNDO CODE
+                if len(contour_undo_cache) > 0:
+                    #make sure we aren't stacking a ton of shift undos
+                    if contour_undo_cache[-1]['action'] != 'SHIFT' and contour_undo_cache[-1]['cut'] != self.cut_lines.index(self.selected):
+                        self.create_undo_entry('SEGMENT', None)
+                        
+                else:
+                    self.create_undo_entry('SHIFT', self.selected)
+                
+                
                 print('shift before: %f', self.selected.shift)
                 if event.type == 'LEFT_ARROW':
                     
@@ -988,19 +1020,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE','NUMPAD_PLUS','NUMPAD_MINUS'}:
             
             if (event.type == 'WHEELUPMOUSE' and event.ctrl) or (event.type == 'NUMPAD_PLUS' and event.value == 'PRESS'):
-                #if len(self.cut_lines):
-                    #max_segments =  min([len(cut.verts) for cut in self.cut_lines])
-                #else:
-                    #max_segments = 10
-                    
-                #if self.segments >= max_segments and not self.sel_verts:
-                    #self.segments = max_segments
-                    #return {'RUNNING_MODAL'}
+                
+                #UNDO CODE
+                if len(contour_undo_cache) > 0:
+                    #make sure we aren't stacking a ton of segment undos
+                    if contour_undo_cache[-1]['action'] != 'SEGMENT':
+                        self.create_undo_entry('SEGMENT', None)
+                        
+                else:
+                    self.create_undo_entry('SEGMENT', None)
+                
+
                 if not self.sel_verts: #used to be elif
                     self.segments += 1
-                    
-                #else:  #
-                    #self.segments = len(self.sel_edges)
+
                 
                     for cut_line in self.cut_lines:
                         if not cut_line.verts:
@@ -1031,7 +1064,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 return {'RUNNING_MODAL'}
             
             elif (event.type == 'WHEELDOWNMOUSE' and event.ctrl) or (event.type == 'NUMPAD_MINUS' and event.value == 'PRESS'):
-            
+                
+                #UNDO CODE
+                if len(contour_undo_cache) > 0:
+                    #make sure we aren't stacking a ton of segment undos
+                    if contour_undo_cache[-1]['action'] != 'SEGMENT':
+                        self.create_undo_entry('SEGMENT', None)
+                        
+                else:
+                    self.create_undo_entry('SEGMENT', None)
+                
                 if not self.sel_verts and self.segments >= 4:
                     self.segments -= 1
                     
@@ -1062,8 +1104,6 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 message = "%s: Set segments to %i" % (event.type, self.segments)
                 context.area.header_text_set(text = message)
                 
-                
-            
                 self.connect_valid_cuts_to_make_mesh()
                 
                 return {'RUNNING_MODAL'}
@@ -1091,8 +1131,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.hover_target.simplify_cross(self.segments)    
                             self.hover_target.update_com()        
                             self.hover_target.update_screen_coords(context)
-                        
-                        print('RELEASE CLICK ALIGN LINE 1011')    
+                           
                         self.align_cut(self.drag_target, mode = 'BETWEEN')
                         self.connect_valid_cuts_to_make_mesh()
 
@@ -1126,6 +1165,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.sort_cuts()
                             if new_cut in self.valid_cuts:
                                 self.align_cut(new_cut, mode = 'BETWEEN')
+                                
+                                #UNDO CODE
+                                self.create_undo_entry('CREATE', new_cut)
+                        
                                 self.connect_valid_cuts_to_make_mesh()
                         else:
                             self.cut_lines.remove(new_cut)
@@ -1199,6 +1242,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.drag_target = self.cut_lines[-1].tail
                         self.new = True
                         self.selected = self.cut_lines[-1]
+                        
+                        #UNDO CODE
+                        #the undo for creation will be in the mouse release
                     
                     return {'RUNNING_MODAL'}
                 
@@ -1302,6 +1348,115 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                 self.connect_valid_cuts_to_make_mesh()
                     
+            
+    def create_undo_entry(self, action, cut):
+    
+        available_actions = {'CREATE','DELETE','TRANSFORM','SHIFT','ALIGN','SEGMENT'}
+        if action not in available_actions:
+            return None
+        
+        
+        #it's a dictionary
+        undo = {}
+        
+        #record what kind of action it is
+        undo['action'] = action
+        undo['segments'] = self.segments
+        
+        #these are the props we will record about a cut
+        cut_props = ['plane_com',
+                     'plane_no',
+                     'plane_pt',
+                     'seed_face_index',
+                     'shift',
+                     'int_shift',
+                     'vec_x',
+                     'vec_y']
+    
+        #record the relevant props
+        if cut:
+            for prop in cut_props:
+                undo[prop] = getattr(cut, prop) 
+            
+        if action in {'DELETE'}:
+            #Special case, we will actually keep the cut in cache
+            #to put it back later
+            undo['cut'] = cut
+            
+        else:
+            undo['cut'] = self.cut_lines.index(cut)
+            
+        contour_undo_cache.append(undo)
+        print('the undo cache grew, but this size may be irrelevant because of containers etc')
+        print(sys.getsizeof(contour_undo_cache))
+    
+    def undo_action(self,context):
+        
+        if len(contour_undo_cache) > 0:
+            undo = contour_undo_cache.pop()
+            
+        action = undo['action']
+        
+        #this may be an actual cut line
+        #or it may be an index?
+        
+        
+        
+        #these are the props we will recorded about a cut
+        cut_props = ['plane_com',
+                     'plane_no',
+                     'plane_pt',
+                     'seed_face_index',
+                     'shift',
+                     'int_shift',
+                     'vec_x',
+                     'vec_y']
+        
+        if action == 'CREATE':
+            cut = self.cut_lines[undo['cut']]
+            if cut in self.valid_cuts:
+                self.valid_cuts.remove(cut)
+            if cut in self.cut_lines:
+                self.cut_lines.remove(cut)
+                
+            self.connect_valid_cuts_to_make_mesh()
+                
+        elif action == 'DELETE':
+            #in this circumstance...it's actually a cut
+            cut = undo['cut']
+            self.cut_lines.append(cut)
+            self.sort_cuts()
+            self.connect_valid_cuts_to_make_mesh()
+            
+            
+        elif action == 'TRANSFORM' or action == 'SHIFT':
+            cut = self.cut_lines[undo['cut']]
+            for prop in cut_props:
+                setattr(cut, prop, undo[prop])
+                
+                
+            self.selected.cut_object(context, self.original_form, self.bme)
+            self.selected.simplify_cross(self.segments)
+            self.selected.update_screen_coords(context)
+            self.connect_valid_cuts_to_make_mesh()
+            
+        elif action == 'SEGMENT':
+            old_segments = self.segments
+            self.segments = undo['segments']
+            ratio = self.segments/old_segments
+            for cut_line in self.cut_lines:
+                new_bulk_shift = round((cut_line.int_shift + cut_line.shift) * ratio)
+                new_fine_shift = ratio * (cut_line.shift + cut_line.int_shift) - new_bulk_shift
+                            
+                cut_line.int_shift = new_bulk_shift
+                cut_line.shift = new_fine_shift
+                            
+                cut_line.simplify_cross(self.segments)
+                cut_line.update_screen_coords(context)
+            
+            self.connect_valid_cuts_to_make_mesh()
+            
+            
             
     def insert_new_cut(self,new_cut, search_rad = 1/8):
         print('beta testing')
