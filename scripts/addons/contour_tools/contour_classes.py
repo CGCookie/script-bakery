@@ -1270,16 +1270,23 @@ class CutLineManipulatorWidget(object):
         
 
     def derive_screen(self,context):
-        region = context.region  
         rv3d = context.space_data.region_3d
         view_z = rv3d.view_rotation * Vector((0,0,1))
         if view_z.dot(self.initial_plane_no) > -.95 and view_z.dot(self.initial_plane_no) < .95:
-            point_0 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com)
-            point_1 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com + self.initial_plane_no.normalized())
-            self.screen_no = point_1 - point_0
-            if self.screen_no.dot(Vector((0,1))) < 0:
-                self.screen_no = point_0 - point_1
-            self.screen_no.normalize()
+            #point_0 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com)
+            #point_1 = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.cut_line.plane_com + self.initial_plane_no.normalized())
+            #self.screen_no = point_1 - point_0
+            #if self.screen_no.dot(Vector((0,1))) < 0:
+                #self.screen_no = point_0 - point_1
+            #self.screen_no.normalize()
+            
+            imx = rv3d.view_matrix.inverted()
+            normal_3d = imx.transposed() * self.cut_line.plane_no
+            self.screen_no = Vector((normal_3d[0],normal_3d[1]))
+            
+            print('TESTING OUT NEW MATRIX MATH')
+            print(self.screen_no)
+
             
             self.angle = math.atan2(self.screen_no[1],self.screen_no[0]) - 1/2 * math.pi
         else:
@@ -1350,47 +1357,39 @@ class CutLineManipulatorWidget(object):
             point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
             contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
         
-        elif self.transform:
-            
-
+        elif self.transform_mode:
 
             #draw a small inner circle
             contour_utilities.draw_polyline_from_points(context, self.inner_circle, self.color, self.line_width, "GL_LINES")
             
-            if not self.hotkey:
-                if not settings.live_update:
-                    if self.transform_mode == "NORMAL_TRANSLATE":
-                        #draw a line representing the COM translation
-                        points = [self.initial_com, self.cut_line.plane_com]
-                        contour_utilities.draw_3d_points(context, points, self.color3, 4)
-                        contour_utilities.draw_polyline_from_3dpoints(context, points, self.color ,2 , "GL_STIPPLE")
-                        
-                    else:
-                        rv3d = context.space_data.region_3d
-                        view_x = rv3d.view_rotation * Vector((1,0,0))
-                        p1 = self.cut_line.plane_com
-                        p2 = p1 + view_x
-                        p3 = p1 + self.cut_line.plane_no
-                        p5 = p1 - self.cut_line.plane_no
-                        
-                        p1_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p1)
-                        p2_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p2)
-                        p3_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p3)
-                        
-                        
-                        p5_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p5)
-                        
-                        vec_2d_scale = p1_2d - p2_2d
-                        screen_scale = self.radius / vec_2d_scale.length
-                        
-                        vec_2d = p1_2d - p3_2d
-                        
-                        p4_2d = p1_2d + screen_scale * vec_2d
-                        p6_2d = p1_2d - screen_scale * vec_2d
-                        
-                        contour_utilities.draw_points(context, [p1_2d, p4_2d, p6_2d], self.color3, 5)
-                        contour_utilities.draw_polyline_from_points(context, [p6_2d, p4_2d], self.color ,2 , "GL_STIPPLE")
-                
+            
+            if not settings.live_update:
+                if self.transform_mode in {"NORMAL_TRANSLATE", "EDGE_SLIDE"}:
+                    #draw a line representing the COM translation
+                    points = [self.initial_com, self.cut_line.plane_com]
+                    contour_utilities.draw_3d_points(context, points, self.color3, 4)
+                    contour_utilities.draw_polyline_from_3dpoints(context, points, self.color ,2 , "GL_STIPPLE")
+                    
+                else:
+                    rv3d = context.space_data.region_3d
+
+                    p1 = self.cut_line.plane_com
+                    p1_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p1)
+                    #p2_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p2)
+                    #p3_2d =  location_3d_to_region_2d(context.region, context.space_data.region_3d, p3)
+                    
+                    
+                    imx = rv3d.view_matrix.inverted()
+                    vec_screen = imx.transposed() * self.cut_line.plane_no
+                    vec_2d = Vector((vec_screen[0],vec_screen[1]))
+
+                    p4_2d = p1_2d + self.radius * vec_2d
+                    p6_2d = p1_2d - self.radius * vec_2d
+                    
+                    print('previewing the rotation')
+                    contour_utilities.draw_points(context, [p1_2d, p4_2d, p6_2d], self.color3, 5)
+                    contour_utilities.draw_polyline_from_points(context, [p6_2d, p4_2d], self.color ,2 , "GL_STIPPLE")
+            
             
             #If self.transform_mode != 
 #cut line, a user interactive 2d line which represents a plane in 3d splace

@@ -633,12 +633,22 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             bridge = False
             a = 0
             if self.sel_verts and self.sel_edges and len(self.sel_verts):
+                print('we must bridge')
                 bridge =True
                 a = len(self.sel_verts)
+                if not context.tool_settings.mesh_select_mode[0]:
+                    context.tool_settings.mesh_select_mode[0] = True
+                    restore_vert_mode = True
+                else:
+                    restore_vert_mode = False
+                    
             for i, vert in enumerate(self.verts):
                 new_vert = bm.verts.new(tuple(reto_imx * (orig_mx * vert)))
                 bmverts.append(new_vert)
-                if bridge and i < a:
+                
+                #because of the way the verts are ordered
+                #the first loop will be verts [0:a-1]
+                if bridge and i < a:  
                     new_vert.select = True
             
             # Initialize the index values of this sequence
@@ -710,6 +720,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 if self.sel_verts and len(self.sel_verts):
                     bpy.ops.mesh.bridge_edge_loops(type='SINGLE', use_merge=False, merge_factor=0.5, number_cuts=0, interpolation='PATH', smoothness=1, profile_shape_factor=0, profile_shape='SMOOTH')
                     bpy.ops.mesh.select_all(action='DESELECT')
+                    if restore_vert_mode:
+                        context.tool_settings.mesh_select_mode[0] = False
             return{'FINISHED'}
         
         elif event.type == 'S' and event.value == 'PRESS':
@@ -1810,7 +1822,14 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.bme.to_mesh(new_me)
                 new_me.update()
                 self.tmp_ob = bpy.data.objects.new('ContourTMP', new_me)
-                #context.scene.objects.link(self.tmp_ob)
+                
+                
+                #I think this is needed to generate the data for raycasting
+                #there may be some other way to update the object
+                context.scene.objects.link(self.tmp_ob)
+                self.tmp_ob.update_tag()
+                context.scene.update() #this will slow things down
+                context.scene.objects.unlink(self.tmp_ob)
                 self.tmp_ob.matrix_world = self.original_form.matrix_world
                 
                 
