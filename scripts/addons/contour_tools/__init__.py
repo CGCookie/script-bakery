@@ -783,7 +783,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     act = 'BACKWARD'
                     print('BACKWARD')
 
-                print('ALIGNING CUT LINE 704 with hotkey A')
+                print('ALIGNING CUT LINE 786 with hotkey A')
                 self.align_cut(self.selected, mode = act, fine_grain = True)
                 self.selected.simplify_cross(self.segments)
                 
@@ -970,6 +970,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hot_key:
             
             self.cut_line_widget.cancel_transform()
+            
+            #the widget puts the item back so we can pop an undo stack
+            contour_undo_cache.pop()
+            
             self.selected.cut_object(context, self.original_form, self.bme)
             self.selected.simplify_cross(self.segments)
             self.selected.update_com()
@@ -987,7 +991,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 if len(contour_undo_cache) > 0:
                     #make sure we aren't stacking a ton of shift undos
                     if contour_undo_cache[-1]['action'] != 'SHIFT' and contour_undo_cache[-1]['cut'] != self.cut_lines.index(self.selected):
-                        self.create_undo_entry('SEGMENT', None)
+                        self.create_undo_entry('SHIFT', self.selected)
                         
                 else:
                     self.create_undo_entry('SHIFT', self.selected)
@@ -1189,10 +1193,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
                 if not self.hot_key:
                     
-                    #make sure we have something under tehre
+                    #make sure we have something under there
                     if self.hover_target:
                         
                         #we drag until we release unless we are just selecting
+                        #this initiates 
                         if not event.ctrl:
                             self.drag = True
                             self.drag_target = self.hover_target
@@ -1200,6 +1205,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             ###Implied that we are on a cut_line here
                             #TODO if we have other objects available to use
                             self.widget_interaction = True
+                            
+                            self.create_undo_entry('TRANSFORM', self.drag_target)
                             
                         #we are just selecting    
                         else:
@@ -1355,12 +1362,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         if action not in available_actions:
             return None
         
-        
+        print('undo push %s' % action)
         #it's a dictionary
         undo = {}
         
         #record what kind of action it is
         undo['action'] = action
+        #how many segments are
         undo['segments'] = self.segments
         
         #these are the props we will record about a cut
@@ -1383,6 +1391,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #to put it back later
             undo['cut'] = cut
             
+        elif action == 'SEGMENT':
+            undo['cut'] = None
         else:
             undo['cut'] = self.cut_lines.index(cut)
             
@@ -1429,7 +1439,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.connect_valid_cuts_to_make_mesh()
             
             
-        elif action == 'TRANSFORM' or action == 'SHIFT':
+        elif action in {'TRANSFORM', 'SHIFT','ALIGN'}:
             cut = self.cut_lines[undo['cut']]
             for prop in cut_props:
                 setattr(cut, prop, undo[prop])
@@ -1822,12 +1832,18 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.write_to_cache('CUT_LINES')
   
     def invoke(self, context, event):
-        #if edit mode
+        #TODO Settings harmon CODE REVIEW
         settings = context.user_preferences.addons['contour_tools'].preferences
         
         self.valid_cut_inds = []
         
+        #clear the undo cache
+        contour_undo_cache = []
+        
+        #TODO Settings harmon CODE REVIEW
         self.settings = settings
+        
+        #if edit mode
         if context.mode == 'EDIT_MESH':
             
             #the active object will be the retopo object
