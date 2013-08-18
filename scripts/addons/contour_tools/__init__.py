@@ -51,6 +51,7 @@ import bpy
 import bmesh
 import blf
 import math
+import sys
 import time
 from mathutils import Vector
 from bpy_extras.view3d_utils import location_3d_to_region_2d
@@ -65,14 +66,69 @@ from bpy.types import Operator, AddonPreferences
 global contour_cache 
 contour_cache = {}
 
-contour_undo_cache = {}
+contour_undo_cache = []
 
 #store any temporary triangulated objects
 #store the bmesh to prevent recalcing bmesh
 #each time :-)
+global contour_mesh_cache
 contour_mesh_cache = {}
 
+def object_validation(ob):
+    
+    valid = [ob.name, len(ob.data.vertices), len(ob.data.edges), len(ob.data.polygons)]
+    
+    return valid
 
+
+def write_mesh_cache(orig_ob,tmp_ob, bme):
+    
+    #TODO try taking this out
+    global contour_mesh_cache
+    
+    if 'valid' in contour_mesh_cache and contour_mesh_cache['valid']:
+        del contour_mesh_cache['valid']
+        
+    valid = object_validation(orig_ob) #TODO, maybe this should be polygons
+    
+    contour_mesh_cache['valid'] = valid
+    
+    if 'bme' in contour_mesh_cache and contour_mesh_cache['bme']:
+        bme_old = contour_mesh_cache['bme']
+        bme_old.free()
+        del contour_mesh_cache['bme']
+    
+    contour_mesh_cache['bme'] = bme
+    
+    if 'tmp' in contour_mesh_cache and contour_mesh_cache['tmp']:
+        old_obj = contour_mesh_cache['tmp']
+        
+        #context.scene.objects.unlink(self.tmp_ob)
+        me = old_obj.data
+        old_obj.user_clear()
+        bpy.data.objects.remove(old_obj)
+        bpy.data.meshes.remove(me)
+                
+        del contour_mesh_cache['tmp']
+        
+    contour_mesh_cache['tmp'] = tmp_ob
+    
+def clear_mesh_cache():
+    if 'valid' in contour_mesh_cache and contour_mesh_cache['valid']:
+        del contour_mesh_cache['valid']
+        
+    if 'bme' in contour_mesh_cache and contour_mesh_cache['bme']:
+        bme_old = contour_mesh_cache['bme']
+        bme_old.free()
+        del contour_mesh_cache['bme']
+    
+    if 'tmp' in contour_mesh_cache and contour_mesh_cache['tmp']:
+        old_obj = contour_mesh_cache['tmp']
+        bpy.data.objects.remove(old_obj.name)
+        del contour_mesh_cache['tmp']
+        
+
+        
 class ContourToolsAddonPreferences(AddonPreferences):
     bl_idname = __name__
     
@@ -500,9 +556,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         settings = context.user_preferences.addons['contour_tools'].preferences
         
         
+        if event.type == 'Z' and event.ctrl and event.value == 'PRESS':
+            self.undo_action(context)
         
         if event.type in {'G','R','K'} and event.value == 'PRESS' and not self.hot_key and self.selected:
+            
             self.hot_key = event.type
+            
+            #UNDO CODE
+            self.create_undo_entry('TRANSFORM', self.selected)
             
             if event.type == 'G' and self.selected:
                 self.widget_interaction = True
@@ -580,12 +642,22 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             bridge = False
             a = 0
             if self.sel_verts and self.sel_edges and len(self.sel_verts):
+                print('we must bridge')
                 bridge =True
                 a = len(self.sel_verts)
+                if not context.tool_settings.mesh_select_mode[0]:
+                    context.tool_settings.mesh_select_mode[0] = True
+                    restore_vert_mode = True
+                else:
+                    restore_vert_mode = False
+                    
             for i, vert in enumerate(self.verts):
                 new_vert = bm.verts.new(tuple(reto_imx * (orig_mx * vert)))
                 bmverts.append(new_vert)
-                if bridge and i < a:
+                
+                #because of the way the verts are ordered
+                #the first loop will be verts [0:a-1]
+                if bridge and i < a:  
                     new_vert.select = True
             
             # Initialize the index values of this sequence
@@ -639,14 +711,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             context.area.header_text_set()
             contour_utilities.callback_cleanup(self,context)
             bm.free()
-            self.dest_bme.free()
-            self.bme.free()
-            if self.tmp_ob:
-                context.scene.objects.unlink(self.tmp_ob)
-                me = self.tmp_ob.data
-                self.tmp_ob.user_clear()
-                bpy.data.objects.remove(self.tmp_ob)
-                bpy.data.meshes.remove(me)
+            
+            #used to free the bmesh, now it stays in cache
+            #self.dest_bme.free()
+            #self.bme.free()
+            #if self.tmp_ob:
+                #context.scene.objects.unlink(self.tmp_ob)
+                #me = self.tmp_ob.data
+                #self.tmp_ob.user_clear()
+                #bpy.data.objects.remove(self.tmp_ob)
+                #bpy.data.meshes.remove(me)
             if back_to_edit:
                 #not sure why this is necessary?
                 #TODO:  make this bmesh data manipulation instead of bpy.ops
@@ -655,6 +729,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 if self.sel_verts and len(self.sel_verts):
                     bpy.ops.mesh.bridge_edge_loops(type='SINGLE', use_merge=False, merge_factor=0.5, number_cuts=0, interpolation='PATH', smoothness=1, profile_shape_factor=0, profile_shape='SMOOTH')
                     bpy.ops.mesh.select_all(action='DESELECT')
+                    if restore_vert_mode:
+                        context.tool_settings.mesh_select_mode[0] = False
             return{'FINISHED'}
         
         elif event.type == 'S' and event.value == 'PRESS':
@@ -686,6 +762,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
             if len(self.valid_cuts) and self.selected and self.selected.desc == 'CUT_LINE' and not self.widget_interaction:
                 
+                #UNDO CODE
+                self.create_undo_entry('ALIGN', self.selected)
+            
                 if not event.ctrl and not event.shift:
                     action = 'Align to neighbors'
                     act = 'BETWEEN'
@@ -704,7 +783,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     act = 'BACKWARD'
                     print('BACKWARD')
 
-                print('ALIGNING CUT LINE 704 with hotkey A')
+                print('ALIGNING CUT LINE 786 with hotkey A')
                 self.align_cut(self.selected, mode = act, fine_grain = True)
                 self.selected.simplify_cross(self.segments)
                 
@@ -820,13 +899,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #clean up callbacks to prevent crash
             context.area.header_text_set()
             contour_utilities.callback_cleanup(self,context)
-            self.bme.free()
-            if self.tmp_ob:
-                context.scene.objects.unlink(self.tmp_ob)
-                me = self.tmp_ob.data
-                self.tmp_ob.user_clear()
-                bpy.data.objects.remove(self.tmp_ob)
-                bpy.data.meshes.remove(me)
+            
+            #don't free it anymore, let the clear cache do that
+            #self.bme.free()
+            #if self.tmp_ob:
+                #context.scene.objects.unlink(self.tmp_ob)
+                #me = self.tmp_ob.data
+                #self.tmp_ob.user_clear()
+                #bpy.data.objects.remove(self.tmp_ob)
+                #bpy.data.meshes.remove(me)
             return {'CANCELLED'}  
         
         elif event.type in {'MIDDLEMOUSE', 'NUMPAD_2', 'NUMPAD_4', 'NUMPAD_6', 'NUMPAD_8', 'NUMPAD_1', 'NUMPAD_3', 'NUMPAD_5', 'NUMPAD_7', 'NUMPAD_9'}:
@@ -849,6 +930,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
              event.type == 'X' and event.value == 'PRESS' and self.selected:
             
             if self.hover_target and event.type == 'RIGHTMOUSE':
+                
+                #UNDO CODE
+                self.create_undo_entry('DELETE', self.hover_target)
+                
                 if self.hover_target in self.valid_cuts:
                     self.valid_cuts.remove(self.hover_target)
                 self.cut_lines.remove(self.hover_target)
@@ -858,8 +943,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.selected = None
             
             elif self.selected and event.type == 'X':
+                
+                #UNDO CODE
+                self.create_undo_entry('DELETE', self.selected)
+                
                 if self.selected in self.valid_cuts:
                     self.valid_cuts.remove(self.selected)
+                    
                 self.cut_lines.remove(self.selected)
                 self.hover_target = None
                 self.widget_interaction = False
@@ -880,6 +970,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hot_key:
             
             self.cut_line_widget.cancel_transform()
+            
+            #the widget puts the item back so we can pop an undo stack
+            contour_undo_cache.pop()
+            
             self.selected.cut_object(context, self.original_form, self.bme)
             self.selected.simplify_cross(self.segments)
             self.selected.update_com()
@@ -891,7 +985,18 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
 
         if event.type in {'LEFT_ARROW','RIGHT_ARROW'} and event.value == 'PRESS':
-            if self.selected and hasattr(self.selected, 'head'):
+            if self.selected and self.selected.desc == 'CUT_LINE':
+                
+                #UNDO CODE
+                if len(contour_undo_cache) > 0:
+                    #make sure we aren't stacking a ton of shift undos
+                    if contour_undo_cache[-1]['action'] != 'SHIFT' and contour_undo_cache[-1]['cut'] != self.cut_lines.index(self.selected):
+                        self.create_undo_entry('SHIFT', self.selected)
+                        
+                else:
+                    self.create_undo_entry('SHIFT', self.selected)
+                
+                
                 print('shift before: %f', self.selected.shift)
                 if event.type == 'LEFT_ARROW':
                     
@@ -919,19 +1024,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         if event.type in {'WHEELDOWNMOUSE','WHEELUPMOUSE','NUMPAD_PLUS','NUMPAD_MINUS'}:
             
             if (event.type == 'WHEELUPMOUSE' and event.ctrl) or (event.type == 'NUMPAD_PLUS' and event.value == 'PRESS'):
-                #if len(self.cut_lines):
-                    #max_segments =  min([len(cut.verts) for cut in self.cut_lines])
-                #else:
-                    #max_segments = 10
-                    
-                #if self.segments >= max_segments and not self.sel_verts:
-                    #self.segments = max_segments
-                    #return {'RUNNING_MODAL'}
+                
+                #UNDO CODE
+                if len(contour_undo_cache) > 0:
+                    #make sure we aren't stacking a ton of segment undos
+                    if contour_undo_cache[-1]['action'] != 'SEGMENT':
+                        self.create_undo_entry('SEGMENT', None)
+                        
+                else:
+                    self.create_undo_entry('SEGMENT', None)
+                
+
                 if not self.sel_verts: #used to be elif
                     self.segments += 1
-                    
-                #else:  #
-                    #self.segments = len(self.sel_edges)
+
                 
                     for cut_line in self.cut_lines:
                         if not cut_line.verts:
@@ -962,7 +1068,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 return {'RUNNING_MODAL'}
             
             elif (event.type == 'WHEELDOWNMOUSE' and event.ctrl) or (event.type == 'NUMPAD_MINUS' and event.value == 'PRESS'):
-            
+                
+                #UNDO CODE
+                if len(contour_undo_cache) > 0:
+                    #make sure we aren't stacking a ton of segment undos
+                    if contour_undo_cache[-1]['action'] != 'SEGMENT':
+                        self.create_undo_entry('SEGMENT', None)
+                        
+                else:
+                    self.create_undo_entry('SEGMENT', None)
+                
                 if not self.sel_verts and self.segments >= 4:
                     self.segments -= 1
                     
@@ -993,8 +1108,6 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 message = "%s: Set segments to %i" % (event.type, self.segments)
                 context.area.header_text_set(text = message)
                 
-                
-            
                 self.connect_valid_cuts_to_make_mesh()
                 
                 return {'RUNNING_MODAL'}
@@ -1022,8 +1135,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.hover_target.simplify_cross(self.segments)    
                             self.hover_target.update_com()        
                             self.hover_target.update_screen_coords(context)
-                        
-                        print('RELEASE CLICK ALIGN LINE 1011')    
+                           
                         self.align_cut(self.drag_target, mode = 'BETWEEN')
                         self.connect_valid_cuts_to_make_mesh()
 
@@ -1057,6 +1169,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             self.sort_cuts()
                             if new_cut in self.valid_cuts:
                                 self.align_cut(new_cut, mode = 'BETWEEN')
+                                
+                                #UNDO CODE
+                                self.create_undo_entry('CREATE', new_cut)
+                        
                                 self.connect_valid_cuts_to_make_mesh()
                         else:
                             self.cut_lines.remove(new_cut)
@@ -1077,10 +1193,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
                 if not self.hot_key:
                     
-                    #make sure we have something under tehre
+                    #make sure we have something under there
                     if self.hover_target:
                         
                         #we drag until we release unless we are just selecting
+                        #this initiates 
                         if not event.ctrl:
                             self.drag = True
                             self.drag_target = self.hover_target
@@ -1088,6 +1205,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                             ###Implied that we are on a cut_line here
                             #TODO if we have other objects available to use
                             self.widget_interaction = True
+                            
+                            self.create_undo_entry('TRANSFORM', self.drag_target)
                             
                         #we are just selecting    
                         else:
@@ -1130,6 +1249,9 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                         self.drag_target = self.cut_lines[-1].tail
                         self.new = True
                         self.selected = self.cut_lines[-1]
+                        
+                        #UNDO CODE
+                        #the undo for creation will be in the mouse release
                     
                     return {'RUNNING_MODAL'}
                 
@@ -1233,6 +1355,118 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                 self.connect_valid_cuts_to_make_mesh()
                     
+            
+    def create_undo_entry(self, action, cut):
+    
+        available_actions = {'CREATE','DELETE','TRANSFORM','SHIFT','ALIGN','SEGMENT'}
+        if action not in available_actions:
+            return None
+        
+        print('undo push %s' % action)
+        #it's a dictionary
+        undo = {}
+        
+        #record what kind of action it is
+        undo['action'] = action
+        #how many segments are
+        undo['segments'] = self.segments
+        
+        #these are the props we will record about a cut
+        cut_props = ['plane_com',
+                     'plane_no',
+                     'plane_pt',
+                     'seed_face_index',
+                     'shift',
+                     'int_shift',
+                     'vec_x',
+                     'vec_y']
+    
+        #record the relevant props
+        if cut:
+            for prop in cut_props:
+                undo[prop] = getattr(cut, prop) 
+            
+        if action in {'DELETE'}:
+            #Special case, we will actually keep the cut in cache
+            #to put it back later
+            undo['cut'] = cut
+            
+        elif action == 'SEGMENT':
+            undo['cut'] = None
+        else:
+            undo['cut'] = self.cut_lines.index(cut)
+            
+        contour_undo_cache.append(undo)
+        print('the undo cache grew, but this size may be irrelevant because of containers etc')
+        print(sys.getsizeof(contour_undo_cache))
+    
+    def undo_action(self,context):
+        
+        if len(contour_undo_cache) > 0:
+            undo = contour_undo_cache.pop()
+            
+        action = undo['action']
+        
+        #this may be an actual cut line
+        #or it may be an index?
+        
+        
+        
+        #these are the props we will recorded about a cut
+        cut_props = ['plane_com',
+                     'plane_no',
+                     'plane_pt',
+                     'seed_face_index',
+                     'shift',
+                     'int_shift',
+                     'vec_x',
+                     'vec_y']
+        
+        if action == 'CREATE':
+            cut = self.cut_lines[undo['cut']]
+            if cut in self.valid_cuts:
+                self.valid_cuts.remove(cut)
+            if cut in self.cut_lines:
+                self.cut_lines.remove(cut)
+                
+            self.connect_valid_cuts_to_make_mesh()
+                
+        elif action == 'DELETE':
+            #in this circumstance...it's actually a cut
+            cut = undo['cut']
+            self.cut_lines.append(cut)
+            self.sort_cuts()
+            self.connect_valid_cuts_to_make_mesh()
+            
+            
+        elif action in {'TRANSFORM', 'SHIFT','ALIGN'}:
+            cut = self.cut_lines[undo['cut']]
+            for prop in cut_props:
+                setattr(cut, prop, undo[prop])
+                
+                
+            self.selected.cut_object(context, self.original_form, self.bme)
+            self.selected.simplify_cross(self.segments)
+            self.selected.update_screen_coords(context)
+            self.connect_valid_cuts_to_make_mesh()
+            
+        elif action == 'SEGMENT':
+            old_segments = self.segments
+            self.segments = undo['segments']
+            ratio = self.segments/old_segments
+            for cut_line in self.cut_lines:
+                new_bulk_shift = round((cut_line.int_shift + cut_line.shift) * ratio)
+                new_fine_shift = ratio * (cut_line.shift + cut_line.int_shift) - new_bulk_shift
+                            
+                cut_line.int_shift = new_bulk_shift
+                cut_line.shift = new_fine_shift
+                            
+                cut_line.simplify_cross(self.segments)
+                cut_line.update_screen_coords(context)
+            
+            self.connect_valid_cuts_to_make_mesh()
+            
+            
             
     def insert_new_cut(self,new_cut, search_rad = 1/8):
         print('beta testing')
@@ -1598,34 +1832,23 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.write_to_cache('CUT_LINES')
   
     def invoke(self, context, event):
-        #if edit mode
+        #TODO Settings harmon CODE REVIEW
         settings = context.user_preferences.addons['contour_tools'].preferences
         
         self.valid_cut_inds = []
         
+        #clear the undo cache
+        contour_undo_cache = []
+        
+        #TODO Settings harmon CODE REVIEW
         self.settings = settings
+        
+        #if edit mode
         if context.mode == 'EDIT_MESH':
-            
-            
-            '''
-            self.destination_ob = context.object
-            self.dest_me = context.object.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
-            self.dest_bme = bmesh.new()
-            
-            #we will build this bmesh then add it to the existing one
-            self.tmp_bme = bmesh.new()
-            
-            self.dest_bme.from_mesh(self.dest_me)
-            '''
-            
-            ########################################################
-            #### This is temporary code until bmesh.ops improves ###
-            ########################################################
             
             #the active object will be the retopo object
             #whose geometry we will be augmenting
             self.destination_ob = context.object
-
             
             #get the destination mesh data
             self.dest_me = self.destination_ob.data
@@ -1634,8 +1857,19 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             self.dest_bme = bmesh.from_edit_mesh(self.dest_me)
             
             #the selected object will be the original form
-            self.original_form = [ob for ob in context.selected_objects if ob.name != context.object.name][0]
+            #or we wil pull the mesh cache
+            target = [ob for ob in context.selected_objects if ob.name != context.object.name][0]
             
+            validation = object_validation(target)
+            if 'valid' in contour_mesh_cache and contour_mesh_cache['valid'] == validation:
+                use_cache = True
+                print('willing and able to use the cache!')
+            
+            else:
+                use_cache = False  #later, we will double check for ngons and things
+                clear_mesh_cache()
+                self.original_form = target
+                
             
             #count and collect the selected edges if any
             ed_inds = [ed.index for ed in self.dest_bme.edges if ed.select]
@@ -1671,26 +1905,38 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.sel_verts = None
                 self.segments = settings.vertex_count
             
-        else:
+        elif context.mode == 'OBJECT':
+            
             #make the irrelevant variables None
             self.sel_edges = None
             self.sel_verts = None
             self.existing_cut = None
             
             #the active object will be the target
-            self.original_form  = context.object
+            target = context.object
             
-            #no temp mesh needed
+            validation = object_validation(target)
+            
+            if 'valid' in contour_mesh_cache and contour_mesh_cache['valid'] == validation:
+                use_cache = True
+            
+            else:
+                use_cache = False
+                self.original_form  = target
+            
+            #no temp bmesh needed in object mode
+            #we will create a new obeject
             self.tmp_bme = None
             
-            #new blank mesh
-            self.dest_me = bpy.data.meshes.new(self.original_form.name + "_recontour")
-            #new object to hold it
-            self.destination_ob = bpy.data.objects.new(self.original_form.name + "_recontour",self.dest_me) #this is an empty currently
-            self.destination_ob.matrix_world = self.original_form.matrix_world
+            #new blank mesh data
+            self.dest_me = bpy.data.meshes.new(target.name + "_recontour")
+            
+            #new object to hold mesh data
+            self.destination_ob = bpy.data.objects.new(target.name + "_recontour",self.dest_me) #this is an empty currently
+            self.destination_ob.matrix_world = target.matrix_world
             self.destination_ob.update_tag()
             
-            #bmesh to operate on
+            #destination bmesh to operate on
             self.dest_bme = bmesh.new()
             self.dest_bme.from_mesh(self.dest_me)
             
@@ -1699,36 +1945,82 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         #get the info about the original form
         #and convert it to a bmesh for fast connectivity info
-        me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
-        self.bme = bmesh.new()
-        self.bme.from_mesh(me)
+        #or load the previous bme to save even more time
         
-        if settings.use_x_ray:
-            self.orig_x_ray = self.destination_ob.show_x_ray
-            self.destination_ob.show_x_ray = True
         
-        #check for ngons, and if there are any...triangulate just the ngons
-        #this mainly stems from the obj.ray_cast function returning triangulate
-        #results and that it makes my cross section method easier.
-        ngons = []
-        for f in self.bme.faces:
-            if len(f.verts) > 4:
-                ngons.append(f)
-        if len(ngons):
-            print('Ngons detected, this is a real hassle just so you know')
-            print('Ngons detected, this will probably double operator initial startup time')
-            new_geom = bmesh.ops.triangulate(self.bme, faces = ngons, use_beauty = True)
-            new_faces = new_geom['faces']
-            new_me = bpy.data.meshes.new('tmp_recontour_mesh')
-            self.bme.to_mesh(new_me)
-            new_me.update()
-            self.tmp_ob = bpy.data.objects.new('ContourTMP', new_me)
-            context.scene.objects.link(self.tmp_ob)
-            self.tmp_ob.matrix_world = self.original_form.matrix_world
-            self.original_form = self.tmp_ob
-        else:
-            self.tmp_ob = None
+        
+        if use_cache:
+            start = time.time()
+            print('the cache is valid for use!')
             
+            self.bme = contour_mesh_cache['bme']
+            print('loaded old bme in %f' % (time.time() - start))
+            
+            start = time.time()
+            
+            self.tmp_ob = contour_mesh_cache['tmp']
+            print('loaded old tmp ob in %f' % (time.time() - start))
+            
+            if self.tmp_ob:
+                self.original_form = self.tmp_ob
+            else:
+                self.original_form = target
+              
+        else:
+    
+            start = time.time()
+            
+            #clear any old saved data
+            clear_mesh_cache()
+            
+            me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
+            self.bme = bmesh.new()
+            self.bme.from_mesh(me)
+             
+            #check for ngons, and if there are any...triangulate just the ngons
+            #this mainly stems from the obj.ray_cast function returning triangulate
+            #results and that it makes my cross section method easier.
+            ngons = []
+            for f in self.bme.faces:
+                if len(f.verts) > 4:
+                    ngons.append(f)
+            if len(ngons):
+                print('Ngons detected, this is a real hassle just so you know')
+                print('Ngons detected, this will probably double operator initial startup time')
+                new_geom = bmesh.ops.triangulate(self.bme, faces = ngons, use_beauty = True)
+                new_faces = new_geom['faces']
+                new_me = bpy.data.meshes.new('tmp_recontour_mesh')
+                self.bme.to_mesh(new_me)
+                new_me.update()
+                self.tmp_ob = bpy.data.objects.new('ContourTMP', new_me)
+                
+                
+                #I think this is needed to generate the data for raycasting
+                #there may be some other way to update the object
+                context.scene.objects.link(self.tmp_ob)
+                self.tmp_ob.update_tag()
+                context.scene.update() #this will slow things down
+                context.scene.objects.unlink(self.tmp_ob)
+                self.tmp_ob.matrix_world = self.original_form.matrix_world
+                
+                
+                ###THIS IS A HUGELY IMPORTANT THING TO NOTICE!###
+                #so maybe I need to make it more apparent or write it differnetly#
+                #We are using a temporary duplicate to handle ray casting
+                #and triangulation
+                self.original_form = self.tmp_ob
+                
+            else:
+                self.tmp_ob = None
+            
+            
+            #store this stuff for next time.  We will most likely use it again
+            #keep in mind, in some instances, tmp_ob is self.original orm
+            #where as in others is it unique.  We want to use "target" here to
+            #record validation because that is the the active or selected object
+            #which is visible in the scene with a unique name.
+            write_mesh_cache(target, self.tmp_ob, self.bme)
+            print('derived new bme and any triangulations in %f' % (time.time() - start))
 
         message = "Segments: %i" % self.segments
         context.area.header_text_set(text = message)
@@ -1743,6 +2035,11 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         self.faces = []
             
        
+        if settings.use_x_ray:
+            self.orig_x_ray = self.destination_ob.show_x_ray
+            self.destination_ob.show_x_ray = True
+            
+            
         #These are all variables/values used in the user interaction
         #and drawing
         
