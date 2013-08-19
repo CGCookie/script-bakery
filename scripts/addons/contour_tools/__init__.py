@@ -892,7 +892,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'RUNNING_MODAL'}
         
         #escape
-        elif event.type== 'ESC':
+        elif event.type== 'ESC' and not self.hot_key and event.value == 'PRESS':
             #TODO:  Delete the destination ob in case we dont need it
             #need to carefully implement this so people dont delete their wok
             
@@ -967,7 +967,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
     
 
-        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hot_key:
+        elif  event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS' and self.hot_key:
             
             self.cut_line_widget.cancel_transform()
             
