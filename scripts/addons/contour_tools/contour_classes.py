@@ -893,7 +893,7 @@ class ContourCutLine(object):
     def active_element(self,context,x,y):
         settings = context.user_preferences.addons['contour_tools'].preferences
         
-        if self.head:
+        if self.head: #this makes sure the head and tail haven't been removed
             active_head = self.head.mouse_over(x, y)
             active_tail = self.tail.mouse_over(x, y)
         else:
@@ -918,6 +918,9 @@ class ContourCutLine(object):
                 if (dist < 100) and (bound < 1) and (bound > 0):
                     active_self = True
                     break
+            
+        else:
+            active_self = False
             '''
             region = context.region  
             rv3d = context.space_data.region_3d
@@ -947,8 +950,9 @@ class ContourCutLine(object):
         bound = intersect[1]
         active_self = (dist < 100) and (bound < 1) and (bound > 0) #TODO:  make this a sensitivity setting
         '''
-        if active_head and active_tail and active_self: #they are all clustered together
-            #print('returning head but tail too')
+        #they are all clustered together
+        if active_head and active_tail and active_self: 
+            
             return self.head
         
         elif active_tail:
