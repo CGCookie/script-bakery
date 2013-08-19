@@ -105,8 +105,9 @@ def assignTarget(modifier):
 # Add Modifier function, for use with smart mod classes.  
 ################################################### 
 
-def addMod(modifier):
-    ops.object.modifier_add(type=modifier)
+def addMod(modifier, name):
+    #ops.object.modifier_add(type=modifier)
+    bpy.context.object.modifiers.new(type=modifier, name=name)
     return {"FINISHED"}
 
 
@@ -133,7 +134,7 @@ class addArray(bpy.types.Operator):
         targetObj = context.selected_objects
         
         # Add a array modifier
-        addMod("ARRAY")
+        addMod("ARRAY", "SmartArray")
                 
         # Store the mesh object
         selectedObj = activeObj        
@@ -186,10 +187,10 @@ class addBoolean(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
        
     
-    # Check to see if an object is selected
+    #Check to see if an object is selected
     @classmethod
     def poll(cls, context):
-        if len(context.selected_objects) in range(1,3):
+        if len(context.selected_objects) > 1:
             return True
     
     # Add the modifier
@@ -198,16 +199,22 @@ class addBoolean(bpy.types.Operator):
         activeObj = context.active_object
         selected = context.selected_objects
 
-        addMod("BOOLEAN")
+        count = 0
+
         for obj in selected:
             if obj != activeObj:
                 target = obj
-            for mod in activeObj.modifiers:
-                if mod.type == 'BOOLEAN':        
-                    mod.object = bpy.data.objects[target.name]
-            
+                count += 1
 
-        self.report({'INFO'}, "Assigned second object to boolean modifier")  
+                addMod("BOOLEAN", "SmartBoolean "+str(count))
+                
+                for mod in activeObj.modifiers:
+                    if mod.name == 'SmartBoolean '+str(count):
+                        mod.object = bpy.data.objects[target.name]
+                        mod.operation = 'DIFFERENCE'
+
+
+        self.report({'INFO'}, "Assigned each object to a boolean modifier")  
 
         return {"FINISHED"}
 
@@ -235,7 +242,7 @@ class addCast(bpy.types.Operator):
         targetObj = context.selected_objects
         
         # Add a array modifier
-        addMod("CAST")
+        addMod("CAST", "SmartCast")
                 
         # Store the mesh object
         selectedObj = activeObj        
@@ -318,7 +325,7 @@ class addMirror(bpy.types.Operator):
                 targetObj = obj
             elif obj.type == 'MESH' or obj.type == 'CURVE':
                 # Add a mirror modifier
-                addMod("MIRROR")
+                addMod("MIRROR", "SmartMirror")
 
         #Make the targetObj active
         try:
@@ -374,7 +381,7 @@ class addLattice(bpy.types.Operator):
         targetObj = context.selected_objects
         
         # Add a lattice modifier
-        addMod("LATTICE")
+        addMod("LATTICE", "SmartLattice")
 
         # Store the mesh object
         selectedObj = activeObj
@@ -441,7 +448,7 @@ class addScrew(bpy.types.Operator):
         targetObj = context.selected_objects
         
         # Add a screw modifier
-        addMod("SCREW")
+        addMod("SCREW", "SmartScrew")
                 
         # Store the mesh object
         selectedObj = activeObj        
@@ -496,7 +503,7 @@ class addRemesh(bpy.types.Operator):
         return not context.sculpt_object.use_dynamic_topology_sculpting
 
     def execute(self, context):
-        ops.object.modifier_add(type='REMESH')
+        AddMod("REMESH", "Remesh")
         context.object.modifiers['Remesh'].mode = 'SMOOTH'
         return {"FINISHED"}
 
