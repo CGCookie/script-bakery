@@ -1207,7 +1207,7 @@ class CutLineManipulatorWidget(object):
                             rot_angle = screen_angle - self.angle #+ .5 * math.pi  #Mystery
                             
                         else:
-                            init_angle = math.atan2(self.initial_y, self.initial_x)
+                            init_angle = math.atan2(self.initial_y - self.y, self.initial_x - self.x)
                             init_angle = math.fmod(init_angle + 4 * math.pi, 2 * math.pi)
                             rot_angle = screen_angle - init_angle
                             
