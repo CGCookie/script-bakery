@@ -39,12 +39,10 @@ import quick_scene
 import bpy
 from bpy.types import AddonPreferences
 
-#from bl_ui.space_userpref_keymap import InputKeyMapPanel
+# import rna_keymap_ui
 
 # class QuickToolsPreferences(AddonPreferences):
 #     bl_idname = __package__
-
-#     _fake_panel = InputKeyMapPanel()
 
 #     def draw(self, context):
 #         layout = self.layout
@@ -58,7 +56,7 @@ from bpy.types import AddonPreferences
 #         for km, kmi in addon_keymaps:
 #             #km = km.active()
 #             col.context_pointer_set("keymap", km)
-#             self._fake_panel.draw_kmi([], kc, km, kmi, col, 0)
+#             rna_keymap_ui.draw_kmi([], kc, km, kmi, col, 0)
 
 addon_keymaps = []        
 
@@ -114,8 +112,15 @@ def register():
    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
    kmi.properties.name = 'sculpt.tools_menu'
    kmi.active = True
-   addon_keymaps.append((km, kmi))
+
+   kmi = km.keymap_items.new('sculpt.symmetry', 'X', 'PRESS', shift=True)
+   kmi.properties.axis = -1
+   kmi = km.keymap_items.new('sculpt.symmetry', 'Y', 'PRESS', shift=True)
+   kmi.properties.axis = 0
+   kmi = km.keymap_items.new('sculpt.symmetry', 'Z', 'PRESS', shift=True)
+   kmi.properties.axis = 1
   
+   addon_keymaps.append((km, kmi))
  
 def unregister():
     # bpy.utils.unregister_class(QuickToolsPreferences)
