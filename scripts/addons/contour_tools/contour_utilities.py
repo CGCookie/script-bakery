@@ -211,15 +211,19 @@ def pi_slice(x,y,r1,r2,thta1,thta2,res,t_fan = False):
             
     return(points)
 
-def draw_outline_or_region(mode, points):
+def draw_outline_or_region(mode, points, color):
         '''  
         arg: 
         mode - either bgl.GL_POLYGON or bgl.GL_LINE_LOOP
         color - will need to be set beforehand using theme colors. eg
         bgl.glColor4f(self.ri, self.gi, self.bi, self.ai)
         '''
-            
-        bgl.glBegin(mode)
+        
+        bgl.glColor4f(color[0],color[1],color[2],color[3])
+        if mode == 'GL_LINE_LOOP':
+            bgl.glBegin(bgl.GL_LINE_LOOP)
+        else:
+            bgl.glBegin(bgl.GL_POLYGON)
  
         # start with corner right-bottom
         for i in range(0,len(points)):
@@ -227,7 +231,32 @@ def draw_outline_or_region(mode, points):
  
         bgl.glEnd()
 
-
+def arrow_primitive(x,y,ang,tail_l, head_l, head_w, tail_w):
+    
+    #primitive
+    #notice the order so that the arrow can be filled
+    #in by traingle fan or GL quad arrow[0:4] and arrow [4:]
+    prim = [Vector((-tail_w,tail_l)),
+            Vector((-tail_w, 0)), 
+            Vector((tail_w, 0)), 
+            Vector((tail_w, tail_l)),
+            Vector((head_w,tail_l)),
+            Vector((0,tail_l + head_l)),
+            Vector((-head_w,tail_l))]
+    
+    #rotation
+    rmatrix = Matrix.Rotation(ang,2)
+    
+    #translation
+    T = Vector((x,y))
+    
+    arrow = [[None]] * 7
+    for i, loc in enumerate(prim):
+        arrow[i] = T + rmatrix * loc
+        
+    return arrow
+    
+    
 def arc_arrow(x,y,r1,thta1,thta2,res, arrow_size, arrow_angle, ccw = True):
     '''
     args: 

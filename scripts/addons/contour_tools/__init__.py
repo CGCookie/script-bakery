@@ -259,10 +259,13 @@ class ContourToolsAddonPreferences(AddonPreferences):
             description = 'Will cause non parallel cuts from same view',
             default=True,
             )
-     
-    widget_color = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(.6,0.5,0.35), subtype="COLOR")
-    widget_color2 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0.1,.1, .3), subtype="COLOR")
-    widget_color3 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0.6,0.06,0.06), subtype="COLOR")
+    
+    #TODO  Theme this out nicely :-) 
+    widget_color = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0,0,1), subtype="COLOR")
+    widget_color2 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(1,0,0), subtype="COLOR")
+    widget_color3 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0,1,0), subtype="COLOR")
+    widget_color4 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(0,0.2,.8), subtype="COLOR")
+    widget_color5 = FloatVectorProperty(name="Widget Color", description="Choose Widget color", min=0, max=1, default=(.9,.1,0), subtype="COLOR")
     
     
     widget_radius = IntProperty(
@@ -403,6 +406,8 @@ class ContourToolsAddonPreferences(AddonPreferences):
             row.prop(self, "widget_color", text="Color 1")
             row.prop(self, "widget_color2", text="Color 2")
             row.prop(self, "widget_color3", text="Color 3")
+            row.prop(self, "widget_color4", text="Color 4")
+            row.prop(self, "widget_color5", text="Color 5")
 
         # Debug Settings
         box = layout.box().column(align=False)
