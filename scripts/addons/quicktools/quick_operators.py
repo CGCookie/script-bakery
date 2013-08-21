@@ -725,7 +725,7 @@ class halveMesh(bpy.types.Operator):
                     
                     # Switch back to object mode and add the mirror modifier
                     ops.object.mode_set(mode='OBJECT')
-                    addMod("MIRROR")
+                    addMod("MIRROR", "Mirror")
 
                     self.report({'INFO'}, "Mesh half removed and Mirror modifier added")
                 else:
