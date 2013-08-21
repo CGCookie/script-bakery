@@ -74,7 +74,7 @@ def register():
    
    # create the mode switch menu hotkey
    km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
-   kmi = km.keymap_items.new('wm.call_menu', 'TAB', 'PRESS', alt=True)
+   kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS', alt=True)
    kmi.properties.name = 'mode.switch_menu' 
    kmi.active = True
    addon_keymaps.append((km, kmi))
