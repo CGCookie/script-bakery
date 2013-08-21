@@ -734,7 +734,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return{'FINISHED'}
         
         elif event.type == 'S' and event.value == 'PRESS':
-            if self.selected:
+            if self.selected and self.selected in self.cut_lines:
                 context.scene.cursor_location = self.selected.plane_com
                 action = 'Snap cursor to selected loop'
                 message = "%s: %s" % (event.type, action)
@@ -801,7 +801,6 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                     #[new_com, new_no, new_tan]
                     recalc_vals = self.cut_line_widget.user_interaction(context, event.mouse_region_x,event.mouse_region_y)
-                    print(recalc_vals)
 
                     if settings.live_update:     
                             self.drag_target.hit_object(context, self.original_form, method = '3_AXIS_COM')
@@ -892,7 +891,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'RUNNING_MODAL'}
         
         #escape
-        elif event.type== 'ESC':
+        elif event.type== 'ESC' and not self.hot_key and event.value == 'PRESS':
             #TODO:  Delete the destination ob in case we dont need it
             #need to carefully implement this so people dont delete their wok
             
@@ -967,7 +966,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
     
 
-        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hot_key:
+        elif  event.type in {'RIGHTMOUSE', 'ESC'} and event.value == 'PRESS' and self.hot_key:
             
             self.cut_line_widget.cancel_transform()
             
@@ -1255,7 +1254,17 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                     return {'RUNNING_MODAL'}
                 
-                else: #self.hotkey exists.
+                elif self.hot_key and self.selected: #self.hotkey exists.
+                    
+                    self.selected.hit_object(context, self.original_form, method = '3_AXIS_COM')
+                    self.selected.cut_object(context, self.original_form, self.bme)
+                    self.selected.simplify_cross(self.segments)
+                            
+                    self.selected.update_com()
+                    self.align_cut(self.selected, mode='BETWEEN', fine_grain = True)      
+                    self.selected.update_screen_coords(context)
+                            
+                            
                     self.hot_key = None
                     self.widget_interaction = False
                     self.cut_line_widget = None
@@ -1405,66 +1414,64 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         if len(contour_undo_cache) > 0:
             undo = contour_undo_cache.pop()
             
-        action = undo['action']
-        
-        #this may be an actual cut line
-        #or it may be an index?
-        
-        
-        
-        #these are the props we will recorded about a cut
-        cut_props = ['plane_com',
-                     'plane_no',
-                     'plane_pt',
-                     'seed_face_index',
-                     'shift',
-                     'int_shift',
-                     'vec_x',
-                     'vec_y']
-        
-        if action == 'CREATE':
-            cut = self.cut_lines[undo['cut']]
-            if cut in self.valid_cuts:
-                self.valid_cuts.remove(cut)
-            if cut in self.cut_lines:
-                self.cut_lines.remove(cut)
-                
-            self.connect_valid_cuts_to_make_mesh()
-                
-        elif action == 'DELETE':
-            #in this circumstance...it's actually a cut
-            cut = undo['cut']
-            self.cut_lines.append(cut)
-            self.sort_cuts()
-            self.connect_valid_cuts_to_make_mesh()
+            action = undo['action']
             
+            #this may be an actual cut line
+            #or it may be an index?
             
-        elif action in {'TRANSFORM', 'SHIFT','ALIGN'}:
-            cut = self.cut_lines[undo['cut']]
-            for prop in cut_props:
-                setattr(cut, prop, undo[prop])
+            #these are the props we will recorded about a cut
+            cut_props = ['plane_com',
+                         'plane_no',
+                         'plane_pt',
+                         'seed_face_index',
+                         'shift',
+                         'int_shift',
+                         'vec_x',
+                         'vec_y']
+            
+            if action == 'CREATE':
+                cut = self.cut_lines[undo['cut']]
+                if cut in self.valid_cuts:
+                    self.valid_cuts.remove(cut)
+                if cut in self.cut_lines:
+                    self.cut_lines.remove(cut)
+                    
+                self.connect_valid_cuts_to_make_mesh()
+                    
+            elif action == 'DELETE':
+                #in this circumstance...it's actually a cut
+                cut = undo['cut']
+                self.cut_lines.append(cut)
+                self.sort_cuts()
+                self.connect_valid_cuts_to_make_mesh()
                 
                 
-            self.selected.cut_object(context, self.original_form, self.bme)
-            self.selected.simplify_cross(self.segments)
-            self.selected.update_screen_coords(context)
-            self.connect_valid_cuts_to_make_mesh()
-            
-        elif action == 'SEGMENT':
-            old_segments = self.segments
-            self.segments = undo['segments']
-            ratio = self.segments/old_segments
-            for cut_line in self.cut_lines:
-                new_bulk_shift = round((cut_line.int_shift + cut_line.shift) * ratio)
-                new_fine_shift = ratio * (cut_line.shift + cut_line.int_shift) - new_bulk_shift
-                            
-                cut_line.int_shift = new_bulk_shift
-                cut_line.shift = new_fine_shift
-                            
-                cut_line.simplify_cross(self.segments)
-                cut_line.update_screen_coords(context)
-            
-            self.connect_valid_cuts_to_make_mesh()
+            elif action in {'TRANSFORM', 'SHIFT','ALIGN'}:
+                cut = self.cut_lines[undo['cut']]
+                for prop in cut_props:
+                    setattr(cut, prop, undo[prop])
+                    
+                    
+                self.selected.cut_object(context, self.original_form, self.bme)
+                self.selected.simplify_cross(self.segments)
+                self.selected.update_screen_coords(context)
+                self.connect_valid_cuts_to_make_mesh()
+                
+            elif action == 'SEGMENT':
+                old_segments = self.segments
+                self.segments = undo['segments']
+                ratio = self.segments/old_segments
+                for cut_line in self.cut_lines:
+                    new_bulk_shift = round((cut_line.int_shift + cut_line.shift) * ratio)
+                    new_fine_shift = ratio * (cut_line.shift + cut_line.int_shift) - new_bulk_shift
+                                
+                    cut_line.int_shift = new_bulk_shift
+                    cut_line.shift = new_fine_shift
+                                
+                    cut_line.simplify_cross(self.segments)
+                    cut_line.update_screen_coords(context)
+                
+                self.connect_valid_cuts_to_make_mesh()
             
             
             

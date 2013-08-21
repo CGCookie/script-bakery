@@ -893,7 +893,7 @@ class ContourCutLine(object):
     def active_element(self,context,x,y):
         settings = context.user_preferences.addons['contour_tools'].preferences
         
-        if self.head:
+        if self.head: #this makes sure the head and tail haven't been removed
             active_head = self.head.mouse_over(x, y)
             active_tail = self.tail.mouse_over(x, y)
         else:
@@ -918,6 +918,9 @@ class ContourCutLine(object):
                 if (dist < 100) and (bound < 1) and (bound > 0):
                     active_self = True
                     break
+            
+        else:
+            active_self = False
             '''
             region = context.region  
             rv3d = context.space_data.region_3d
@@ -947,8 +950,9 @@ class ContourCutLine(object):
         bound = intersect[1]
         active_self = (dist < 100) and (bound < 1) and (bound > 0) #TODO:  make this a sensitivity setting
         '''
-        if active_head and active_tail and active_self: #they are all clustered together
-            #print('returning head but tail too')
+        #they are all clustered together
+        if active_head and active_tail and active_self: 
+            
             return self.head
         
         elif active_tail:
@@ -1096,6 +1100,8 @@ class CutLineManipulatorWidget(object):
         else:
             #we were transforming but went back in the circle
             if loc_vec.length < self.inner_radius and not self.hotkey:
+                
+                self.cancel_transform()
                 self.transform = False
                 self.transform_mode = None
                 
@@ -1120,9 +1126,21 @@ class CutLineManipulatorWidget(object):
                         vec_a = self.a - self.initial_com
                         vec_a_dir = vec_a.normalized()
                         
+                        
                         if world_vec.dot(vec_a_dir) > 0 and factor * world_vec.dot(vec_a_dir) < vec_a.length:
                             translate = factor * world_vec.dot(vec_a_dir) * vec_a_dir
+                            
+                            if self.a_no.dot(self.initial_plane_no) < 0:
+                                v = -1 * self.a_no
+                            else:
+                                v = self.a_no
+                            
+                            scale = (factor * world_vec.dot(vec_a_dir))/vec_a.length
+                            quat = contour_utilities.rot_between_vecs(self.initial_plane_no, v, factor = scale)
+                            inter_no = quat * self.initial_plane_no
+                            
                             self.cut_line.plane_com = self.initial_com + translate
+                            self.cut_line.plane_no = inter_no
                             return {'REHIT','RECUT'}
                         
                         elif not self.b and world_vec.dot(vec_a_dir) < 0:
@@ -1137,7 +1155,17 @@ class CutLineManipulatorWidget(object):
                         
                         if world_vec.dot(vec_b_dir) > 0 and factor * world_vec.dot(vec_b_dir) < vec_b.length:
                             translate = factor * world_vec.dot(vec_b_dir)* vec_b_dir
+                            
+                            if self.b_no.dot(self.initial_plane_no) < 0:
+                                v = -1 * self.b_no
+                            else:
+                                v = self.b_no
+                            
+                            scale = (factor * world_vec.dot(vec_b_dir))/vec_b.length
+                            quat = contour_utilities.rot_between_vecs(self.initial_plane_no, v, factor = scale)
+                            inter_no = quat * self.initial_plane_no
                             self.cut_line.plane_com = self.initial_com + translate
+                            self.cut_line.plane_no = inter_no
                             
                             return {'REHIT','RECUT'}
                         
@@ -1203,7 +1231,7 @@ class CutLineManipulatorWidget(object):
                             rot_angle = screen_angle - self.angle #+ .5 * math.pi  #Mystery
                             
                         else:
-                            init_angle = math.atan2(self.initial_y, self.initial_x)
+                            init_angle = math.atan2(self.initial_y - self.y, self.initial_x - self.x)
                             init_angle = math.fmod(init_angle + 4 * math.pi, 2 * math.pi)
                             rot_angle = screen_angle - init_angle
                             
@@ -1283,10 +1311,6 @@ class CutLineManipulatorWidget(object):
             imx = rv3d.view_matrix.inverted()
             normal_3d = imx.transposed() * self.cut_line.plane_no
             self.screen_no = Vector((normal_3d[0],normal_3d[1]))
-            
-            print('TESTING OUT NEW MATRIX MATH')
-            print(self.screen_no)
-
             
             self.angle = math.atan2(self.screen_no[1],self.screen_no[0]) - 1/2 * math.pi
         else:
