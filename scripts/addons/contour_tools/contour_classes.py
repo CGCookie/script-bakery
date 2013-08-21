@@ -1331,12 +1331,23 @@ class CutLineManipulatorWidget(object):
         
         
         
+  
+        self.inner_circle = contour_utilities.simple_curce(self.x, self.y, self.inner_radius, 20)
+=======
+        
+        
+        
         #New screen coords, leaving old ones until completely transitioned
         self.arc_arrow_rotate_ccw = contour_utilities.arc_arrow(self.x, self.y, self.radius, left - deg_45-.3, left + deg_45+.3, 10, self.arrow_size, 2*deg_45, ccw = True)
         self.arc_arrow_rotate_cw = contour_utilities.arc_arrow(self.x, self.y, self.radius, left - deg_45-.3, left + deg_45+.3, 10, self.arrow_size, 2*deg_45, ccw = False)
         
-        self.inner_circle = contour_utilities.simple_curce(self.x, self.y, self.inner_radius, 20)
+        self.inner_circle = contour_utilities.simple_circle(self.x, self.y, self.inner_radius, 20)
+>>>>>>> local
         self.inner_circle.append(self.inner_circle[0])
+        
+        self.outer_circle_1 = contour_utilities.arc_arrow(self.x, self.y, self.radius, up, down,10, self.arrow_size,2*deg_45, ccw = True)
+        self.outer_circle_2 = contour_utilities.arc_arrow(self.x, self.y, self.radius, up, down,10, self.arrow_size,2*deg_45, ccw = False)
+        
     
     def cancel_transform(self):
         
@@ -1354,34 +1365,55 @@ class CutLineManipulatorWidget(object):
         settings = context.user_preferences.addons['contour_tools'].preferences
         if not self.transform and not self.hotkey:
             #draw wedges
-            contour_utilities.draw_polyline_from_points(context, self.wedge_1, self.color, self.line_width, "GL_LINES")
-            contour_utilities.draw_polyline_from_points(context, self.wedge_2, self.color, self.line_width, "GL_LINES")
-            contour_utilities.draw_polyline_from_points(context, self.wedge_3, self.color, self.line_width, "GL_LINES")
-            contour_utilities.draw_polyline_from_points(context, self.wedge_4, self.color, self.line_width, "GL_LINES")
+            #contour_utilities.draw_polyline_from_points(context, self.wedge_1, self.color, self.line_width, "GL_LINES")
+            #contour_utilities.draw_polyline_from_points(context, self.wedge_2, self.color, self.line_width, "GL_LINES")
+            #contour_utilities.draw_polyline_from_points(context, self.wedge_3, self.color, self.line_width, "GL_LINES")
+            #contour_utilities.draw_polyline_from_points(context, self.wedge_4, self.color, self.line_width, "GL_LINES")
+            
+            #draw inner circle
+            contour_utilities.draw_polyline_from_points(context, self.inner_circle, self.color, self.line_width, "GL_LINES")
+            
+            #draw outer circle (two halfs later)
+            #contour_utilities.draw_polyline_from_points(context, self.outer_circle_1[0:l-1], (0,.5,.8,1), self.line_width, "GL_LINES")
+
                 
             #draw arc 1
             l = len(self.arc_arrow_1)
             contour_utilities.draw_polyline_from_points(context, self.arc_arrow_1[:l-1], self.color2, self.line_width, "GL_LINES")
+
+            #draw outer circle half
+            contour_utilities.draw_polyline_from_points(context, self.outer_circle_1[0:l-2], (0,.5,.8,1), self.line_width, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, self.outer_circle_2[0:l-2], (1,.5,0,1), self.line_width, "GL_LINES")
+            
+            
             #draw a line perpendicular to arc
-            point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
-            point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
-            contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color3, self.line_width, "GL_LINES")
+            #point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
+            #point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle), math.sin(self.angle)))
+            #contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color3, self.line_width, "GL_LINES")
+            
+            
+            #try the straight red line
+            point_1 = Vector((self.x,self.y)) + self.inner_radius * Vector((math.cos(self.angle), math.sin(self.angle)))
+            point_2 = Vector((self.x,self.y)) +  self.radius * Vector((math.cos(self.angle), math.sin(self.angle)))
+            contour_utilities.draw_polyline_from_points(context, [point_1, point_2], (1,0,0,1), 4, "GL_LINES")
             
             #drawa arc 2
-            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_2[:l-1], self.color2, self.line_width, "GL_LINES")
+            #contour_utilities.draw_polyline_from_points(context, self.arc_arrow_2[:l-1], self.color2, self.line_width, "GL_LINES")
             
             #new rotation thingy
             contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_ccw[:l-1], (0,0,1,1), 4, "GL_LINES")
             contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_cw[:l-1], (0,0,1,1), 4, "GL_LINES")
             #other half the tip
-            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_ccw[l-2:l], (0,0,1,1), 4, "GL_LINES")
-            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_cw[l-2:l], (0,0,1,1), 4, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, [self.arc_arrow_rotate_ccw[l-1],self.arc_arrow_rotate_ccw[l-3]], (0,0,1,1), 4, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, [self.arc_arrow_rotate_cw[l-1],self.arc_arrow_rotate_cw[l-3]], (0,0,1,1), 4, "GL_LINES")
+>>>>>>> local
             
             #draw an up and down arrow
             point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))
             point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))
             contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")
             
+            #draw little hash
             point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
             point_2 = Vector((self.x,self.y)) + 1/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle +  3/2 * math.pi), math.sin(self.angle +  3/2 * math.pi)))
             contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color, self.line_width, "GL_LINES")

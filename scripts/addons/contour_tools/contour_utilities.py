@@ -239,9 +239,9 @@ def arc_arrow(x,y,r1,thta1,thta2,res, arrow_size, arrow_angle, ccw = True):
     
     ccw = True draw the arrow
     '''
-    points = [Vector((0,0))]*res  #The arc + 2 arrow points
+    points = [Vector((0,0))]*(res +1) #The arc + 2 arrow points
 
-    for i in range(0,res):
+    for i in range(0,res+1):
         #able to accept negative values?
         diff = math.fmod(thta2-thta1 + 2*math.pi, 2*math.pi)
         x1 = math.cos(thta1 + i*diff/res) 
@@ -271,7 +271,7 @@ def arc_arrow(x,y,r1,thta1,thta2,res, arrow_size, arrow_angle, ccw = True):
            
     return(points)
 
-def simple_curce(x,y,r,res):
+def simple_circle(x,y,r,res):
     '''
     args: 
     x,y - center coordinate of cark
