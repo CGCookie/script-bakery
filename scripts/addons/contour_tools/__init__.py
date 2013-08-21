@@ -734,7 +734,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return{'FINISHED'}
         
         elif event.type == 'S' and event.value == 'PRESS':
-            if self.selected and self.selected in self.valid_cuts:
+            if self.selected and self.selected in self.cut_lines:
                 context.scene.cursor_location = self.selected.plane_com
                 action = 'Snap cursor to selected loop'
                 message = "%s: %s" % (event.type, action)
