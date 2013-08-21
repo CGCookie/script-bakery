@@ -30,7 +30,7 @@ import random
 from collections import deque
 
 from bpy_extras import view3d_utils
-from mathutils import Vector, Matrix
+from mathutils import Vector, Matrix, Quaternion
 from mathutils.geometry import intersect_line_plane, intersect_point_line, distance_point_to_plane, intersect_line_line_2d
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 
@@ -1262,6 +1262,32 @@ def discrete_curl(verts, z): #Adapted from Open Dental CAD by Patrick Moore
         curl = curl + ang*sign
     
     return curl
+
+def rot_between_vecs(v1,v2, factor = 1):
+    '''
+    args:
+    v1 - Vector Init
+    v2 - Vector Final
+    
+    factor - will interpolate between them.  [0,1]
+    
+    returns the quaternion representing rotation between v1 to v2
+    
+    v2 = quat * v1
+    
+    notes: doesn't test for parallel vecs
+    '''
+    v1.normalize()
+    v2.normalize()
+    angle = factor * v1.angle(v2)
+    axis = v1.cross(v2)
+    axis.normalize()
+    sin = math.sin(angle/2)
+    cos = math.cos(angle/2)
+    
+    quat = Quaternion((cos, sin*axis[0], sin*axis[1], sin*axis[2]))
+    
+    return quat
     
 def align_edge_loops(verts_1, verts_2, eds_1, eds_2):
     '''

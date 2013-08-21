@@ -1100,6 +1100,8 @@ class CutLineManipulatorWidget(object):
         else:
             #we were transforming but went back in the circle
             if loc_vec.length < self.inner_radius and not self.hotkey:
+                
+                self.cancel_transform()
                 self.transform = False
                 self.transform_mode = None
                 
@@ -1128,12 +1130,14 @@ class CutLineManipulatorWidget(object):
                         if world_vec.dot(vec_a_dir) > 0 and factor * world_vec.dot(vec_a_dir) < vec_a.length:
                             translate = factor * world_vec.dot(vec_a_dir) * vec_a_dir
                             
-                            inter_no = self.initial_plane_no.lerp(self.a_no, factor * world_vec.dot(vec_a_dir)*2)
+                            if self.a_no.dot(self.initial_plane_no) < 0:
+                                v = -1 * self.a_no
+                            else:
+                                v = self.a_no
                             
-                            
-                            print(self.initial_plane_no)
-                            print(self.b_no)
-                            print(inter_no)
+                            scale = (factor * world_vec.dot(vec_a_dir))/vec_a.length
+                            quat = contour_utilities.rot_between_vecs(self.initial_plane_no, v, factor = scale)
+                            inter_no = quat * self.initial_plane_no
                             
                             self.cut_line.plane_com = self.initial_com + translate
                             self.cut_line.plane_no = inter_no
@@ -1151,11 +1155,15 @@ class CutLineManipulatorWidget(object):
                         
                         if world_vec.dot(vec_b_dir) > 0 and factor * world_vec.dot(vec_b_dir) < vec_b.length:
                             translate = factor * world_vec.dot(vec_b_dir)* vec_b_dir
-                            inter_no = self.initial_plane_no.lerp(self.b_no, factor * world_vec.dot(vec_b_dir)*2)
                             
-                            print(self.initial_plane_no)
-                            print(self.b_no)
-                            print(inter_no)
+                            if self.b_no.dot(self.initial_plane_no) < 0:
+                                v = -1 * self.b_no
+                            else:
+                                v = self.b_no
+                            
+                            scale = (factor * world_vec.dot(vec_b_dir))/vec_b.length
+                            quat = contour_utilities.rot_between_vecs(self.initial_plane_no, v, factor = scale)
+                            inter_no = quat * self.initial_plane_no
                             self.cut_line.plane_com = self.initial_com + translate
                             self.cut_line.plane_no = inter_no
                             
