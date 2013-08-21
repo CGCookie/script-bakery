@@ -1328,6 +1328,13 @@ class CutLineManipulatorWidget(object):
         
         self.arc_arrow_1 = contour_utilities.arc_arrow(self.x, self.y, self.arc_radius, left - deg_45+.2, left + deg_45-.2, 10, self.arrow_size, 2*deg_45, ccw = True)
         self.arc_arrow_2 = contour_utilities.arc_arrow(self.x, self.y, self.arc_radius, right - deg_45+.2, right + deg_45-.2, 10, self.arrow_size,2*deg_45, ccw = True)
+        
+        
+        
+        #New screen coords, leaving old ones until completely transitioned
+        self.arc_arrow_rotate_ccw = contour_utilities.arc_arrow(self.x, self.y, self.radius, left - deg_45-.3, left + deg_45+.3, 10, self.arrow_size, 2*deg_45, ccw = True)
+        self.arc_arrow_rotate_cw = contour_utilities.arc_arrow(self.x, self.y, self.radius, left - deg_45-.3, left + deg_45+.3, 10, self.arrow_size, 2*deg_45, ccw = False)
+        
         self.inner_circle = contour_utilities.simple_curce(self.x, self.y, self.inner_radius, 20)
         self.inner_circle.append(self.inner_circle[0])
     
@@ -1363,6 +1370,12 @@ class CutLineManipulatorWidget(object):
             #drawa arc 2
             contour_utilities.draw_polyline_from_points(context, self.arc_arrow_2[:l-1], self.color2, self.line_width, "GL_LINES")
             
+            #new rotation thingy
+            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_ccw[:l-1], (0,0,1,1), 4, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_cw[:l-1], (0,0,1,1), 4, "GL_LINES")
+            #other half the tip
+            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_ccw[l-2:l], (0,0,1,1), 4, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_cw[l-2:l], (0,0,1,1), 4, "GL_LINES")
             
             #draw an up and down arrow
             point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))
