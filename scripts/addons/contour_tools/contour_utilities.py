@@ -35,7 +35,7 @@ from mathutils.geometry import intersect_line_plane, intersect_point_line, dista
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 
 def callback_register(self, context):
-        if str(bpy.app.build_revision)[2:7] == "unkno" or eval(str(bpy.app.build_revision)[2:7]) >= 53207:
+        if str(bpy.app.build_revision)[2:7].lower == "unkno" or eval(str(bpy.app.build_revision)[2:7]) >= 53207:
             self._handle = bpy.types.SpaceView3D.draw_handler_add(self.menu.draw, (self, context), 'WINDOW', 'POST_PIXEL')
         else:
             self._handle = context.region.callback_add(self.menu.draw, (self, context), 'POST_PIXEL')
