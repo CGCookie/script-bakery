@@ -1124,9 +1124,19 @@ class CutLineManipulatorWidget(object):
                         vec_a = self.a - self.initial_com
                         vec_a_dir = vec_a.normalized()
                         
+                        
                         if world_vec.dot(vec_a_dir) > 0 and factor * world_vec.dot(vec_a_dir) < vec_a.length:
                             translate = factor * world_vec.dot(vec_a_dir) * vec_a_dir
+                            
+                            inter_no = self.initial_plane_no.lerp(self.a_no, factor * world_vec.dot(vec_a_dir)*2)
+                            
+                            
+                            print(self.initial_plane_no)
+                            print(self.b_no)
+                            print(inter_no)
+                            
                             self.cut_line.plane_com = self.initial_com + translate
+                            self.cut_line.plane_no = inter_no
                             return {'REHIT','RECUT'}
                         
                         elif not self.b and world_vec.dot(vec_a_dir) < 0:
@@ -1141,7 +1151,13 @@ class CutLineManipulatorWidget(object):
                         
                         if world_vec.dot(vec_b_dir) > 0 and factor * world_vec.dot(vec_b_dir) < vec_b.length:
                             translate = factor * world_vec.dot(vec_b_dir)* vec_b_dir
+                            inter_no = self.initial_plane_no.lerp(self.b_no, factor * world_vec.dot(vec_b_dir)*2)
+                            
+                            print(self.initial_plane_no)
+                            print(self.b_no)
+                            print(inter_no)
                             self.cut_line.plane_com = self.initial_com + translate
+                            self.cut_line.plane_no = inter_no
                             
                             return {'REHIT','RECUT'}
                         
@@ -1287,10 +1303,6 @@ class CutLineManipulatorWidget(object):
             imx = rv3d.view_matrix.inverted()
             normal_3d = imx.transposed() * self.cut_line.plane_no
             self.screen_no = Vector((normal_3d[0],normal_3d[1]))
-            
-            print('TESTING OUT NEW MATRIX MATH')
-            print(self.screen_no)
-
             
             self.angle = math.atan2(self.screen_no[1],self.screen_no[0]) - 1/2 * math.pi
         else:

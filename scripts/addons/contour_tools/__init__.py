@@ -801,7 +801,6 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                     #[new_com, new_no, new_tan]
                     recalc_vals = self.cut_line_widget.user_interaction(context, event.mouse_region_x,event.mouse_region_y)
-                    print(recalc_vals)
 
                     if settings.live_update:     
                             self.drag_target.hit_object(context, self.original_form, method = '3_AXIS_COM')
@@ -1255,7 +1254,17 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                     return {'RUNNING_MODAL'}
                 
-                else: #self.hotkey exists.
+                elif self.hot_key and self.selected: #self.hotkey exists.
+                    
+                    self.selected.hit_object(context, self.original_form, method = '3_AXIS_COM')
+                    self.selected.cut_object(context, self.original_form, self.bme)
+                    self.selected.simplify_cross(self.segments)
+                            
+                    self.selected.update_com()
+                    self.align_cut(self.selected, mode='BETWEEN', fine_grain = True)      
+                    self.selected.update_screen_coords(context)
+                            
+                            
                     self.hot_key = None
                     self.widget_interaction = False
                     self.cut_line_widget = None
