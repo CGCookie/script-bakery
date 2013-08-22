@@ -1014,7 +1014,10 @@ class CutLineManipulatorWidget(object):
         self.radius = settings.widget_radius
         self.inner_radius = settings.widget_radius_inner
         self.line_width = settings.widget_thickness
+        self.line_width2 = settings.widget_thickness2
         self.arrow_size = settings.arrow_size
+        
+        self.arrow_size2 = settings.arrow_size2
         
         self.arc_radius = .5 * (self.radius + self.inner_radius)
         self.screen_no = None
@@ -1351,8 +1354,9 @@ class CutLineManipulatorWidget(object):
         self.outer_circle_1 = contour_utilities.arc_arrow(self.x, self.y, self.radius, up, down,10, self.arrow_size,2*deg_45, ccw = True)
         self.outer_circle_2 = contour_utilities.arc_arrow(self.x, self.y, self.radius, down, up,10, self.arrow_size,2*deg_45, ccw = True)
         
-        self.trans_arrow_up = contour_utilities.arrow_primitive(self.x +math.cos(up) * self.radius, self.y + math.sin(up)*self.radius, right, self.radius/5, self.radius/5, self.radius/5, self.radius/10)
-        self.trans_arrow_down = contour_utilities.arrow_primitive(self.x + math.cos(down) * self.radius, self.y + math.sin(down) * self.radius, left, self.radius/5, self.radius/5, self.radius/5, self.radius/10)
+        b = self.arrow_size2
+        self.trans_arrow_up = contour_utilities.arrow_primitive(self.x +math.cos(up) * self.radius, self.y + math.sin(up)*self.radius, right, b, b, b, b/2)
+        self.trans_arrow_down = contour_utilities.arrow_primitive(self.x + math.cos(down) * self.radius, self.y + math.sin(down) * self.radius, left, b, b, b, b/2)
     
     def cancel_transform(self):
         
@@ -1409,22 +1413,22 @@ class CutLineManipulatorWidget(object):
             #try the straight red line
             point_1 = Vector((self.x,self.y)) #+ self.inner_radius * Vector((math.cos(self.angle), math.sin(self.angle)))
             point_2 = Vector((self.x,self.y)) +  self.radius * Vector((math.cos(self.angle), math.sin(self.angle)))
-            contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color2, 4, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color2, self.line_width2 , "GL_LINES")
             
             point_1 = Vector((self.x,self.y))# + -self.inner_radius * Vector((math.cos(self.angle), math.sin(self.angle)))
             point_2 = Vector((self.x,self.y)) +  -self.radius * Vector((math.cos(self.angle), math.sin(self.angle)))
-            contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color2, 1, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, [point_1, point_2], self.color2, self.line_width, "GL_LINES")
             
             #drawa arc 2
             #contour_utilities.draw_polyline_from_points(context, self.arc_arrow_2[:l-1], self.color2, self.line_width, "GL_LINES")
             
             #new rotation thingy
-            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_ccw[:l-1], self.color, 4, "GL_LINES")
-            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_cw[:l-1], self.color, 4, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_ccw[:l-1], self.color, self.line_width2, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, self.arc_arrow_rotate_cw[:l-1], self.color, self.line_width2, "GL_LINES")
             
             #other half the tips
-            contour_utilities.draw_polyline_from_points(context, [self.arc_arrow_rotate_ccw[l-1],self.arc_arrow_rotate_ccw[l-3]], (0,0,1,1), 4, "GL_LINES")
-            contour_utilities.draw_polyline_from_points(context, [self.arc_arrow_rotate_cw[l-1],self.arc_arrow_rotate_cw[l-3]], (0,0,1,1), 4, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, [self.arc_arrow_rotate_ccw[l-1],self.arc_arrow_rotate_ccw[l-3]], (0,0,1,1), self.line_width2, "GL_LINES")
+            contour_utilities.draw_polyline_from_points(context, [self.arc_arrow_rotate_cw[l-1],self.arc_arrow_rotate_cw[l-3]], (0,0,1,1), self.line_width2, "GL_LINES")
             
             #draw an up and down arrow
             #point_1 = Vector((self.x,self.y)) + 2/3 * (self.inner_radius + self.radius) * Vector((math.cos(self.angle + .5*math.pi), math.sin(self.angle + .5*math.pi)))

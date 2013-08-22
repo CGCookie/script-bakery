@@ -291,6 +291,14 @@ class ContourToolsAddonPreferences(AddonPreferences):
             min = 1,
             max = 10,
             )
+    
+    widget_thickness2 = IntProperty(
+            name="Widget 2nd Line Thick",
+            description = "Width of lines used to draw widget",
+            default=4,
+            min = 1,
+            max = 10,
+            )
         
     arrow_size = IntProperty(
             name="Arrow Size",
@@ -298,7 +306,13 @@ class ContourToolsAddonPreferences(AddonPreferences):
             min=5,
             max=50,
             )   
-        
+    
+    arrow_size2 = IntProperty(
+            name="Translate Arrow Size",
+            default=10,
+            min=5,
+            max=50,
+            )      
     vertex_count = IntProperty(
             name = "Vertex Count",
             description = "The Number of Vertices Per Edge Ring",
@@ -398,9 +412,13 @@ class ContourToolsAddonPreferences(AddonPreferences):
         if self.draw_widget:
             row = box.row()
             row.prop(self, "widget_radius", text="Radius")
-            row.prop(self,"widget_radius_inner", text="Inner Radius")
+            row.prop(self,"widget_radius_inner", text="Active Radius")
+            
+            row = box.row()
             row.prop(self, "widget_thickness", text="Line Thickness")
+            row.prop(self, "widget_thickness2", text="2nd Line Thickness")
             row.prop(self, "arrow_size", text="Arrow Size")
+            row.prop(self, "arrow_size2", text="Translate Arrow Size")
 
             row = box.row()
             row.prop(self, "widget_color", text="Color 1")
