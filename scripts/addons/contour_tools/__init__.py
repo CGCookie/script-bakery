@@ -948,8 +948,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return {'PASS_THROUGH'}
         
         
-        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target or \
-             event.type == 'X' and event.value == 'PRESS' and self.selected:
+        elif event.type == 'RIGHTMOUSE' and event.value == 'PRESS' and self.hover_target and not self.hot_key or \
+             event.type == 'X' and event.value == 'PRESS' and self.selected and not self.hot_key:
             
             if self.hover_target and event.type == 'RIGHTMOUSE':
                 
