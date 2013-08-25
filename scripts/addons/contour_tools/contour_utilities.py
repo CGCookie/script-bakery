@@ -147,45 +147,83 @@ def perp_vector_point_line(pt1, pt2, ptn):
     return alt_vect
 
 
-def rpd_cycle(verts, a, b, match_factor):
-    '''
-    http://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
+def altitude(point1, point2, pointn):
+    edge1 = point2 - point1
+    edge2 = pointn - point1
+    if edge2.length == 0:
+        altitude = 0
+        return altitude
+    if edge1.length == 0:
+        altitude = edge2.length
+        return altitude
+    alpha = edge1.angle(edge2)
+    altitude = math.sin(alpha) * edge2.length
     
-    searhces between two points for a point with perpendicular distance
-    greater than the match factor
+    return altitude 
+    
+# iterate through verts
+def iterate(points, newVerts, error,method = 1):
+    '''
+    args:
+    points - list of vectors in order representing locations on a curve
+    newVerts - list of indices? (mapping to arg: points) of aready identified "new" verts
+    error - distance obove/below chord which makes vert considered a feature
+    
+    return:
+    new -  list of vertex indicies (mappint to arg points) representing identified feature points
+    or
+    false - no new feature points identified...algorithm is finished.
+    '''
+    new = []
+    for newIndex in range(len(newVerts)-1):
+        bigVert = 0
+        alti_store = 0
+        for i, point in enumerate(points[newVerts[newIndex]+1:newVerts[newIndex+1]]):
+            if method == 1:
+                alti = perp_vector_point_line(points[newVerts[newIndex]], points[newVerts[newIndex+1]], point).length
+            else:
+                alti = altitude(points[newVerts[newIndex]], points[newVerts[newIndex+1]], point)
+                
+            if alti > alti_store:
+                alti_store = alti
+                if alti_store >= error:
+                    bigVert = i+1+newVerts[newIndex]
+        if bigVert:
+            new.append(bigVert)
+    if new == []:
+        return False
+    return new
+
+#### get SplineVertIndices to keep
+def simplify_RDP(splineVerts, error, method = 1):
+    '''
+    Reduces a curve or polyline based on altitude changes globally and w.r.t. neighbors
+    args:
+    splineVerts - list of vectors representing locations along the spline/line path
+    error - altitude above global/neighbors which allows point to be considered a feature
+    return:
+    newVerts - a list of indicies of the simplified representation of the curve (in order, mapping to arg-splineVerts)
     '''
 
-    max_perp_d = 0
-    indx = a
-    for i in range(a+1,b):
-        perp_d = perp_vector_point_line(verts[a],verts[b],verts[i])
-        if perp_d > max_perp_d:
-            max_perp_d = perp_d
-            indx = i
+    start = time.time()
+    
+    # set first and last vert
+    newVerts = [0, len(splineVerts)-1]
+
+    # iterate through the points
+    new = 1
+    while new != False:
+        new = iterate(splineVerts, newVerts, error, method = method)
+        if new:
+            newVerts += new
+            newVerts.sort()
             
-    if max_perp_d > match_factor:
-        return i
-    else:
-        return None
+    print('finished simplification with method %i in %f seconds' % (method, time.time() - start))
+    return newVerts
+
         
 
-def RPD_open_loop(verts, match_factor):
-    '''
-    a list of vertex locations in order
-    match factor = distance to aim for between approximation and original
-    '''
-    
-    #do some timing
-    
-    #count simplifaction iterations
-    
-    #
-    new_verts_inds = [0,len(verts)-1]
-    A = 0
-    B = len(verts)-1
-    new_v = rpd_cycle(verts, A, B, match_factor)
-    if new_v:
-        pairs = None #TODO: take care of this function
+
     
 def pi_slice(x,y,r1,r2,thta1,thta2,res,t_fan = False):
     '''
@@ -317,18 +355,7 @@ def simple_circle(x,y,r,res):
            
     return(points)     
     
-def RPD_closed_loop(verts,match_factor):
-    '''
-    a list of vertex locations in order
-    match factor = distance to aim for between approximation and original
-    '''
-    
-    #first we simply duplicated the last vert
-    #move it by some small amount so that we get an
-    #open loop
-    
-    
-    #now we do RPD open loop
+
     
 
 
