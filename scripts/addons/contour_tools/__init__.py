@@ -56,7 +56,7 @@ import time
 from mathutils import Vector
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 import contour_utilities
-from contour_classes import ContourCutLine, ExistingVertList, CutLineManipulatorWidget
+from contour_classes import ContourCutLine, ExistingVertList, CutLineManipulatorWidget, PolySkecthLine
 from mathutils.geometry import intersect_line_plane, intersect_point_line
 from bpy.props import EnumProperty, StringProperty,BoolProperty, IntProperty, FloatVectorProperty, FloatProperty
 from bpy.types import Operator, AddonPreferences
@@ -466,6 +466,7 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel):
         layout = self.layout
         col = layout.column()
         col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')
+        col.operator("cgcookie.retopo_poly_sketch", text="Sketch Poly Strips", icon='MESH_UVSPHERE')
         cgc_contour = context.user_preferences.addons['contour_tools'].preferences
         row = layout.row()
         row.prop(cgc_contour, "cyclic")
@@ -2128,6 +2129,333 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             print(line.view_dir)
 
 
+def poly_sketch_draw_callback(self,context):
+                
+    if len(self.draw_cache):
+        contour_utilities.draw_polyline_from_points(context, self.draw_cache, (1,.5,1,.8), 2, "GL_LINE_SMOOTH")
+    
+    if len(self.sketch_lines):    
+        for line in self.sketch_lines:
+            line.draw(context)
+
+class CGCOOKIE_OT_retopo_poly_sketch(bpy.types.Operator):
+    '''Sketch Toplogy on Forms with Contour Strokes'''
+    bl_idname = "cgcookie.retopo_poly_sketch"
+    bl_label = "Contour Poly Sketch"    
+    
+    @classmethod
+    def poll(cls,context):
+        if context.mode not in {'EDIT_MESH','OBJECT'}:
+            return False
+        
+        if context.active_object:
+            if context.mode == 'EDIT_MESH':
+                if len(context.selected_objects) > 1:
+                    return True
+                else:
+                    return False
+            else:
+                return context.object.type == 'MESH'
+        else:
+            return False
+        
+    def modal(self, context, event):
+        context.area.tag_redraw()
+        settings = context.user_preferences.addons['contour_tools'].preferences
+        
+        if event.type == 'D':
+            
+            #toggle drawing
+            if event.value == 'PRESS':
+                self.draw = self.draw == False
+            
+            
+            if self.draw:
+                message = "Stick draw on"
+                
+            else:
+                message = "Experimental poly_sketch 'D' to draw"
+            context.area.header_text_set(text = message)    
+            #else:
+                #self.draw = False
+                #self.draw_cache = []
+                
+            return {'RUNNING_MODAL'}
+                
+        elif event.type == 'MOUSEMOVE':
+            
+            if self.drag and self.draw:
+                
+                self.draw_cache.append((event.mouse_region_x,event.mouse_region_y))
+                
+            return {'RUNNING_MODAL'}
+                    
+                    
+        elif event.type == 'LEFTMOUSE':
+            if event.value == 'PRESS':
+                self.drag = True
+            else:
+                if self.draw:
+                    if len(self.draw_cache) > 10:
+                        sketch = PolySkecthLine(self.draw_cache)
+                        
+                        print('raycasting now')
+                        sketch.ray_cast_path(context, self.original_form)
+                        sketch.smooth_path()
+                        
+                        self.sketch_lines.append(sketch)
+                    
+                        self.draw_cache = []
+                
+                self.drag = False
+                
+            return {'RUNNING_MODAL'}
+        
+        elif event.type == 'ESC':
+            contour_utilities.callback_cleanup(self,context)
+            context.area.header_text_set()
+            return {'CANCELLED'}
+            
+            
+        else:
+            return {'RUNNING_MODAL'}
+    def invoke(self, context, event):
+        #HINT you are in the poly sketch code
+        
+        #TODO Settings harmon CODE REVIEW
+        settings = context.user_preferences.addons['contour_tools'].preferences
+        
+        #TODO Settings harmon CODE REVIEW
+        self.settings = settings
+        
+        #if edit mode
+        if context.mode == 'EDIT_MESH':
+            
+            #the active object will be the retopo object
+            #whose geometry we will be augmenting
+            self.destination_ob = context.object
+            
+            #get the destination mesh data
+            self.dest_me = self.destination_ob.data
+            
+            #we will build this bmesh using from editmesh
+            self.dest_bme = bmesh.from_edit_mesh(self.dest_me)
+            
+            #the selected object will be the original form
+            #or we wil pull the mesh cache
+            target = [ob for ob in context.selected_objects if ob.name != context.object.name][0]
+            
+            validation = object_validation(target)
+            if 'valid' in contour_mesh_cache and contour_mesh_cache['valid'] == validation:
+                use_cache = True
+                print('willing and able to use the cache!')
+            
+            else:
+                use_cache = False  #later, we will double check for ngons and things
+                clear_mesh_cache()
+                self.original_form = target
+                
+            
+            #count and collect the selected edges if any
+            ed_inds = [ed.index for ed in self.dest_bme.edges if ed.select]
+            
+            if len(ed_inds):
+                vert_loops = contour_utilities.edge_loops_from_bmedges(self.dest_bme, ed_inds)
+                if len(vert_loops) > 1:
+                    self.report({'ERROR'}, 'single edge loop must be selected')
+                    #TODO: clean up things and free the bmesh
+                    return {'CANCELLED'}
+                
+                else:
+                    best_loop = vert_loops[0]
+                    if best_loop[-1] != best_loop[0]: #typically this means not cyclcic unless there is a tail []_
+                        if len(list(set(best_loop))) == len(best_loop): #verify no tail
+                            self.sel_edges = [ed for ed in self.dest_bme.edges if ed.select]
+                        
+                        else:
+                            self.report({'ERROR'}, 'Edge loop selection has extra parts')
+                            #TODO: clean up things and free the bmesh
+                            return {'CANCELLED'}
+                    else:
+                        self.sel_edges = [ed for ed in self.dest_bme.edges if ed.select]
+            else:
+                self.sel_edges = None
+                
+            if self.sel_edges and len(self.sel_edges):
+                self.sel_verts = [vert for vert in self.dest_bme.verts if vert.select]
+                
+                #TODO...allow extnesion of selections
+                #self.segments = len(self.sel_edges)
+                #self.existing_cut = ExistingVertList(self.sel_verts, self.sel_edges,self.destination_ob.matrix_world)
+            else:
+                #self.existing_cut = None
+                self.sel_verts = None
+                self.segments = settings.vertex_count
+            
+        elif context.mode == 'OBJECT':
+            
+            #make the irrelevant variables None
+            self.sel_edges = None
+            self.sel_verts = None
+            #self.existing_cut = None
+            
+            #the active object will be the target
+            target = context.object
+            
+            validation = object_validation(target)
+            
+            if 'valid' in contour_mesh_cache and contour_mesh_cache['valid'] == validation:
+                use_cache = True
+            
+            else:
+                use_cache = False
+                self.original_form  = target
+            
+            #no temp bmesh needed in object mode
+            #we will create a new obeject
+            self.tmp_bme = None
+            
+            #new blank mesh data
+            self.dest_me = bpy.data.meshes.new(target.name + "_recontour")
+            
+            #new object to hold mesh data
+            self.destination_ob = bpy.data.objects.new(target.name + "_recontour",self.dest_me) #this is an empty currently
+            self.destination_ob.matrix_world = target.matrix_world
+            self.destination_ob.update_tag()
+            
+            #destination bmesh to operate on
+            self.dest_bme = bmesh.new()
+            self.dest_bme.from_mesh(self.dest_me)
+            
+            #default segments (spans)
+            self.segments = settings.vertex_count
+        
+        #get the info about the original form
+        #and convert it to a bmesh for fast connectivity info
+        #or load the previous bme to save even more time
+        
+        
+        
+        if use_cache:
+            start = time.time()
+            print('the cache is valid for use!')
+            
+            self.bme = contour_mesh_cache['bme']
+            print('loaded old bme in %f' % (time.time() - start))
+            
+            start = time.time()
+            
+            self.tmp_ob = contour_mesh_cache['tmp']
+            print('loaded old tmp ob in %f' % (time.time() - start))
+            
+            if self.tmp_ob:
+                self.original_form = self.tmp_ob
+            else:
+                self.original_form = target
+              
+        else:
+    
+            start = time.time()
+            
+            #clear any old saved data
+            clear_mesh_cache()
+            
+            me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
+            self.bme = bmesh.new()
+            self.bme.from_mesh(me)
+             
+            #check for ngons, and if there are any...triangulate just the ngons
+            #this mainly stems from the obj.ray_cast function returning triangulate
+            #results and that it makes my cross section method easier.
+            ngons = []
+            for f in self.bme.faces:
+                if len(f.verts) > 4:
+                    ngons.append(f)
+            if len(ngons):
+                print('Ngons detected, this is a real hassle just so you know')
+                print('Ngons detected, this will probably double operator initial startup time')
+                new_geom = bmesh.ops.triangulate(self.bme, faces = ngons, use_beauty = True)
+                new_faces = new_geom['faces']
+                new_me = bpy.data.meshes.new('tmp_recontour_mesh')
+                self.bme.to_mesh(new_me)
+                new_me.update()
+                self.tmp_ob = bpy.data.objects.new('ContourTMP', new_me)
+                
+                
+                #I think this is needed to generate the data for raycasting
+                #there may be some other way to update the object
+                context.scene.objects.link(self.tmp_ob)
+                self.tmp_ob.update_tag()
+                context.scene.update() #this will slow things down
+                context.scene.objects.unlink(self.tmp_ob)
+                self.tmp_ob.matrix_world = self.original_form.matrix_world
+                
+                
+                ###THIS IS A HUGELY IMPORTANT THING TO NOTICE!###
+                #so maybe I need to make it more apparent or write it differnetly#
+                #We are using a temporary duplicate to handle ray casting
+                #and triangulation
+                self.original_form = self.tmp_ob
+                
+            else:
+                self.tmp_ob = None
+            
+            
+            #store this stuff for next time.  We will most likely use it again
+            #keep in mind, in some instances, tmp_ob is self.original orm
+            #where as in others is it unique.  We want to use "target" here to
+            #record validation because that is the the active or selected object
+            #which is visible in the scene with a unique name.
+            write_mesh_cache(target, self.tmp_ob, self.bme)
+            print('derived new bme and any triangulations in %f' % (time.time() - start))
+
+        message = "Segments: %i" % self.segments
+        context.area.header_text_set(text = message)
+            
+            
+        #here is where we will cache verts edges and faces
+        #unti lthe user confirms and we output a real mesh.
+        self.verts = []
+        self.edges = []
+        self.faces = []
+        
+        #store points
+        self.draw_cache = []
+            
+       
+        if settings.use_x_ray:
+            self.orig_x_ray = self.destination_ob.show_x_ray
+            self.destination_ob.show_x_ray = True
+            
+        #is the mouse clicked and held down
+        self.drag = False
+        self.navigating = False
+        self.draw = False
+        
+        #what is the user dragging..a cutline, a handle etc
+        self.drag_target = None
+        #what is the mouse over top of currently
+        self.hover_target = None
+        #keep track of selected cut_line (perhaps
+        self.selected = None
+        
+        
+        
+        self.sketch_lines = []
+        
+        
+        
+        self.header_message = 'Experimental sketcying. D + LMB to draw'
+        context.area.header_text_set(self.header_message)
+        #if settings.recover:
+            #print('loading cache!')
+            #print(contour_cache['CUT_LINES'])
+            #self.load_from_cache(context, 'CUT_LINES', settings.recover_clip)
+        #add in the draw callback and modal method
+        self._handle = bpy.types.SpaceView3D.draw_handler_add(poly_sketch_draw_callback, (self, context), 'WINDOW', 'POST_PIXEL')
+        context.window_manager.modal_handler_add(self)
+        
+        return {'RUNNING_MODAL'}
 # Used to store keymaps for addon
 addon_keymaps = []
 
@@ -2137,6 +2465,7 @@ def register():
     bpy.utils.register_class(ContourToolsAddonPreferences)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour_panel)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour)
+    bpy.utils.register_class(CGCOOKIE_OT_retopo_poly_sketch)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour_menu)
 
     # Create the addon hotkeys
@@ -2155,6 +2484,7 @@ def unregister():
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour)
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour_panel)
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour_menu)
+    bpy.utils.unregister_class(CGCOOKIE_OT_retopo_poly_sketch)
     bpy.utils.unregister_class(ContourToolsAddonPreferences)
 
     # Remove addon hotkeys

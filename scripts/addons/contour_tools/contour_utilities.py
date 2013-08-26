@@ -223,7 +223,41 @@ def simplify_RDP(splineVerts, error, method = 1):
 
         
 
-
+def relax(verts, factor = .75, in_place = True):
+    '''
+    verts is a list of Vectors
+    first and last vert will not be changes
+    
+    this should modify the list in place
+    however I have it returning verts?
+    '''
+    
+    L = len(verts)
+    if L < 4:
+        print('not enough verts to relax')
+        return verts
+    
+    
+    deltas = [Vector((0,0,0))] * L
+    
+    for i in range(1,L-1):
+        
+        d = .5 * (verts[i-1] + verts[i+1]) - verts[i]
+        deltas[i] = factor * d
+    
+    if in_place:
+        for i in range(1,L-1):
+            verts[i] += deltas[i]
+        
+        return True
+    else:
+        new_verts = verts.copy()
+        for i in range(1,L-1):
+            new_verts[i] += deltas[i]     
+        
+        return new_verts
+        
+    
     
 def pi_slice(x,y,r1,r2,thta1,thta2,res,t_fan = False):
     '''
@@ -441,6 +475,19 @@ def draw_polyline_from_3dpoints(context, points_3d, color, thickness, LINE_TYPE)
       
     return
     
+
+def get_path_length(verts):
+    '''
+    sum up the length of a string of vertices
+    '''
+    l_tot = 0
+    
+    for i in range(0,len(verts-1)):
+        d = verts[i+1] - verts[i]
+        l_tot += d
+        
+    return l_tot
+
     
 def get_com(verts):
     '''
@@ -472,6 +519,25 @@ def approx_radius(verts, COM):
     
     return app_rad    
 
+
+def verts_bbox(verts):
+    xs = [v[0] for v in verts]
+    ys = [v[1] for v in verts]
+    zs = [v[2] for v in verts]
+    return (min(xs), max(xs), min(ys), max(ys), min(zs), max(zs))
+
+def diagonal_verts(verts):
+    xs = [v[0] for v in verts]
+    ys = [v[1] for v in verts]
+    zs = [v[2] for v in verts]
+    
+    dx = max(xs) - min(xs)
+    dy = max(ys) - min(ys)
+    dz = max(zs) - min(zs)
+    
+    diag = math.pow((dx**2 + dy**2 + dz**2),.5)
+    
+    return diag
 
 # calculate a best-fit plane to the given vertices
 #modified from LoopTools addon

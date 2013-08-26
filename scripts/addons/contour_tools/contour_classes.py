@@ -213,6 +213,174 @@ class ExistingVertList(object):
                 print('reversing path 2')
                 self.verts_simple.reverse()
                       
+
+class PolySkecthLine(object):
+    
+    def __init__(self, raw_points,
+                 cull_factor = 5,
+                 smooth_factor = 5,
+                 feature_factor = 3,
+                 color1 = (1,0,0,1),
+                 color2 = (0,1,0,1),
+                 color3 = (0,0,1,1),
+                 color4 = (1,1,0,1)):
+        
+        ####DATA####
+        self.raw_screen = [raw_points[0]]
+        
+        #toss a bunch of data
+        for i, v in enumerate(raw_points):
+            if not math.fmod(i, cull_factor):
+                self.raw_screen.append(v)
+        
+        
+        
+        #culled raw_screen
+        #raycast onto object
+        self.raw_world = []
+        
+        #atenuated and smoothed
+        self.world_path = []
+        
+        #this is free data from raycast
+        self.path_normals = []
+        
+        #region 2d version of world path
+        self.screen_path = []
+        
+        #detected features of screen path
+        self.knots = []
+        
+        #locations of perpendicular
+        #poly edges
+        self.poly_nodes = []
+        
+        
+        ####PROCESSIG CONSTANTS###
+        self.cull_factor = cull_factor
+        self.smooth_factor = smooth_factor
+        self.feature_factor = feature_factor
+        
+        self.poly_loc = 'CENTERED' #ABOVE, #BELOW
+        
+        self.segments = 10
+        
+        ####VISULAIZTION STUFF####
+        self.color1 = color1
+        self.color2 = color2
+        self.color3 = color3
+        self.color4 = color4
+        
+        
+    def hover(self,x,y):
+        print('not implemented yet')
+        
+    def ray_cast_path(self,context, ob):
+        region = context.region  
+        rv3d = context.space_data.region_3d
+        self.raw_world = []
+        for v in self.raw_screen:
+            vec = region_2d_to_vector_3d(region, rv3d, v)
+            loc = region_2d_to_location_3d(region, rv3d, v, vec)
+
+            a = loc + 3000*vec
+            b = loc - 3000*vec
+
+            mx = ob.matrix_world
+            imx = mx.inverted()
+            hit = ob.ray_cast(imx*a, imx*b)
+            
+            if hit[2] != -1:
+                self.raw_world.append(mx * hit[0])
+                
+        
+    def find_knots(self):
+        print('find those knots')
+        box_diag = contour_utilities.diagonal_verts(self.raw_world)
+        error = 1/self.feature_factor * box_diag
+        
+        self.knots = contour_utilities.simplify_RDP(self.raw_world, error)
+        
+        
+    def smooth_path(self):
+        print('              ')
+        print('              ')
+        print('smoothing the path')
+        print('check the first 5')
+        print(self.raw_world[1:5])
+        #clear the world path if need be
+        self.world_path = []
+        
+        if len(self.knots) > 2:
+            
+            #split the raw
+            segments = []
+            for i in range(0,len(self.knots) - 1):
+                segments.append([self.raw_world[m] for m in range(self.knots[i],self.knots[i+1])])
+                
+        else:
+            segments = [[v.copy() for v in self.raw_world]]
+        
+        for segment in segments:
+            for n in range(self.smooth_factor - 1):
+                contour_utilities.relax(segment)
+            
+            self.world_path.extend(segment)
+                    
+        print('verify the first 5')
+        print(self.raw_world[1:5])
+        print('              ')
+        print('              ')         
+        
+    
+    def create_vert_nodes(self):
+        self.poly_nodes = []
+        curve_len = contour_utilities.get_path_length(self.world_path)
+        desired_density = curve_len/self.segments
+            
+        if len(self.knots) > 2:
+            
+            
+            segments = []
+            for i in range(0,len(self.knots) - 1):
+                segments.append(self.world_path[self.knots[i]:self.knots[i+1]])
+                
+            
+            
+        else:
+            segments = [self.world_path]
+            
+        
+        for segment in segments:
+            segment_length = contour_utilities.get_path_length(segment)
+            n_segments = round(segment_length * desired_density)
+            vs = contour_utilities.space_evenly_on_path(segment, [[0,1][1,2]], n_segments, 0, debug = False)
+            self.poly_nodes.extend(vs)
+        
+        
+            
+    def generate_quads(self):
+        print('make the quads')
+        
+    def draw(self,context):
+        
+        if len(self.raw_world) > 2:
+            contour_utilities.draw_polyline_from_3dpoints(context, self.raw_world, self.color1, 1, 'GL_LINES')
+            
+        #draw the smothed path
+        if len(self.world_path) > 2:
+            print('draw the world_path points')
+            contour_utilities.draw_polyline_from_3dpoints(context, self.world_path, self.color2, 1, 'GL_LINE_STIPPLE')
+        
+        #draw the knots
+        if len(self.knots) > 2:
+            contour_utilities.draw_3d_points(context, self.knots, self.color3, 2)
+            
+        #draw the knots
+        if len(self.poly_nodes) > 2:
+            contour_utilities.draw_3d_points(context, self.poly_nodes, self.color4, 2)
+        
+        
             
 class ContourCutLine(object): 
     
