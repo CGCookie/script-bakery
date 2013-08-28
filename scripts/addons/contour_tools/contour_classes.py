@@ -23,6 +23,7 @@ Created by Patrick Moore
 
 import bpy
 import math
+import time
 from mathutils import Vector, Quaternion
 from mathutils.geometry import intersect_point_line, intersect_line_plane
 import contour_utilities
@@ -219,7 +220,7 @@ class PolySkecthLine(object):
     def __init__(self, raw_points,
                  cull_factor = 5,
                  smooth_factor = 5,
-                 feature_factor = 3,
+                 feature_factor = 5,
                  color1 = (1,0,0,1),
                  color2 = (0,1,0,1),
                  color3 = (0,0,1,1),
@@ -302,15 +303,18 @@ class PolySkecthLine(object):
         self.knots = contour_utilities.simplify_RDP(self.raw_world, error)
         
         
-    def smooth_path(self):
+    def smooth_path(self, ob = None):
         print('              ')
-        print('              ')
-        print('smoothing the path')
-        print('check the first 5')
-        print(self.raw_world[1:5])
+
+        start_time = time.time()
+        print(self.raw_world[1])
         #clear the world path if need be
         self.world_path = []
         
+        if ob:
+            mx = ob.matrix_world
+            imx = mx.inverted()
+            
         if len(self.knots) > 2:
             
             #split the raw
@@ -324,26 +328,38 @@ class PolySkecthLine(object):
         for segment in segments:
             for n in range(self.smooth_factor - 1):
                 contour_utilities.relax(segment)
+                
+                #resnap so we don't loose the surface
+                if ob:
+                    print(segment)
+                    for i, vert in enumerate(segment):
+                        print(vert)
+                        snap = ob.closest_point_on_mesh(imx * vert)
+                        segment[i] = mx * snap[0]
+                        
             
             self.world_path.extend(segment)
-                    
-        print('verify the first 5')
-        print(self.raw_world[1:5])
+        
+        
+        end_time = time.time()
+        print('smoothed and asnapped %r in %f seconds' % (ob != None, end_time - start_time))            
+        print('verify')
+        print(self.raw_world[1])
         print('              ')
-        print('              ')         
+        
         
     
     def create_vert_nodes(self):
         self.poly_nodes = []
         curve_len = contour_utilities.get_path_length(self.world_path)
-        desired_density = curve_len/self.segments
+        desired_density = self.segments/curve_len
             
         if len(self.knots) > 2:
             
             
             segments = []
             for i in range(0,len(self.knots) - 1):
-                segments.append(self.world_path[self.knots[i]:self.knots[i+1]])
+                segments.append(self.world_path[self.knots[i]:self.knots[i+1]+1])
                 
             
             
@@ -354,8 +370,8 @@ class PolySkecthLine(object):
         for segment in segments:
             segment_length = contour_utilities.get_path_length(segment)
             n_segments = round(segment_length * desired_density)
-            vs = contour_utilities.space_evenly_on_path(segment, [[0,1][1,2]], n_segments, 0, debug = False)
-            self.poly_nodes.extend(vs)
+            vs = contour_utilities.space_evenly_on_path(segment, [[0,1],[1,2]], n_segments, 0, debug = False)[0]
+            self.poly_nodes.extend(vs[:len(vs)])
         
         
             
@@ -369,16 +385,17 @@ class PolySkecthLine(object):
             
         #draw the smothed path
         if len(self.world_path) > 2:
-            print('draw the world_path points')
+            
             contour_utilities.draw_polyline_from_3dpoints(context, self.world_path, self.color2, 1, 'GL_LINE_STIPPLE')
         
         #draw the knots
         if len(self.knots) > 2:
-            contour_utilities.draw_3d_points(context, self.knots, self.color3, 2)
+            points = [self.raw_world[i] for i in self.knots]
+            contour_utilities.draw_3d_points(context, points, self.color3, 5)
             
         #draw the knots
         if len(self.poly_nodes) > 2:
-            contour_utilities.draw_3d_points(context, self.poly_nodes, self.color4, 2)
+            contour_utilities.draw_3d_points(context, self.poly_nodes, self.color4, 3)
         
         
             

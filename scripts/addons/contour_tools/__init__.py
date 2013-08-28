@@ -2005,6 +2005,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             clear_mesh_cache()
             
             me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
+            me.update()
+            
             self.bme = bmesh.new()
             self.bme.from_mesh(me)
              
@@ -2163,7 +2165,13 @@ class CGCOOKIE_OT_retopo_poly_sketch(bpy.types.Operator):
         context.area.tag_redraw()
         settings = context.user_preferences.addons['contour_tools'].preferences
         
-        if event.type == 'D':
+        
+        if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE', 'NUMPAD_2', 'NUMPAD_4', 'NUMPAD_6', 'NUMPAD_8', 'NUMPAD_1', 'NUMPAD_3', 'NUMPAD_5', 'NUMPAD_7', 'NUMPAD_9'}:
+            
+            return {'PASS_THROUGH'}
+            
+            
+        elif event.type == 'D':
             
             #toggle drawing
             if event.value == 'PRESS':
@@ -2201,7 +2209,9 @@ class CGCOOKIE_OT_retopo_poly_sketch(bpy.types.Operator):
                         
                         print('raycasting now')
                         sketch.ray_cast_path(context, self.original_form)
-                        sketch.smooth_path()
+                        sketch.find_knots()
+                        sketch.smooth_path(ob = self.original_form)
+                        sketch.create_vert_nodes()
                         
                         self.sketch_lines.append(sketch)
                     

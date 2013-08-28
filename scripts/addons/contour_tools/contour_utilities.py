@@ -482,9 +482,9 @@ def get_path_length(verts):
     '''
     l_tot = 0
     
-    for i in range(0,len(verts-1)):
+    for i in range(0,len(verts)-1):
         d = verts[i+1] - verts[i]
-        l_tot += d
+        l_tot += d.length
         
     return l_tot
 
@@ -932,7 +932,7 @@ def point_inside_loop_almost3D(pt, verts, no, p_pt = None, threshold = .01, debu
     
     return pt_in_loop
 
-def face_cycle(face, pt, no, prev_eds, verts, connection):
+def face_cycle(face, pt, no, prev_eds, verts):#, connection):
     '''
     args:
         face - Blender BMFace
@@ -963,7 +963,7 @@ def face_cycle(face, pt, no, prev_eds, verts, connection):
                 
             if result[0] == 'CROSS':
                 
-                connection[len(verts)] = [f.index for f in ed.link_faces]
+                #connection[len(verts)] = [f.index for f in ed.link_faces]
                 verts.append(result[1])
                 next_faces = [newf for newf in ed.link_faces if newf.index != face.index]
                 if len(next_faces):
@@ -979,13 +979,13 @@ def face_cycle(face, pt, no, prev_eds, verts, connection):
                 else:
                     co_point = ed.verts[1]
                     
-                connection[len(verts)] = [f.index for f in co_point.link_faces]  #notice we take the face loop around the point!
+                #connection[len(verts)] = [f.index for f in co_point.link_faces]  #notice we take the face loop around the point!
                 verts.append(result[1])  #store the "intersection"
                     
                 return co_point
             
                 
-def vert_cycle(vert, pt, no, prev_eds, verts, connection):
+def vert_cycle(vert, pt, no, prev_eds, verts):#, connection):
     '''
     args:
         vert - Blender BMVert
@@ -1011,7 +1011,7 @@ def vert_cycle(vert, pt, no, prev_eds, verts, connection):
                 result = cross_edge(A, B, pt, no)
                 
                 if result[0] == 'CROSS':
-                    connection[len(verts)] = [f.index for f in ed.link_faces]
+                    #connection[len(verts)] = [f.index for f in ed.link_faces]
                     verts.append(result[1])
                     next_faces = [newf for newf in ed.link_faces if newf.index != f.index]
                     if len(next_faces):
@@ -1044,7 +1044,7 @@ def vert_cycle(vert, pt, no, prev_eds, verts, connection):
                             element = ed.verts[0]
                         
                         #add the new vert coord into the mix
-                        connection[len(verts)] = [f.index for f in element.link_faces]
+                        #connection[len(verts)] = [f.index for f in element.link_faces]
                         verts.append(element.co)
                         
                         #return the vert to repeat the vert cycle
@@ -1530,6 +1530,149 @@ def align_edge_loops(verts_1, verts_2, eds_1, eds_2):
     return verts_2
     
 
+
+
+def cross_section_2_seeds(bme, mx, point, normal, pt_a, seed_index_a, pt_b, seed_index_b, debug = True):
+    '''
+    Takes a mesh and associated world matrix of the object and returns a cross secion in local
+    space.
+    
+    Args:
+        bme: Blender BMesh
+        mx:   World matrix (type Mathutils.Matrix)
+        point: any point on the cut plane in world coords (type Mathutils.Vector)
+        normal:  plane normal direction (type Mathutisl.Vector)
+        seed: face index, typically achieved by raycast
+        exclude_edges: list of edge indices (usually already tested from previous iterations)
+    '''
+    
+    times = []
+    times.append(time.time())
+    
+    imx = mx.inverted()
+    pt = imx * point
+    no = imx.to_3x3() * normal
+    
+    
+    #we will store vert chains here
+    #indexed by the face they start with
+    #after the initial seed facc
+    #___________________
+    #|     |     |      |
+    #|  1  |init |  2   |
+    #|_____|_____|______|
+    #
+    verts = {}
+    
+    
+    #we need to test all edges of both faces for plane intersection
+    #we should get intersections, because we define the plane
+    #initially between the two seeds
+    
+    seeds = []
+    prev_eds = []
+    
+    #the simplest expected result is that we find 2 edges
+    for ed in bme.faces[seed_index_a].edges:
+        
+                  
+        prev_eds.append(ed.index)
+        
+        A = ed.verts[0].co
+        B = ed.verts[1].co
+        result = cross_edge(A, B, pt, no)
+        
+        
+        if result[0] != 'CROSS':
+            print('got an anomoly')
+            print(result[0])
+            
+        #here we are only tesing the good cases
+        if result[0] == 'CROSS':
+            #create a list to hold the verst we find from this seed
+            #start with the a point....go toward b
+            
+            
+            #TODO: CODE REVIEW...this looks like stupid code.
+            potential_faces = [face for face in ed.link_faces if face.index != seed_index_a]
+            if len(potential_faces):
+                f = potential_faces[0]
+                seeds.append(f)
+                
+                #we will keep track of our growing vert chains
+                #based on the face they start with
+                verts[f.index] = [pt_a]
+                verts[f.index].append(result[1])
+                
+        
+    #we now have 1 or two faces on either side of seed_face_a
+    #now we walk until we do or dont find seed_face_b
+    #this is a brute force, and we make no assumptions about which
+    #direction is better to head in first.
+    total_tests = 0
+    successes = {}
+    for initial_element in seeds: #this will go both ways if they dont meet up.
+        element_tests = 0
+        element = initial_element
+        stop_test = None
+        while element and total_tests < 10000 and stop_test != seed_index_b:
+            total_tests += 1
+            element_tests += 1
+            #first, we know that this face is not coplanar..that's good
+            #if new_face.no.cross(no) == 0:
+                #print('coplanar face, stopping calcs until your programmer gets smarter')
+                #return None
+            if type(element) == bmesh.types.BMFace:
+                element = face_cycle(element, pt, no, prev_eds, verts[initial_element.index])#, edge_mapping)
+                stop_test = element.index
+            
+            elif type(element) == bmesh.types.BMVert:
+                element = vert_cycle(element, pt, no, prev_eds, verts[initial_element.index])#, edge_mapping)
+                stop_test = None
+        
+        if stop_test == seed_index_b:
+            print('found the other face!')
+            verts[initial_element.index].append(pt_b)
+            
+        else:
+            #trash the vert data...we aren't interested
+            #if we want to do other stuff later...we can
+            del verts[initial_element.index]
+            
+        if total_tests-2 > 10000:
+            print('maxed out tests')
+                   
+        print('completed %i tests in this seed search' % element_tests)
+        print('%i vertices found so far' % len(verts[initial_element.index]))                
+    
+    #this iterates the keys in verts
+    #i have kept the keys consistent for
+    #verts
+    if len(verts):
+        
+        print('picking the shortes path by elements')
+        print('later we will return both paths to allow')
+        print('sorting by path length or by proximity to view')
+        
+        chains = [verts[key] for key in verts if len(verts[key]) > 2]
+        if len(chains):
+            sizes = [len(chain) for chain in chains]
+        
+            best = min(sizes)
+            ind = sizes.index(best)
+        
+        
+            return chains[ind]
+        else:
+            print('failure no chains > 2 verts')
+            return
+                    
+    else:
+        print('failed to find connection in either direction...perhaps points arent coplanar')
+        return 
+            
+            
+
 def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     '''
     Takes a mesh and associated world matrix of the object and returns a cross secion in local
@@ -1563,7 +1706,7 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
     pt = imx * point
     no = imx.to_3x3() * normal  #local normal
     
-    edge_mapping = {}  #perhaps we should use bmesh becaus it stores the great cycles..answer yup
+    #edge_mapping = {}  #perhaps we should use bmesh becaus it stores the great cycles..answer yup
     
     #first initial search around seeded face.
     #if none, we may go back to brute force
@@ -1614,7 +1757,7 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
         result = cross_edge(A, B, pt, no)
         if result[0] == 'CROSS':
             #add the point, add the mapping move forward
-            edge_mapping[len(verts)] = [f.index for f in ed.link_faces]
+            #edge_mapping[len(verts)] = [f.index for f in ed.link_faces]
             verts.append(result[1])
             potential_faces = [face for face in ed.link_faces if face.index != seed_index]
             if len(potential_faces):
@@ -1644,10 +1787,10 @@ def cross_section_seed(bme, mx, point, normal, seed_index, debug = True):
                 #print('coplanar face, stopping calcs until your programmer gets smarter')
                 #return None
             if type(element) == bmesh.types.BMFace:
-                element = face_cycle(element, pt, no, prev_eds, verts, edge_mapping)
+                element = face_cycle(element, pt, no, prev_eds, verts)#, edge_mapping)
             
             elif type(element) == bmesh.types.BMVert:
-                element = vert_cycle(element, pt, no, prev_eds, verts, edge_mapping)
+                element = vert_cycle(element, pt, no, prev_eds, verts)#, edge_mapping)
                 
         print('completed %i tests in this seed search' % element_tests)
         print('%i vertices found so far' % len(verts))
