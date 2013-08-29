@@ -2004,6 +2004,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #clear any old saved data
             clear_mesh_cache()
             
+            
             me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
             self.bme = bmesh.new()
             self.bme.from_mesh(me)
@@ -2015,14 +2016,19 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             for f in self.bme.faces:
                 if len(f.verts) > 4:
                     ngons.append(f)
-            if len(ngons):
-                print('Ngons detected, this is a real hassle just so you know')
-                print('Ngons detected, this will probably double operator initial startup time')
-                new_geom = bmesh.ops.triangulate(self.bme, faces = ngons, use_beauty = True)
-                new_faces = new_geom['faces']
+            if len(ngons) or len(self.original_form.modifiers) > 0:
+                print('Ngons or modifiers detected this is a real hassle just so you know')
+                
+                if len(ngons):
+                    new_geom = bmesh.ops.triangulate(self.bme, faces = ngons, use_beauty = True)
+                    new_faces = new_geom['faces']
+                    
+                    
                 new_me = bpy.data.meshes.new('tmp_recontour_mesh')
                 self.bme.to_mesh(new_me)
                 new_me.update()
+                
+                
                 self.tmp_ob = bpy.data.objects.new('ContourTMP', new_me)
                 
                 
