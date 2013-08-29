@@ -2212,6 +2212,7 @@ class CGCOOKIE_OT_retopo_poly_sketch(bpy.types.Operator):
                         sketch.find_knots()
                         sketch.smooth_path(ob = self.original_form)
                         sketch.create_vert_nodes()
+                        sketch.generate_quads(self.original_form,1)
                         
                         self.sketch_lines.append(sketch)
                     

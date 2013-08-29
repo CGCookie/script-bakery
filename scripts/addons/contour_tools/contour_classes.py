@@ -255,6 +255,8 @@ class PolySkecthLine(object):
         #locations of perpendicular
         #poly edges
         self.poly_nodes = []
+        self.extrudes_u = []
+        self.extrudes_d = []
         
         
         ####PROCESSIG CONSTANTS###
@@ -367,21 +369,58 @@ class PolySkecthLine(object):
             segments = [self.world_path]
             
         
-        for segment in segments:
+        for i, segment in enumerate(segments):
             segment_length = contour_utilities.get_path_length(segment)
             n_segments = round(segment_length * desired_density)
             vs = contour_utilities.space_evenly_on_path(segment, [[0,1],[1,2]], n_segments, 0, debug = False)[0]
-            self.poly_nodes.extend(vs[:len(vs)])
+            if i > 0:
+                self.poly_nodes.extend(vs[1:len(vs)])
+            else:
+                self.poly_nodes.extend(vs[:len(vs)])
         
         
             
-    def generate_quads(self):
+    def generate_quads(self,ob,width):
+        mx = ob.matrix_world
+        imx = mx.inverted()
+        
+        self.normals = []
+        self.extrudes_u = []
+        self.extrudes_d = []
+        
+        for vert in self.poly_nodes:
+            snap = ob.closest_point_on_mesh(imx * vert)
+            #this wil be toughy
+            self.normals.append(mx.to_3x3() * snap[1])
+            
+            
+        for i, v in enumerate(self.poly_nodes):
+            if i == 0:
+                v = self.poly_nodes[i+1] - self.poly_nodes[i]
+            
+            elif i == len(self.poly_nodes) - 1:
+                v = self.poly_nodes[i] - self.poly_nodes[i-1]
+                
+            else:
+                v1 = self.poly_nodes[i] - self.poly_nodes[i-1]
+                v2 = self.poly_nodes[i+1] - self.poly_nodes[i]
+                v = v1.lerp(v2, .5)
+                
+            ext = self.normals[i].cross(v)
+            ext.normalize()
+            
+            self.extrudes_u.append(self.poly_nodes[i] + .5 * width * ext)
+            self.extrudes_d.append(self.poly_nodes[i] - .5 * width * ext)    
+            
+            
         print('make the quads')
+        
+        
         
     def draw(self,context):
         
-        if len(self.raw_world) > 2:
-            contour_utilities.draw_polyline_from_3dpoints(context, self.raw_world, self.color1, 1, 'GL_LINES')
+        #if len(self.raw_world) > 2:
+            #contour_utilities.draw_polyline_from_3dpoints(context, self.raw_world, self.color1, 1, 'GL_LINES')
             
         #draw the smothed path
         if len(self.world_path) > 2:
@@ -394,9 +433,19 @@ class PolySkecthLine(object):
             contour_utilities.draw_3d_points(context, points, self.color3, 5)
             
         #draw the knots
-        if len(self.poly_nodes) > 2:
+        if len(self.poly_nodes) > 2 and len(self.extrudes_u) == 0:
             contour_utilities.draw_3d_points(context, self.poly_nodes, self.color4, 3)
+            contour_utilities.draw_polyline_from_3dpoints(context, self.poly_nodes, (0,1,0,1), 1, 'GL_LINE_STIPPLE')
         
+        if len(self.extrudes_u) > 2:
+            contour_utilities.draw_3d_points(context, self.extrudes_u, self.color4, 2)
+            contour_utilities.draw_3d_points(context, self.extrudes_d, self.color4, 2)
+            contour_utilities.draw_polyline_from_3dpoints(context, self.extrudes_u, (0,1,0,1), 1, 'GL_LINE_STIPPLE')
+            contour_utilities.draw_polyline_from_3dpoints(context, self.extrudes_d, (0,1,0,1), 1, 'GL_LINE_STIPPLE')
+            
+            for i, v in enumerate(self.extrudes_u):
+                contour_utilities.draw_polyline_from_3dpoints(context, [self.extrudes_u[i],self.extrudes_d[i]], (0,1,0,1), 1, 'GL_LINE_STIPPLE')
+            
         
             
 class ContourCutLine(object): 
