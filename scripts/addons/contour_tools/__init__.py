@@ -2196,6 +2196,12 @@ class CGCOOKIE_OT_retopo_poly_sketch(bpy.types.Operator):
                 
                 self.draw_cache.append((event.mouse_region_x,event.mouse_region_y))
                 
+            if not self.drag and not self.draw:
+                for sketch in self.sketch_lines:
+                    sketch.active_element(context, event.mouse_region_x, event.mouse_region_y)
+                
+            
+            
             return {'RUNNING_MODAL'}
                     
                     
@@ -2209,7 +2215,7 @@ class CGCOOKIE_OT_retopo_poly_sketch(bpy.types.Operator):
                         
                         print('raycasting now')
                         sketch.ray_cast_path(context, self.original_form)
-                        sketch.find_knots()
+                        #sketch.find_knots()
                         sketch.smooth_path(ob = self.original_form)
                         sketch.create_vert_nodes()
                         sketch.generate_quads(self.original_form,1)

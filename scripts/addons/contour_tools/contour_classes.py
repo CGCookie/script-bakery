@@ -274,9 +274,36 @@ class PolySkecthLine(object):
         self.color3 = color3
         self.color4 = color4
         
+
+    def active_element(self,context,x,y):
+        settings = context.user_preferences.addons['contour_tools'].preferences
+        mouse_loc = Vector((x,y))
         
-    def hover(self,x,y):
-        print('not implemented yet')
+        if len(self.knots):
+            for i in self.knots:
+                a = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.poly_nodes[i])
+                
+
+        if len(self.poly_nodes):
+            
+            #Check by testing distance to all edges
+            active_self = False
+            self.color2 = (0,1,0,1)
+            for i in range(0,len(self.poly_nodes) -1):
+                
+                a = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.poly_nodes[i])
+                b = location_3d_to_region_2d(context.region, context.space_data.region_3d, self.poly_nodes[i+1])
+                intersect = intersect_point_line(mouse_loc, a, b)
+        
+                dist = (intersect[0] - mouse_loc).length_squared
+                bound = intersect[1]
+                if (dist < 100) and (bound < 1) and (bound > 0):
+                    active_self = True
+                    self.color2 = (1,1,0,1)
+                    print('found edge %i' % i)
+                    break
+                
+            return active_self
         
     def ray_cast_path(self,context, ob):
         region = context.region  
@@ -344,7 +371,7 @@ class PolySkecthLine(object):
         
         
         end_time = time.time()
-        print('smoothed and asnapped %r in %f seconds' % (ob != None, end_time - start_time))            
+        print('smoothed and snapped %r in %f seconds' % (ob != None, end_time - start_time))            
         print('verify')
         print(self.raw_world[1])
         print('              ')
