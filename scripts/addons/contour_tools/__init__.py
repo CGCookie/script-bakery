@@ -942,10 +942,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 self.navigating = False
                 
             for cut_line in self.cut_lines:
-                if cut_line.head and cut_line.head.world_position:
-                    cut_line.head.screen_from_world(context)
-                    cut_line.tail.screen_from_world(context)
-                    cut_line.update_screen_coords(context)
+                cut_line.update_screen_coords(context)
+                
             return {'PASS_THROUGH'}
         
         
