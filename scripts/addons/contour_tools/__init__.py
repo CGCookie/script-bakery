@@ -2030,6 +2030,8 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
             
             me = self.original_form.to_mesh(scene=context.scene, apply_modifiers=True, settings='PREVIEW')
+            me.update()
+            
             self.bme = bmesh.new()
             self.bme.from_mesh(me)
              
@@ -2194,7 +2196,13 @@ class CGCOOKIE_OT_retopo_poly_sketch(bpy.types.Operator):
         context.area.tag_redraw()
         settings = context.user_preferences.addons['contour_tools'].preferences
         
-        if event.type == 'D':
+        
+        if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'MIDDLEMOUSE', 'NUMPAD_2', 'NUMPAD_4', 'NUMPAD_6', 'NUMPAD_8', 'NUMPAD_1', 'NUMPAD_3', 'NUMPAD_5', 'NUMPAD_7', 'NUMPAD_9'}:
+            
+            return {'PASS_THROUGH'}
+            
+            
+        elif event.type == 'D':
             
             #toggle drawing
             if event.value == 'PRESS':
@@ -2219,6 +2227,12 @@ class CGCOOKIE_OT_retopo_poly_sketch(bpy.types.Operator):
                 
                 self.draw_cache.append((event.mouse_region_x,event.mouse_region_y))
                 
+            if not self.drag and not self.draw:
+                for sketch in self.sketch_lines:
+                    sketch.active_element(context, event.mouse_region_x, event.mouse_region_y)
+                
+            
+            
             return {'RUNNING_MODAL'}
                     
                     
@@ -2232,7 +2246,10 @@ class CGCOOKIE_OT_retopo_poly_sketch(bpy.types.Operator):
                         
                         print('raycasting now')
                         sketch.ray_cast_path(context, self.original_form)
-                        sketch.smooth_path()
+                        #sketch.find_knots()
+                        sketch.smooth_path(ob = self.original_form)
+                        sketch.create_vert_nodes()
+                        sketch.generate_quads(self.original_form,1)
                         
                         self.sketch_lines.append(sketch)
                     
