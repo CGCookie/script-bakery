@@ -76,7 +76,7 @@ contour_mesh_cache = {}
 
 def object_validation(ob):
     
-    valid = [ob.name, len(ob.data.vertices), len(ob.data.edges), len(ob.data.polygons)]
+    valid = [ob.name, len(ob.data.vertices), len(ob.data.edges), len(ob.data.polygons), len(ob.modifiers)]
     
     return valid
 
@@ -1321,7 +1321,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
             
             #todo, make this a little betetr
-            validate = [self.original_form.name, len(self.bme.faces), len(self.bme.verts)]
+            validate = [self.original_form.name, len(self.bme.faces), len(self.bme.verts), len(self.original_form.modifiers)]
             contour_cache[tool_type] = {'validate': validate,
                                         'normals': normals,
                                         'x_vecs':x_vecs,
