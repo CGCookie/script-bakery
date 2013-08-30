@@ -1487,10 +1487,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     setattr(cut, prop, undo[prop])
                     
                     
-                self.selected.cut_object(context, self.original_form, self.bme)
-                self.selected.simplify_cross(self.segments)
-                self.align_cut(self.selected, mode = 'DIRECTION', fine_grain = False)
-                self.selected.update_screen_coords(context)
+                cut.cut_object(context, self.original_form, self.bme)
+                cut.simplify_cross(self.segments)
+                self.align_cut(cut, mode = 'DIRECTION', fine_grain = False)
+                cut.update_screen_coords(context)
                 self.connect_valid_cuts_to_make_mesh()
                 
             elif action == 'SEGMENT':
