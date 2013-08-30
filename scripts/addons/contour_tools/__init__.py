@@ -498,6 +498,11 @@ def retopo_draw_callback(self,context):
     g_color = settings.geom_rgb
     v_color = settings.vert_rgb
 
+    if self.post_update:
+        for cut_line in self.cut_lines:
+            cut_line.update_screen_coords(context)
+                    
+        self.post_update = False
     for cut_collection in [self.cut_lines]: #, self.valid_cuts]:
         if len(cut_collection) > 0:
             for i, c_cut in enumerate(cut_collection):
@@ -579,6 +584,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         context.area.tag_redraw()
         settings = context.user_preferences.addons['contour_tools'].preferences
         
+       
         
         if event.type == 'Z' and event.ctrl and event.value == 'PRESS':
             self.undo_action(context)
@@ -1135,11 +1141,10 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             
             
             else:
-                for cut_line in self.cut_lines:
-                    if cut_line.verts_simple != []:
-                        #cut_line.head.screen_from_world(context)
-                        #cut_line.tail.screen_from_world(context)
-                        cut_line.update_screen_coords(context)
+                #hack because the zoom happens after
+                #the event is passed through
+                self.post_update = True
+    
                 return{'PASS_THROUGH'}  
         
         #event click
@@ -2084,6 +2089,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #is the mouse clicked and held down
         self.drag = False
         self.navigating = False
+        self.post_update = False
         
         #what is the user dragging..a cutline, a handle etc
         self.drag_target = None
