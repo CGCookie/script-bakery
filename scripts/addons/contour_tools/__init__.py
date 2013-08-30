@@ -1343,7 +1343,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             return None
         else:
             data = contour_cache[tool_type]
-            if [self.original_form.name, len(self.bme.faces), len(self.bme.verts)] == data['validate']:
+            if [self.original_form.name, len(self.bme.faces), len(self.bme.verts), len(self.original_form.modifiers)] == data['validate']:
                 normals = data['normals']
                 x_vecs = data['x_vecs']
                 y_vecs = data['y_vecs']
@@ -1381,13 +1381,20 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                     cut.cut_object(context, self.original_form, self.bme)
                     cut.simplify_cross(segments)
-                    cut.update_com()   
+                    
+                    cut.update_com()
                     #cut.verts = verts[i]
                     #cut.verts_simple = verts_simple[i]     
-                    cut.update_screen_coords(context) 
+                     
                     cut.select = False  
                     self.cut_lines.append(cut)
                     self.valid_cuts.append(cut)
+                    self.align_cut(cut, mode='DIRECTION', fine_grain=False)
+                    cut.shift = shifts[i]
+                    cut.int_shift = int_shifts[i]
+                    cut.simplify_cross(segments)
+                    
+                    cut.update_screen_coords(context)
                     
                 self.connect_valid_cuts_to_make_mesh()
                     
@@ -1476,11 +1483,13 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             elif action in {'TRANSFORM', 'SHIFT','ALIGN'}:
                 cut = self.cut_lines[undo['cut']]
                 for prop in cut_props:
+                    print(prop)
                     setattr(cut, prop, undo[prop])
                     
                     
                 self.selected.cut_object(context, self.original_form, self.bme)
                 self.selected.simplify_cross(self.segments)
+                self.align_cut(self.selected, mode = 'DIRECTION', fine_grain = False)
                 self.selected.update_screen_coords(context)
                 self.connect_valid_cuts_to_make_mesh()
                 
@@ -1598,6 +1607,18 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         else:
             shift_b = False    
         
+        
+        if mode == 'DIRECTION':
+            #this essentially just reverses the loop if it's got an anticlockwise rotation
+            if ahead != len(self.valid_cuts):
+                cut.align_to_other(self.valid_cuts[ahead], auto_align = False, direction_only = True)
+        
+                        
+            elif behind != -1:
+                cut.align_to_other(self.valid_cuts[behind], auto_align = False, direction_only = True)
+                
+            
+            
         #align between
         if mode == 'BETWEEN':      
             if shift_a and shift_b:

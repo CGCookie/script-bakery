@@ -880,7 +880,7 @@ class ContourCutLine(object):
         return ideal_to_com
         
         
-    def align_to_other(self,other, auto_align = True):
+    def align_to_other(self,other, auto_align = True, direction_only = False):
         
         '''
         Modifies vert order of self to  provide best
@@ -970,93 +970,96 @@ class ContourCutLine(object):
                 self.verts_simple.reverse()
                 self.verts.reverse()
                 
-        #iterate all verts and "handshake problem" them
-        #into a dictionary?  That's not very efficient!
-        if auto_align:
-            self.shift = 0
-            self.int_shift = 0
-            self.simplify_cross(len(self.eds_simple))
-        edge_len_dict = {}
-        for i in range(0,len(verts_1)):
-            for n in range(0,len(self.verts_simple)):
-                edge = (i,n)
-                vect = self.verts_simple[n] - verts_1[i]
-                edge_len_dict[edge] = vect.length
         
-        shift_lengths = []
-        #shift_cross = []
-        for shift in range(0,len(self.verts_simple)):
-            tmp_len = 0
-            #tmp_cross = 0
-            for i in range(0, len(self.verts_simple)):
-                shift_mod = int(math.fmod(i+shift, len(self.verts_simple)))
-                tmp_len += edge_len_dict[(i,shift_mod)]
-            shift_lengths.append(tmp_len)
-               
-        final_shift = shift_lengths.index(min(shift_lengths))
-        if final_shift != 0:
-            print('pre rough shift alignment % f' % self.connectivity_analysis(other))
-            print("rough shifting verts by %i segments" % final_shift)
-            self.int_shift = final_shift
-            self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
-            print('post rough shift alignment % f' % self.connectivity_analysis(other))
         
-        if auto_align and cyclic:
-            alignment_quality = self.connectivity_analysis(other)
-            #pct_change = 1
-            left_bound = -1
-            right_bound = 1
-            iterations = 0
-            while iterations < 20:
-                
-                iterations += 1
-                width = right_bound - left_bound
-                
-                self.shift = 0.5 * (left_bound + right_bound)
-                self.simplify_cross(len(self.eds_simple)) #TODO not sure this needs to happen here
-                #self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
-                alignment_quality = self.connectivity_analysis(other)
-                
-                self.shift = left_bound
+        if not direction_only:
+            #iterate all verts and "handshake problem" them
+            #into a dictionary?  That's not very efficient!
+            if auto_align:
+                self.shift = 0
+                self.int_shift = 0
                 self.simplify_cross(len(self.eds_simple))
-                #self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
-                alignment_quality_left = self.connectivity_analysis(other)
-                
-                self.shift = right_bound
-                self.simplify_cross(len(self.eds_simple))
-                #self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
-                alignment_quality_right = self.connectivity_analysis(other)
-                
-                if alignment_quality_left < alignment_quality and alignment_quality_right < alignment_quality:
-                    
-                    left_bound += width*1/8
-                    right_bound -= width*1/8
-                    
-                    
-                elif alignment_quality_left > alignment_quality and alignment_quality_right > alignment_quality:
-                    
-                    if alignment_quality_right > alignment_quality_left:
-                        left_bound = right_bound - 0.75 * width
-                    else:
-                        right_bound = left_bound + 0.75* width
-                    
-                elif alignment_quality_left < alignment_quality and alignment_quality_right > alignment_quality:
-                    #print('move to the right')
-                    #right becomes the new middle
-                    left_bound += width * 1/4
+            edge_len_dict = {}
+            for i in range(0,len(verts_1)):
+                for n in range(0,len(self.verts_simple)):
+                    edge = (i,n)
+                    vect = self.verts_simple[n] - verts_1[i]
+                    edge_len_dict[edge] = vect.length
             
-                elif alignment_quality_left > alignment_quality and alignment_quality_right < alignment_quality:
-                    #print('move to the left')
-                    #right becomes the new middle
-                    right_bound -= width * 1/4
+            shift_lengths = []
+            #shift_cross = []
+            for shift in range(0,len(self.verts_simple)):
+                tmp_len = 0
+                #tmp_cross = 0
+                for i in range(0, len(self.verts_simple)):
+                    shift_mod = int(math.fmod(i+shift, len(self.verts_simple)))
+                    tmp_len += edge_len_dict[(i,shift_mod)]
+                shift_lengths.append(tmp_len)
+                   
+            final_shift = shift_lengths.index(min(shift_lengths))
+            if final_shift != 0:
+                print('pre rough shift alignment % f' % self.connectivity_analysis(other))
+                print("rough shifting verts by %i segments" % final_shift)
+                self.int_shift = final_shift
+                self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
+                print('post rough shift alignment % f' % self.connectivity_analysis(other))
+            
+            if auto_align and cyclic:
+                alignment_quality = self.connectivity_analysis(other)
+                #pct_change = 1
+                left_bound = -1
+                right_bound = 1
+                iterations = 0
+                while iterations < 20:
                     
+                    iterations += 1
+                    width = right_bound - left_bound
                     
-                #print('pct change iteration %i was %f' % (iterations, pct_change))
-                #print(alignment_quality)
-                #print(alignment_quality_left)
-                #print(alignment_quality_right)
-            print('converged or didnt in %i iterations' % iterations)
-            print('final alignment quality is %f' % alignment_quality)
+                    self.shift = 0.5 * (left_bound + right_bound)
+                    self.simplify_cross(len(self.eds_simple)) #TODO not sure this needs to happen here
+                    #self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
+                    alignment_quality = self.connectivity_analysis(other)
+                    
+                    self.shift = left_bound
+                    self.simplify_cross(len(self.eds_simple))
+                    #self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
+                    alignment_quality_left = self.connectivity_analysis(other)
+                    
+                    self.shift = right_bound
+                    self.simplify_cross(len(self.eds_simple))
+                    #self.verts_simple = contour_utilities.list_shift(self.verts_simple, final_shift)
+                    alignment_quality_right = self.connectivity_analysis(other)
+                    
+                    if alignment_quality_left < alignment_quality and alignment_quality_right < alignment_quality:
+                        
+                        left_bound += width*1/8
+                        right_bound -= width*1/8
+                        
+                        
+                    elif alignment_quality_left > alignment_quality and alignment_quality_right > alignment_quality:
+                        
+                        if alignment_quality_right > alignment_quality_left:
+                            left_bound = right_bound - 0.75 * width
+                        else:
+                            right_bound = left_bound + 0.75* width
+                        
+                    elif alignment_quality_left < alignment_quality and alignment_quality_right > alignment_quality:
+                        #print('move to the right')
+                        #right becomes the new middle
+                        left_bound += width * 1/4
+                
+                    elif alignment_quality_left > alignment_quality and alignment_quality_right < alignment_quality:
+                        #print('move to the left')
+                        #right becomes the new middle
+                        right_bound -= width * 1/4
+                        
+                        
+                    #print('pct change iteration %i was %f' % (iterations, pct_change))
+                    #print(alignment_quality)
+                    #print(alignment_quality_left)
+                    #print(alignment_quality_right)
+                print('converged or didnt in %i iterations' % iterations)
+                print('final alignment quality is %f' % alignment_quality)
               
     def active_element(self,context,x,y):
         settings = context.user_preferences.addons['contour_tools'].preferences
@@ -1232,22 +1235,23 @@ class CutLineManipulatorWidget(object):
         
         #In hotkey mode G, this will be spawned at the mouse
         #essentially being the initial mouse
-        self_vec = Vector((self.x,self.y))
-        loc_vec = mouse_vec - self_vec
+        widget_screen = Vector((self.x,self.y))
+        mouse_wrt_widget = mouse_vec - widget_screen
+        com_screen = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.initial_com)
         
         
-        region = context.region  
+        region = context.region
         rv3d = context.space_data.region_3d
         world_mouse = region_2d_to_location_3d(region, rv3d, (mouse_x, mouse_y), self.initial_com)
         world_widget = region_2d_to_location_3d(region, rv3d, (self.x, self.y), self.initial_com)
         
         if not self.transform and not self.hotkey:
             #this represents a switch...since by definition we were not transforming to begin with
-            if loc_vec.length > self.inner_radius:
+            if mouse_wrt_widget.length > self.inner_radius:
                 self.transform = True
                 
                 #identify which quadrant we are in
-                screen_angle = math.atan2(loc_vec[1], loc_vec[0])
+                screen_angle = math.atan2(mouse_wrt_widget[1], mouse_wrt_widget[0])
                 loc_angle = screen_angle - self.angle
                 loc_angle = math.fmod(loc_angle + 4 * math.pi, 2 * math.pi)  #correct for any negatives
                 
@@ -1272,7 +1276,7 @@ class CutLineManipulatorWidget(object):
             
         else:
             #we were transforming but went back in the circle
-            if loc_vec.length < self.inner_radius and not self.hotkey:
+            if mouse_wrt_widget.length < self.inner_radius and not self.hotkey:
                 
                 self.cancel_transform()
                 self.transform = False
@@ -1288,27 +1292,34 @@ class CutLineManipulatorWidget(object):
                 if self.transform_mode == 'EDGE_SLIDE':
                     
                     world_vec = world_mouse - world_widget
-                    screen_dist = loc_vec.length - self.inner_radius
+                    screen_dist = mouse_wrt_widget.length - self.inner_radius
+                    
+                    print(screen_dist)
+                    
                     if self.hotkey:
                         factor =  1
                     else:
-                        factor = screen_dist/loc_vec.length
+                        factor = screen_dist/mouse_wrt_widget.length
                     
                     
                     if self.a:
+                        a_screen = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.a)
+                        vec_a_screen = a_screen - com_screen
+                        vec_a_screen_norm = vec_a_screen.normalized()
+                        
                         vec_a = self.a - self.initial_com
                         vec_a_dir = vec_a.normalized()
                         
                         
-                        if world_vec.dot(vec_a_dir) > 0 and factor * world_vec.dot(vec_a_dir) < vec_a.length:
-                            translate = factor * world_vec.dot(vec_a_dir) * vec_a_dir
+                        if mouse_wrt_widget.dot(vec_a_screen_norm) > 0 and factor * mouse_wrt_widget.dot(vec_a_screen_norm) < vec_a_screen.length:
+                            translate = factor * mouse_wrt_widget.dot(vec_a_screen_norm)/vec_a_screen.length * vec_a
                             
                             if self.a_no.dot(self.initial_plane_no) < 0:
                                 v = -1 * self.a_no
                             else:
                                 v = self.a_no
                             
-                            scale = (factor * world_vec.dot(vec_a_dir))/vec_a.length
+                            scale = factor * mouse_wrt_widget.dot(vec_a_screen_norm)/vec_a_screen.length
                             quat = contour_utilities.rot_between_vecs(self.initial_plane_no, v, factor = scale)
                             inter_no = quat * self.initial_plane_no
                             
@@ -1323,24 +1334,30 @@ class CutLineManipulatorWidget(object):
                         
                         
                     if self.b:
+                        b_screen = location_3d_to_region_2d(context.region, context.space_data.region_3d,self.b)
+                        vec_b_screen = b_screen - com_screen
+                        vec_b_screen_norm = vec_b_screen.normalized()
+                        
                         vec_b = self.b - self.initial_com
                         vec_b_dir = vec_b.normalized()
                         
-                        if world_vec.dot(vec_b_dir) > 0 and factor * world_vec.dot(vec_b_dir) < vec_b.length:
-                            translate = factor * world_vec.dot(vec_b_dir)* vec_b_dir
+                        
+                        if mouse_wrt_widget.dot(vec_b_screen_norm) > 0 and factor * mouse_wrt_widget.dot(vec_b_screen_norm) < vec_b_screen.length:
+                            translate = factor * mouse_wrt_widget.dot(vec_b_screen_norm)/vec_b_screen.length * vec_b
                             
                             if self.b_no.dot(self.initial_plane_no) < 0:
                                 v = -1 * self.b_no
                             else:
                                 v = self.b_no
                             
-                            scale = (factor * world_vec.dot(vec_b_dir))/vec_b.length
+                            scale = factor * mouse_wrt_widget.dot(vec_b_screen_norm)/vec_b_screen.length
                             quat = contour_utilities.rot_between_vecs(self.initial_plane_no, v, factor = scale)
                             inter_no = quat * self.initial_plane_no
+                            
                             self.cut_line.plane_com = self.initial_com + translate
                             self.cut_line.plane_no = inter_no
-                            
                             return {'REHIT','RECUT'}
+                            
                         
                         elif not self.a and world_vec.dot(vec_b_dir) < 0:
                             translate = factor * world_vec.dot(self.initial_plane_no) * self.initial_plane_no
@@ -1357,10 +1374,10 @@ class CutLineManipulatorWidget(object):
                 if self.transform_mode == 'NORMAL_TRANSLATE':
                     print('translating')
                     #the pixel distance used to scale the translation
-                    screen_dist = loc_vec.length - self.inner_radius
+                    screen_dist = mouse_wrt_widget.length - self.inner_radius
                     
                     world_vec = world_mouse - world_widget
-                    translate = screen_dist/loc_vec.length * world_vec.dot(self.initial_plane_no) * self.initial_plane_no
+                    translate = screen_dist/mouse_wrt_widget.length * world_vec.dot(self.initial_plane_no) * self.initial_plane_no
                     
                     self.cut_line.plane_com = self.initial_com + translate
                     
@@ -1397,7 +1414,7 @@ class CutLineManipulatorWidget(object):
                     #self.cut_line.plane_z = self.cut_line.plane_com + 2 * self.initial_plane_no
                     
                     #identify which quadrant we are in
-                    screen_angle = math.atan2(loc_vec[1], loc_vec[0])
+                    screen_angle = math.atan2(mouse_wrt_widget[1], mouse_wrt_widget[0])
                     
                     if self.transform_mode == 'ROTATE_VIEW':
                         if not self.hotkey:
@@ -1540,6 +1557,13 @@ class CutLineManipulatorWidget(object):
     def draw(self, context):
         
         settings = context.user_preferences.addons['contour_tools'].preferences
+        
+        if self.a:
+            contour_utilities.draw_3d_points(context, [self.a], self.color3, 5)
+        if self.b:
+            contour_utilities.draw_3d_points(context, [self.b], self.color3, 5)
+            
+            
         if not self.transform and not self.hotkey:
             #draw wedges
             #contour_utilities.draw_polyline_from_points(context, self.wedge_1, self.color, self.line_width, "GL_LINES")
