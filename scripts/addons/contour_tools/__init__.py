@@ -467,7 +467,6 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel):
         col = layout.column()
         col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')
         #col.operator("cgcookie.retopo_poly_sketch", text="Sketch Poly Strips", icon='MESH_UVSPHERE')
-        col.operator("cgcookie.clear_cache", text = "Clear Cache", icon = 'CANCEL')
         
         cgc_contour = context.user_preferences.addons['contour_tools'].preferences
         row = layout.row()
@@ -477,6 +476,9 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel):
         row = layout.row()
         row.prop(cgc_contour, "recover")
         row.prop(cgc_contour, "recover_clip")
+
+        col = layout.column()
+        col.operator("cgcookie.clear_cache", text = "Clear Cache")
 
 class CGCOOKIE_OT_retopo_contour_menu(bpy.types.Menu):  
     bl_label = "Retopology"
