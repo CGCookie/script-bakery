@@ -1418,6 +1418,10 @@ class CutLineManipulatorWidget(object):
                             
                             self.cut_line.plane_com = self.initial_com + translate
                             self.cut_line.plane_no = inter_no
+                            
+                            self.cut_line.vec_x = quat * self.vec_x.copy()
+                            self.cut_line.vec_y = quat * self.vec_y.copy()
+                            
                             return {'REHIT','RECUT'}
                         
                         elif not self.b and world_vec.dot(vec_a_dir) < 0:
@@ -1449,6 +1453,8 @@ class CutLineManipulatorWidget(object):
                             
                             self.cut_line.plane_com = self.initial_com + translate
                             self.cut_line.plane_no = inter_no
+                            self.cut_line.vec_x = quat * self.vec_x.copy()
+                            self.cut_line.vec_y = quat * self.vec_y.copy()
                             return {'REHIT','RECUT'}
                             
                         
