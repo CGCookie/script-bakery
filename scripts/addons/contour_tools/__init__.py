@@ -124,7 +124,7 @@ def clear_mesh_cache():
     
     if 'tmp' in contour_mesh_cache and contour_mesh_cache['tmp']:
         old_obj = contour_mesh_cache['tmp']
-        bpy.data.objects.remove(old_obj.name)
+        bpy.data.objects.remove(old_obj)
         del contour_mesh_cache['tmp']
         
 
@@ -466,7 +466,9 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel):
         layout = self.layout
         col = layout.column()
         col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')
-        col.operator("cgcookie.retopo_poly_sketch", text="Sketch Poly Strips", icon='MESH_UVSPHERE')
+        #col.operator("cgcookie.retopo_poly_sketch", text="Sketch Poly Strips", icon='MESH_UVSPHERE')
+        col.operator("cgcookie.clear_cache", text = "Clear Cache", icon = 'CANCEL')
+        
         cgc_contour = context.user_preferences.addons['contour_tools'].preferences
         row = layout.row()
         row.prop(cgc_contour, "cyclic")
@@ -487,6 +489,23 @@ class CGCOOKIE_OT_retopo_contour_menu(bpy.types.Menu):
         layout.operator_context = 'INVOKE_DEFAULT'
 
         layout.operator("cgcookie.retop_contour", text="Draw Contours")  
+
+class CGCOOKIE_OT_retopo_cache_clear(bpy.types.Operator):
+    '''
+    Removes the temporary object and mesh data from the cache.
+    Do this if you have altered your original form in any way   
+    '''
+    bl_idname = "cgcookie.clear_cache"
+    bl_label = "Clear Contour Cache" 
+    
+    def execute(self,context):
+        
+        clear_mesh_cache()
+        
+        return {'FINISHED'}
+        
+        
+
 
 def retopo_draw_callback(self,context):
     
@@ -2512,8 +2531,9 @@ addon_keymaps = []
 def register():
     bpy.utils.register_class(ContourToolsAddonPreferences)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour_panel)
+    bpy.utils.register_class(CGCOOKIE_OT_retopo_cache_clear)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour)
-    bpy.utils.register_class(CGCOOKIE_OT_retopo_poly_sketch)
+    #bpy.utils.register_class(CGCOOKIE_OT_retopo_poly_sketch)
     bpy.utils.register_class(CGCOOKIE_OT_retopo_contour_menu)
 
     # Create the addon hotkeys
@@ -2529,10 +2549,12 @@ def register():
 
 #unregistration
 def unregister():
+    clear_mesh_cache()
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour)
+    bpy.utils.unregister_class(CGCOOKIE_OT_retopo_cache_clear)
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour_panel)
     bpy.utils.unregister_class(CGCOOKIE_OT_retopo_contour_menu)
-    bpy.utils.unregister_class(CGCOOKIE_OT_retopo_poly_sketch)
+    #bpy.utils.unregister_class(CGCOOKIE_OT_retopo_poly_sketch)
     bpy.utils.unregister_class(ContourToolsAddonPreferences)
 
     # Remove addon hotkeys
