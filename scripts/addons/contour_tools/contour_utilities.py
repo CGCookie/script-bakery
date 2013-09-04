@@ -1433,23 +1433,36 @@ def intersect_paths(path1, path2, cyclic1 = False, cyclic2 = False, threshold = 
     inds = []
     for i in range(0,len(path1)-1 + 1*cyclic1):
         
-        n = int(math.fmod(i+1), len(path1))
+        n = int(math.fmod(i+1, len(path1)))
         v1 = path1[n]
         v2 = path1[i]
         
+        print([i,n])
         for j in range(0,len(path2)-1 + 1*cyclic2):
             
-            m = int(math.fmod(j+1, len(path1)))
-            v3 = path1[m]
-            v4 = path1[j]
+            m = int(math.fmod(j+1, len(path2)))
+            v3 = path2[m]
+            v4 = path2[j]
             
             #closes point on path1 edge, closes_point on path 2 edge
-            inter_1, inter_2 = intersect_line_line(v1,v2,v3,v4)
             
-            diff = inter_2 - inter_1
-            if diff.length < threshold:
-                intersections.append(inter_1)
-                inds.append([i,j])
+            intersect = intersect_line_line(v1,v2,v3,v4)
+            
+            if intersect:
+                #make sure the intersection is within the segment
+                
+                
+                
+                inter_1 = intersect[0]
+                verif1 = intersect_point_line(inter_1, v1,v2)
+                
+                inter_2 = intersect[1]
+                verif2 = intersect_point_line(inter_1, v3,v4)
+            
+                diff = inter_2 - inter_1
+                if diff.length < threshold and verif1[1] > 0 and verif2[1] > 0 and verif1[1] < 1 and verif2[1] < 1:
+                    intersections.append(.5 * (inter_1 + inter_2))
+                    inds.append([i,j])
     
     return intersections, inds
             
@@ -1493,7 +1506,7 @@ def pole_detector(bme):
     pole_inds = []
     
     for vert in bme.verts:
-        if len(vert.link_edges) in {3,5}:
+        if len(vert.link_edges) in {3,5,6}:
             pole_inds.append(vert.index)
             
     return pole_inds
