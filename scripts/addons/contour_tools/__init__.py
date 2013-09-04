@@ -670,7 +670,6 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
         if not self.hot_key and event.type in {'RET', 'NUMPAD_ENTER'} and event.value == 'PRESS':
             
-            
             if context.mode == 'EDIT_MESH':
                 back_to_edit = True
             else:
@@ -680,8 +679,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
             #the world_matrix of the orignal form
             orig_mx = self.original_form.matrix_world
-            orig_ims = orig_mx.inverted()
-            
+    
             #the world matrix of the destination (retopo) mesh
             reto_mx = self.destination_ob.matrix_world
             reto_imx = reto_mx.inverted()
@@ -742,7 +740,6 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 context.scene.objects.active = self.destination_ob
                 
                 if context.space_data.local_view:
-                    mx_copy = context.space_data.region_3d.view_matrix.copy()
                     view_loc = context.space_data.region_3d.view_location.copy()
                     view_rot = context.space_data.region_3d.view_rotation.copy()
                     view_dist = context.space_data.region_3d.view_distance
@@ -1273,9 +1270,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     #No active cut line under mouse -> make a new one
                     #we don't carer about ctrl
                     elif not self.hover_target:
-                        v3d = context.space_data
                         self.drag = True
-                        
                         
                         #clear selection (perhaps self.selected.select = False, self.selected = None)
                         for cut in self.cut_lines:
