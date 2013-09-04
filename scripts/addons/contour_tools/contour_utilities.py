@@ -1487,6 +1487,18 @@ def  fit_path_to_endpoints(path,v0,v1):
     return new_path
     
 
+
+def pole_detector(bme):
+    
+    pole_inds = []
+    
+    for vert in bme.verts:
+        if len(vert.link_edges) in {3,5}:
+            pole_inds.append(vert.index)
+            
+    return pole_inds
+        
+    
 def mix_path(path1,path2,pct = .5):
     '''
     will produce a blended path between path1 and 2 by
