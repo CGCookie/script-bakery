@@ -23,7 +23,7 @@ bl_info = {
     "name": "Contour Retopology Tool",
     "description": "A tool to retopologize forms quickly with contour strokes.",
     "author": "Patrick Moore",
-    "version": (0, 0, 1),
+    "version": (1, 0, 0),
     "blender": (2, 6, 8),
     "location": "View 3D > Tool Shelf",
     "warning": 'Beta',  # used for warning icon and text in addons panel
