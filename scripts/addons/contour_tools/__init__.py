@@ -26,7 +26,7 @@ bl_info = {
     "version": (1, 0, 0),
     "blender": (2, 6, 8),
     "location": "View 3D > Tool Shelf",
-    "warning": 'Beta',  # used for warning icon and text in addons panel
+    "warning": '',  # used for warning icon and text in addons panel
     "wiki_url": "http://cgcookie.com/blender/docs/contour-retopology/",
     "tracker_url": "https://github.com/CGCookie/script-bakery/issues?labels=Contour+Retopology&milestone=1&page=1&state=open",
     "category": "3D View"}
@@ -271,7 +271,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     widget_radius = IntProperty(
             name="Widget Radius",
             description = "Size of cutline widget radius",
-            default=50,
+            default=25,
             min = 20,
             max = 100,
             )
@@ -279,7 +279,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     widget_radius_inner = IntProperty(
             name="Widget Inner Radius",
             description = "Size of cutline widget inner radius",
-            default=15,
+            default=10,
             min = 5,
             max = 30,
             )
