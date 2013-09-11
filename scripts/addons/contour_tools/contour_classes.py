@@ -1303,6 +1303,8 @@ class CutLineManipulatorWidget(object):
         self.vec_y = self.cut_line.vec_y.copy()
         self.initial_plane_no = self.cut_line.plane_no.copy()
         self.initial_seed = self.cut_line.seed_face_index
+        self.initial_int_shift = self.cut_line.int_shift
+        self.initial_shift = self.cut_line.shift
         
         self.wedge_1 = []
         self.wedge_2 = []
@@ -1644,6 +1646,7 @@ class CutLineManipulatorWidget(object):
     
     def cancel_transform(self):
         
+        self.cut_line = ContourCutLine
         #reset our initial values
         self.cut_line.plane_com = self.initial_com
         self.cut_line.plane_no = self.initial_plane_no
@@ -1651,6 +1654,9 @@ class CutLineManipulatorWidget(object):
         self.cut_line.vec_x = self.vec_x
         self.cut_line.vec_y = self.vec_y
         self.cut_line.seed_face_index = self.initial_seed
+        
+        self.cut_line.int_shift = self.initial_int_shift
+        self.cut_line.shift = self.initial_shift
                 
                   
     def draw(self, context):

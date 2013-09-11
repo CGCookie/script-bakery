@@ -1173,14 +1173,16 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                     
                     #user just finished using the widget
                     if self.drag_target.desc == 'CUT_LINE' and self.widget_interaction:
-                        if not settings.live_update:
+                        if not settings.live_update: #meaning all this hasn't been done
                             self.drag_target.hit_object(context, self.original_form, method = '3_AXIS_COM')
                             self.drag_target.cut_object(context, self.original_form, self.bme)
                             self.hover_target.simplify_cross(self.segments)    
                             self.hover_target.update_com()        
                             self.hover_target.update_screen_coords(context)
                            
-                        self.align_cut(self.drag_target, mode = 'BETWEEN')
+                        if self.cut_line_widget.transform:
+                            self.align_cut(self.drag_target, mode = 'BETWEEN')
+                        
                         self.connect_valid_cuts_to_make_mesh()
 
                         
