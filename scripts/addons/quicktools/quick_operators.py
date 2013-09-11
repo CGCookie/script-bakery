@@ -1,5 +1,6 @@
 import bpy
 from bpy import ops
+from bpy.props import BoolProperty
 
 
 ### ----------------------- Convienence variables ----------------------- ###
@@ -774,7 +775,87 @@ class setObjectOrigin(bpy.types.Operator):
         return {"FINISHED"}
 
 
+################################################### 
+# Creating operator for edit PET settings
+################################################### 
+
+class petEditSettings(bpy.types.Operator):
+    """Toggle Setting For Mesh Proportional Editing Tool"""
+    bl_idname = "mesh.pet"
+    bl_label = "Toggle Mesh PET"
+
+    setting = bpy.props.StringProperty()
+
+    def execute(self, context):
+
+        setting = self.setting
+
+        if setting == 'use_pressure_size':
+            if unified_size:
+                value = unified.use_pressure_size
+                unified.use_pressure_size = not value 
+
+        return {"FINISHED"}
+
+################################################### 
+# Creating operator for object PET settings
+################################################### 
+
+class petObjectSettings(bpy.types.Operator):
+    """Toggle Setting For Objects Proportional Editing Tool"""
+    bl_idname = "object.pet"
+    bl_label = "Toggle Object PET "
+
+    def execute(self, context):
+
+        pet = context.scene.tool_settings.use_proportional_edit_objects
+        context.scene.tool_settings.use_proportional_edit_objects = not pet
+
+        return {"FINISHED"}
+
 ### ----------------------- Sculpt Operators ----------------------- ###
+
+################################################### 
+# Creating operator for brush settings
+################################################### 
+
+class sculptBrushSetting(bpy.types.Operator):
+    """Toggle Setting For Active Brush"""
+    bl_idname = "sculpt.brush_setting"
+    bl_label = "Toggle Brush Setting"
+
+    setting = bpy.props.StringProperty()
+
+    def execute(self, context):
+
+        setting = self.setting
+        brush = context.tool_settings.sculpt.brush
+
+        unified = context.tool_settings.unified_paint_settings
+        unified_size = unified.use_unified_size
+        unified_strength = unified.use_unified_strength
+
+        if setting == 'use_pressure_size':
+            if unified_size:
+                value = unified.use_pressure_size
+                unified.use_pressure_size = not value 
+            else:
+                value = brush.use_pressure_size
+                brush.use_pressure_size = not value
+        elif setting == 'use_pressure_strength':
+            if unified_strength:
+                value = unified.use_pressure_strength
+                unified.use_pressure_strength = not value 
+            else:
+                value = brush.use_pressure_strength
+                brush.use_pressure_strength = not value
+        elif setting == 'use_frontface':
+            value = brush.use_frontface
+            brush.use_frontface = not value
+        elif setting == 'use_accumulate':
+            value = brush.use_accumulate
+            brush.use_accumulate = not value
+        return {"FINISHED"}
 
 
 ################################################### 

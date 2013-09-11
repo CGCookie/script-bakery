@@ -69,6 +69,30 @@ class QuickObjectOptions(bpy.types.Menu):
             layout.operator("mesh.faces_shade_smooth", icon='SOLID')
             layout.operator("mesh.faces_shade_flat", icon='MESH_UVSPHERE')            
 
+class QuickPETObjects(bpy.types.Menu):
+    bl_label = "Quick Proportional Editing Tool For Objects"
+    bl_idname = "object.quick_pet_menu"
+
+    def draw(self, context):
+        layout = self.layout
+
+        pet = context.scene.tool_settings.use_proportional_edit_objects
+
+        if pet:
+            layout.operator("object.pet", "Disable PET")
+        else:
+            layout.oeprator("object.pet", "Enable Pet")
+
+        layout.separator()
+
+        layout.label("Brush Falloff")
+        layout.operator("brush.curve_preset", text="Smooth", icon='SMOOTHCURVE').shape = 'SMOOTH'
+        layout.operator("brush.curve_preset", text="Round", icon='SPHERECURVE').shape = 'ROUND'
+        layout.operator("brush.curve_preset", text="Root", icon='ROOTCURVE').shape = 'ROOT'
+        layout.operator("brush.curve_preset", text="Sharp", icon='SHARPCURVE').shape = 'SHARP'
+        layout.operator("brush.curve_preset", text="Line", icon='LINCURVE').shape = 'LINE'
+        layout.operator("brush.curve_preset", text="Max", icon='NOCURVE').shape = 'MAX'
+
 def register():
     bpy.utils.register_module(__name__)  
 
