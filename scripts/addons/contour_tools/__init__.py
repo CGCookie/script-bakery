@@ -23,10 +23,10 @@ bl_info = {
     "name": "Contour Retopology Tool",
     "description": "A tool to retopologize forms quickly with contour strokes.",
     "author": "Patrick Moore",
-    "version": (0, 0, 1),
+    "version": (1, 0, 0),
     "blender": (2, 6, 8),
     "location": "View 3D > Tool Shelf",
-    "warning": 'Beta',  # used for warning icon and text in addons panel
+    "warning": '',  # used for warning icon and text in addons panel
     "wiki_url": "http://cgcookie.com/blender/docs/contour-retopology/",
     "tracker_url": "https://github.com/CGCookie/script-bakery/issues?labels=Contour+Retopology&milestone=1&page=1&state=open",
     "category": "3D View"}
@@ -271,7 +271,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     widget_radius = IntProperty(
             name="Widget Radius",
             description = "Size of cutline widget radius",
-            default=50,
+            default=25,
             min = 20,
             max = 100,
             )
@@ -279,7 +279,7 @@ class ContourToolsAddonPreferences(AddonPreferences):
     widget_radius_inner = IntProperty(
             name="Widget Inner Radius",
             description = "Size of cutline widget inner radius",
-            default=15,
+            default=10,
             min = 5,
             max = 30,
             )
@@ -467,7 +467,6 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel):
         col = layout.column()
         col.operator("cgcookie.retop_contour", text="Draw Contours", icon='MESH_UVSPHERE')
         #col.operator("cgcookie.retopo_poly_sketch", text="Sketch Poly Strips", icon='MESH_UVSPHERE')
-        col.operator("cgcookie.clear_cache", text = "Clear Cache", icon = 'CANCEL')
         
         cgc_contour = context.user_preferences.addons['contour_tools'].preferences
         row = layout.row()
@@ -477,6 +476,9 @@ class CGCOOKIE_OT_retopo_contour_panel(bpy.types.Panel):
         row = layout.row()
         row.prop(cgc_contour, "recover")
         row.prop(cgc_contour, "recover_clip")
+
+        col = layout.column()
+        col.operator("cgcookie.clear_cache", text = "Clear Cache")
 
 class CGCOOKIE_OT_retopo_contour_menu(bpy.types.Menu):  
     bl_label = "Retopology"
