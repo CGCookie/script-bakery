@@ -715,18 +715,49 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
             #this is tricky, I'm hoping that because my vert list is
             #actually composed of BMVerts that this will add in mesh data
             #smoothly with no problems.
+            
+            
+            if len(self.valid_cuts) == 1 and self.existing_cut and len(self.faces) == 0:
+                
+                #gather a few
+                n_lines = len(self.valid_cuts[0].verts_simple)
+                cyclic = 0 in self.valid_cuts[0].eds_simple[-1]
+                n_rings = 2
+                
+                #group our new verts and selected verts together
+                bmverts.extend(self.sel_verts)
+                print('there are this many bmverts now')
+                print(len(bmverts))
+                bridge = False #we do the bridging manually
+                total_faces = []
+                for j in range(0,n_rings - 1): #there are only 2 rings...but i left it here for readability
+                    for i in range(0,n_lines-1):
+                        ind0 = j * n_lines + i
+                        ind1 = j * n_lines + (i + 1)
+                        ind2 = (j + 1) * n_lines + (i + 1)
+                        ind3 = (j + 1) * n_lines + i
+                        total_faces.append((ind0,ind1,ind2,ind3))
+                
+                    if cyclic:
+                        ind0 = (j + 1) * n_lines - 1
+                        ind1 = j * n_lines + int(math.fmod((j+1)*n_lines, n_lines))
+                        ind2 = ind0 + 1
+                        ind3 = ind0 + n_lines
+                        total_faces.append((ind0,ind1,ind2,ind3))
+            
+                self.faces = total_faces
+            
             bmfaces = []
             for face in self.faces:
 
                 #actual BMVerts not indices I think?
                 new_face = tuple([bmverts[i] for i in face])
                 bmfaces.append(bm.faces.new(new_face))
-            
-            
+                                    
             # Finish up, write the modified bmesh back to the mesh
-            
             #if editmode...we have to do it this way
             if context.mode == 'EDIT_MESH':
+                print('try to update the edit mesh')
                 bmesh.update_edit_mesh(self.dest_me, tessface=False, destructive=True)
             
             #if object mode....we do it like this
@@ -1663,7 +1694,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
 
     def sort_cuts(self):
         
-        if len(self.cut_lines) < 2:
+        if len(self.cut_lines) < 2 and not self.existing_cut:
             print('waiting on other cut lines')
             self.verts = []
             self.edges = []
@@ -1677,7 +1708,15 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         #a mesh
         valid_cuts = [c_line for c_line in self.cut_lines if c_line.verts != [] and c_line.verts_simple != []]
         self.cut_lines = valid_cuts
+        
         if len(valid_cuts) < 2:
+            print('for some reason our cut lines dont add up')
+            
+            if self.existing_cut and len(valid_cuts) == 1:
+                print('however there is an existing cut to bridge to')
+                print('aligning existing cut')
+                self.valid_cuts = valid_cuts
+                self.existing_cut.align_to_other(valid_cuts[0], auto_align = False)
             return
         
 
@@ -1844,7 +1883,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         total_edges = []
         total_faces = []
         
-        if len(self.valid_cuts) < 2:
+        if len(self.valid_cuts) < 2 and not self.existing_cut:
             print('waiting on other cut lines')
             self.verts = []
             self.edges = []
@@ -1857,6 +1896,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         n_lines = len(self.valid_cuts[0].verts_simple)
         
         
+        print('work out the edges')
         #work out the connectivity edges
         for i, cut_line in enumerate(self.valid_cuts):
             for v in cut_line.verts_simple:
@@ -1871,6 +1911,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
         
         cyclic = 0 in self.valid_cuts[0].eds_simple[-1]
         
+        print('work out the faces')
         #work out the connectivity faces:
         for j in range(0,n_rings - 1):
             for i in range(0,n_lines-1):
@@ -1889,6 +1930,7 @@ class CGCOOKIE_OT_retopo_contour(bpy.types.Operator):
                 
 
         self.follow_lines = []
+        print('make the follow lines')
         for i in range(0,len(self.valid_cuts[0].verts_simple)):
             tmp_line = []
             if self.existing_cut:
