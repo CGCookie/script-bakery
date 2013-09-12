@@ -80,8 +80,66 @@ class QuickSculptTools(bpy.types.Menu):
         else:
             layout.operator("sculpt.axislock", 'Enable Z Lock').axis = 1
 
+#Create menu for brush specific settings
+class QuickBrushSettings(bpy.types.Menu):
+    bl_label = "Quick Brush Settings"
+    bl_idname = "sculpt.brush_settings_menu"
 
+    def draw(self, context):
+        layout = self.layout
 
+        brush = context.tool_settings.sculpt.brush
+        unified = context.tool_settings.unified_paint_settings
+        unified_size = unified.use_unified_size
+        unified_strength = unified.use_unified_strength
+        
+        if unified_size:
+            if unified.use_pressure_size:
+                pressure_size = layout.operator("sculpt.brush_setting", "Disable Size Pressure")
+                pressure_size.setting = 'use_pressure_size'
+            else:
+                pressure_size = layout.operator("sculpt.brush_setting", "Enable Size Pressure")
+                pressure_size.setting = 'use_pressure_size'
+        else:
+            if brush.use_pressure_size:
+                pressure_size = layout.operator("sculpt.brush_setting", "Disable Size Pressure")
+                pressure_size.setting = 'use_pressure_size'
+            else:
+                pressure_size = layout.operator("sculpt.brush_setting", "Enable Size Pressure")
+                pressure_size.setting = 'use_pressure_size'
+
+        if unified_strength:
+            if unified.use_pressure_strength:
+                pressure_strength = layout.operator("sculpt.brush_setting", "Disable Strength Pressure")
+                pressure_strength.setting = 'use_pressure_strength'
+            else:
+                pressure_strength = layout.operator("sculpt.brush_setting", "Enable Strength Pressure")
+                pressure_strength.setting = 'use_pressure_strength'
+        else:
+            if brush.use_pressure_strength:
+                pressure_strength = layout.operator("sculpt.brush_setting", "Disable Strength Pressure")
+                pressure_strength.setting = 'use_pressure_strength'
+            else:
+                pressure_strength = layout.operator("sculpt.brush_setting", "Enable Strength Pressure")
+                pressure_strength.setting = 'use_pressure_strength'
+        
+        layout.separator()
+
+        frontface = layout.operator("sculpt.brush_setting", "Front Faces Only")
+        frontface.setting = 'use_frontface'
+        accumulate = layout.operator("sculpt.brush_setting", "Accumulate")
+        accumulate.setting = 'use_accumulate'
+        
+
+        layout.separator()
+
+        layout.label("Brush Falloff")
+        layout.operator("brush.curve_preset", text="Smooth", icon='SMOOTHCURVE').shape = 'SMOOTH'
+        layout.operator("brush.curve_preset", text="Round", icon='SPHERECURVE').shape = 'ROUND'
+        layout.operator("brush.curve_preset", text="Root", icon='ROOTCURVE').shape = 'ROOT'
+        layout.operator("brush.curve_preset", text="Sharp", icon='SHARPCURVE').shape = 'SHARP'
+        layout.operator("brush.curve_preset", text="Line", icon='LINCURVE').shape = 'LINE'
+        layout.operator("brush.curve_preset", text="Max", icon='NOCURVE').shape = 'MAX'
 
 ### ------------ New Hotkeys and registration ------------ ###   
 
@@ -89,6 +147,7 @@ class QuickSculptTools(bpy.types.Menu):
 
 def register():
     bpy.utils.register_class(QuickSculptTools)
+    bpy.utils.register_class(QuickBrushSettings)
     
    #  wm = bpy.context.window_manager   
    #  # create the Sculpt hotkeys
@@ -113,6 +172,7 @@ def unregister():
 
     #unregister the new operators 
     bpy.utils.unregister_class(QuickSculptTools)
+    bpy.utils.unregister_class(QuickBrushSettings)
     
     # # remove keymaps when add-on is deactivated
     # wm = bpy.context.window_manager

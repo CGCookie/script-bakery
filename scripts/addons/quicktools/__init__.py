@@ -100,6 +100,11 @@ def register():
    kmi.active = True
    addon_keymaps.append((km, kmi))
 
+   kmi = km.keymap_items.new('wm.call_menu', 'W', 'PRESS', alt=True)
+   kmi.properties.name = 'object.quick_pet_menu'
+   kmi.active = True
+   addon_keymaps.append((km, kmi))
+
    # create the edit mode tools menu hotkey
    km = kc.keymaps.new(name='Mesh')
    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
@@ -111,6 +116,10 @@ def register():
    km = kc.keymaps.new(name='Sculpt')
    kmi = km.keymap_items.new('wm.call_menu', 'Q', 'PRESS')
    kmi.properties.name = 'sculpt.tools_menu'
+   kmi.active = True
+
+   kmi = km.keymap_items.new('wm.call_menu', 'W', 'PRESS')
+   kmi.properties.name = 'sculpt.brush_settings_menu'
    kmi.active = True
 
    kmi = km.keymap_items.new('sculpt.symmetry', 'X', 'PRESS', shift=True)
