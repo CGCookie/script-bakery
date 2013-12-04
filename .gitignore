@@ -34,3 +34,6 @@ nosetests.xml
 .project
 .pydevproject
 development/contour_tools.zip
+
+# OSX
+.DS_Store
