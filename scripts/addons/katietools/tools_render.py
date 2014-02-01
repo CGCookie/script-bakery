@@ -605,28 +605,28 @@ class OBJECT_OT_cyclesMaterialFoundation(bpy.types.Operator):
         diffuse.inputs[0].default_value = diffColor
         diffuse.location = -235,300
         
-        glossy = tree.nodes.new('BSDF_GLOSSY')
+        glossy = tree.nodes.new('ShaderNodeBsdfGlossy')
         glossy.inputs[0].default_value = glossColor
         glossy.location = -235,150
         
-        mixShader = tree.nodes.new('MIX_SHADER')
+        mixShader = tree.nodes.new('ShaderNodeMixShader')
         mixShader.location = 40,340
         
-        layWeight = tree.nodes.new('LAYER_WEIGHT')
+        layWeight = tree.nodes.new('ShaderNodeLayerWeight')
         layWeight.location = -1080,300
         
-        ramp = tree.nodes.new('VALTORGB')
+        ramp = tree.nodes.new('ShaderNodeValToRGB')
         ramp.location = -800,300
         ramp.color_ramp.interpolation = 'B_SPLINE'
         elements = ramp.color_ramp.elements
         elements[0].position = rampPos1
         
-        mixA = tree.nodes.new('MIX_RGB')
+        mixA = tree.nodes.new('ShaderNodeMixRGB')
         mixA.location = -435,475
         mixA.inputs[1].default_value = mixA_col1
         mixA.inputs[2].default_value = mixA_col2
         
-        mixB = tree.nodes.new('MIX_RGB')
+        mixB = tree.nodes.new('ShaderNodeMixRGB')
         mixB.location = -435,150
         mixB.inputs[1].default_value = mixB_col1
         mixB.inputs[2].default_value = mixB_col2

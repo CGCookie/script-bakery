@@ -259,22 +259,22 @@ def importMatcapImages(context):
                 tree = bpy.data.materials[matName].node_tree
                 links = tree.links
                 
-                geo = tree.nodes.new('GEOMETRY')
+                geo = tree.nodes.new('ShaderNodeGeometry')
                 geo.name = 'KTmc_Geometry'
                 geo.location = -200,0
                 
-                map = tree.nodes.new('MAPPING')
+                map = tree.nodes.new('ShaderNodeMapping')
                 map.name = 'KTmc_Mapping'
                 map.scale = (1.0,-1.0,1.0)
                 links.new(geo.outputs[5],map.inputs[0])
                 
-                tex = tree.nodes.new('TEXTURE')
+                tex = tree.nodes.new('ShaderNodeTexture')
                 tex.name = 'KTmc_Texture'
                 tex.location = 300,0
                 tex.texture = bpy.data.textures[texName]
                 links.new(map.outputs[0],tex.inputs[0])
                 
-                '''curve = tree.nodes.new('CURVE_RGB') #RGB Curve node for texture color space 'correction'
+                '''curve = tree.nodes.new('ShaderNodeRGBCurve') #RGB Curve node for texture color space 'correction'
                 curve.name = 'KTmc_CurveRGB'
                 curve.location = 500,0
                 cCurve = curve.mapping.curves[3] #the 'C' curve is first in the UI but last in the code
